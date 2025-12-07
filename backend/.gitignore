@@ -1,0 +1,48 @@
+# Node modules
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Environment variables
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+
+# Logs
+logs/
+*.log
+*.log.*
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Build output
+dist/
+build/
+tmp/
+temp/
+.cache/
+
+# Uploaded files (if any temporary)
+uploads/
+tmp_uploads/
+
+# OS / IDE files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# AWS / cloud keys (just in case)
+*.pem
+*.key
+
+# Mac system files
+__MACOSX/
+
+# S3 sync folders (if used later)
+.s3/
