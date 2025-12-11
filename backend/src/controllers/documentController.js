@@ -7,6 +7,10 @@ const index = require("../config/pinecone");
 const s3 = require("../config/s3");
 const pool = require("../config/db");
 
+// TODO:
+// 1. When uploading, validate classroom_id belongs to authenticated user.
+// 2. Prevent users from uploading documents to classrooms they don't own.
+
 exports.uploadDocument = async (req, res) => {
     try {
         const { classroom_id } = req.body;
