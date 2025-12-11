@@ -1,0 +1,44 @@
+# Root Ignore
+
+# Node backend dependencies
+backend/node_modules/
+
+# Frontend dependencies
+frontend/node_modules/
+
+# Environment files (VERY IMPORTANT)
+backend/.env
+frontend/.env
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+
+# Build output
+backend/dist/
+frontend/build/
+
+# AWS credentials (in case user accidentally adds)
+.aws/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Python junk (if any tools used)
+__pycache__/
+*.pyc
+
+# Coverage (if using Jest later)
+coverage/
