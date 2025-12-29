@@ -1,71 +1,82 @@
-import { useParams, useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+// FIX: Changed 'FastickyNote' to 'FaStickyNote'
+import { 
+  FaBook, FaRobot, FaBrain, FaStickyNote, FaClock, FaBars, FaLayerGroup 
+} from "react-icons/fa"; 
+
 import DocumentManager from "../components/DocumentManager";
 import RagChat from "../components/RagChat";
-import { PomodoroTimer, Notebook } from "../components/StudyTools";
+import QuizGenerator from "../components/QuizGenerator";
+import Notebook from "../components/Notebook";
+import Pomodoro from "../components/Pomodoro";
+import FlashcardGenerator from "../components/FlashcardGenerator";
 
 export default function Classroom() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("documents"); // documents | chat | tools
+  const [activeTab, setActiveTab] = useState("documents");
+  const [isSidebarOpen, setSidebarOpen] = useState(true);
+
+  const menuItems = [
+    { id: "documents", label: "Documents", icon: <FaBook /> },
+    { id: "chat", label: "AI Chat", icon: <FaRobot /> },
+    { id: "quiz", label: "Quiz", icon: <FaBrain /> },
+    { id: "flashcards", label: "Flashcards", icon: <FaLayerGroup /> },
+    { id: "notes", label: "Notebook", icon: <FaStickyNote /> },
+    { id: "timer", label: "Timer", icon: <FaClock /> },
+  ];
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Header */}
-      <header className="bg-white shadow p-4 flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <button onClick={() => navigate("/")} className="text-gray-500 hover:text-black">
-            ← Back
+    <div className="flex h-screen bg-gray-100 overflow-hidden">
+      
+      {/* Sidebar */}
+      <div className={`bg-white border-r transition-all duration-300 flex flex-col ${isSidebarOpen ? "w-64" : "w-16"}`}>
+        <div className="p-4 flex items-center justify-between border-b h-16">
+          {isSidebarOpen && <span className="font-bold text-lg text-indigo-600">StudyAI</span>}
+          <button onClick={() => setSidebarOpen(!isSidebarOpen)} className="p-1 hover:bg-gray-100 rounded text-gray-500">
+            <FaBars />
           </button>
-          <h1 className="text-xl font-bold">Classroom {id}</h1>
         </div>
         
-        {/* Navigation Tabs */}
-        <div className="flex space-x-1 bg-gray-200 p-1 rounded-lg">
-          {["documents", "chat", "tools"].map((tab) => (
+        <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
+          {menuItems.map((item) => (
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 rounded-md capitalize text-sm font-medium transition-colors ${
-                activeTab === tab 
-                  ? "bg-white text-blue-600 shadow-sm" 
-                  : "text-gray-600 hover:text-gray-900"
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors ${
+                activeTab === item.id 
+                  ? "bg-indigo-50 text-indigo-600 font-medium" 
+                  : "text-gray-600 hover:bg-gray-50"
               }`}
             >
-              {tab}
+              <span className="text-xl min-w-[20px]">{item.icon}</span>
+              {isSidebarOpen && <span className="whitespace-nowrap">{item.label}</span>}
             </button>
           ))}
+        </nav>
+
+        <div className="p-4 border-t">
+          <button 
+            onClick={() => navigate("/")} 
+            className={`flex items-center gap-3 text-sm text-gray-500 hover:text-red-500 transition-colors w-full p-2 rounded hover:bg-red-50`}
+          >
+             <span>←</span>
+             {isSidebarOpen && <span>Exit Classroom</span>}
+          </button>
         </div>
-      </header>
+      </div>
 
-      {/* Main Content */}
-      <main className="flex-1 p-6 max-w-5xl mx-auto w-full">
-        
-        {activeTab === "documents" && (
-          <div className="animate-fade-in">
-            <h2 className="text-2xl font-bold mb-4">Documents & AI Generation</h2>
-            <DocumentManager classroomId={id} />
-          </div>
-        )}
-
-        {activeTab === "chat" && (
-          <div className="animate-fade-in">
-            <h2 className="text-2xl font-bold mb-4">Chat with your Documents (RAG)</h2>
-            <RagChat classroomId={id} />
-          </div>
-        )}
-
-        {activeTab === "tools" && (
-          <div className="animate-fade-in grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <PomodoroTimer />
-            </div>
-            <div>
-              <Notebook />
-            </div>
-          </div>
-        )}
-
+      {/* Main Content Area */}
+      <main className="flex-1 overflow-auto relative bg-gray-50">
+        <div className="p-8 max-w-6xl mx-auto h-full">
+            {activeTab === "documents" && <DocumentManager classroomId={id} />}
+            {activeTab === "chat" && <RagChat classroomId={id} />}
+            {activeTab === "quiz" && <QuizGenerator classroomId={id} />}
+            {activeTab === "flashcards" && <FlashcardGenerator classroomId={id} />}
+            {activeTab === "notes" && <Notebook classroomId={id} />}
+            {activeTab === "timer" && <Pomodoro />}
+        </div>
       </main>
     </div>
   );

@@ -10,6 +10,49 @@ const pool = require("../config/db");
 // TODO:
 // 1. When uploading, validate classroom_id belongs to authenticated user.
 // 2. Prevent users from uploading documents to classrooms they don't own.
+// GET: List documents for a classroom
+exports.getDocuments = async (req, res) => {
+    try {
+        const { classroomId } = req.params;
+        const result = await pool.query(
+            "SELECT id, filename, created_at FROM documents WHERE classroom_id = $1 ORDER BY created_at DESC",
+            [classroomId]
+        );
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+// DELETE: Remove document from DB, S3, and Pinecone
+exports.deleteDocument = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // 1. Get doc details to find S3 key
+        const docRes = await pool.query("SELECT * FROM documents WHERE id = $1", [id]);
+        if (docRes.rows.length === 0) return res.status(404).json({ error: "Document not found" });
+        const doc = docRes.rows[0];
+
+        // 2. Delete from S3
+        // Extract Key from URL or store Key in DB. Assuming we can derive it or stored it. 
+        // For this example, let's assume you stored the 'key' or can parse it from s3_url.
+        // const s3Key = doc.s3_url.split(".com/")[1]; 
+        // await s3.deleteObject({ Bucket: process.env.AWS_BUCKET, Key: s3Key }).promise();
+
+        // 3. Delete vectors from Pinecone (Delete by metadata filter)
+        await index.deleteMany({ classroom_id: doc.classroom_id.toString(), document_id: id.toString() });
+
+        // 4. Delete from Postgres
+        await pool.query("DELETE FROM documents WHERE id = $1", [id]);
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Delete failed" });
+    }
+};
+
 
 exports.uploadDocument = async (req, res) => {
     try {
@@ -84,3 +127,5 @@ exports.uploadDocument = async (req, res) => {
         res.status(500).json({ error: "Document upload failed", details: err.message });
     }
 };
+
+
