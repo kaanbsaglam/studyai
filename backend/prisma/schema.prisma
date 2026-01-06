@@ -1,0 +1,101 @@
+// Prisma Schema for StudyAI
+// Run `npx prisma migrate dev` to apply changes
+// Run `npx prisma generate` to regenerate the client
+// Run `npx prisma studio` to open the database GUI
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// User & Authentication
+// ============================================
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relations (will add more as we build features)
+  classrooms   Classroom[]
+  documents    Document[]
+
+  @@map("users")
+}
+
+// ============================================
+// Organization: Classrooms
+// ============================================
+// A classroom represents a course/subject that contains documents
+model Classroom {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documents Document[]
+
+  @@map("classrooms")
+}
+
+// ============================================
+// Documents
+// ============================================
+enum DocumentStatus {
+  PENDING    // Just uploaded, not processed yet
+  PROCESSING // Currently being chunked/embedded
+  READY      // Successfully processed, ready for RAG
+  FAILED     // Processing failed
+}
+
+model Document {
+  id          String         @id @default(uuid())
+  filename    String
+  originalName String        @map("original_name")
+  mimeType    String         @map("mime_type")
+  size        Int            // File size in bytes
+  s3Key       String         @map("s3_key")  // Path in S3
+  status      DocumentStatus @default(PENDING)
+  errorMessage String?       @map("error_message") // If status is FAILED
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  // Relations
+  userId      String    @map("user_id")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  classroomId String    @map("classroom_id")
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  chunks      DocumentChunk[]
+
+  @@map("documents")
+}
+
+// ============================================
+// Document Chunks (for RAG reference)
+// ============================================
+// We store chunk metadata here so we can show source citations
+// The actual vectors are in Pinecone
+model DocumentChunk {
+  id          String   @id @default(uuid())
+  chunkIndex  Int      @map("chunk_index")
+  content     String   // The text content of this chunk
+  pineconeId  String   @map("pinecone_id") // ID in Pinecone for reference
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  documentId String   @map("document_id")
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@map("document_chunks")
+}

@@ -1,0 +1,117 @@
+# Docker Compose file for local development
+# Run with: docker-compose up
+# Run in background: docker-compose up -d
+# Stop: docker-compose down
+# Stop and remove all data: docker-compose down -v
+
+version: "3.8"
+
+services:
+  # ============================================
+  # PostgreSQL Database
+  # ============================================
+  # This is your main database for users, classrooms, documents, etc.
+  # Data is persisted in a volume so it survives container restarts.
+  postgres:
+    image: postgres:16-alpine  # Alpine = smaller image size
+    container_name: studyai-postgres
+    environment:
+      POSTGRES_USER: studyai
+      POSTGRES_PASSWORD: studyai_dev_password
+      POSTGRES_DB: studyai
+    ports:
+      - "5432:5432"  # Expose on localhost:5432 for tools like pgAdmin, DBeaver
+    volumes:
+      - postgres_data:/var/lib/postgresql/data  # Persist data
+    healthcheck:
+      # Docker will check if Postgres is ready to accept connections
+      test: ["CMD-SHELL", "pg_isready -U studyai -d studyai"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # Redis (Cache + Message Queue)
+  # ============================================
+  # Used for:
+  # 1. Caching LLM responses (avoid repeat API calls)
+  # 2. BullMQ job queue (background document processing)
+  redis:
+    image: redis:7-alpine
+    container_name: studyai-redis
+    ports:
+      - "6379:6379"  # Expose on localhost:6379
+    volumes:
+      - redis_data:/data  # Persist data (optional for dev, but nice to have)
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # API Server (Node.js + Express)
+  # ============================================
+  # Your main backend application
+  api:
+    build:
+      context: ./backend  # Look for Dockerfile in ./backend
+      dockerfile: Dockerfile
+    container_name: studyai-api
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      # Note: Inside Docker network, we use service names (postgres, redis)
+      # not localhost!
+      DATABASE_URL: postgresql://studyai:studyai_dev_password@postgres:5432/studyai
+      REDIS_URL: redis://redis:6379
+    volumes:
+      # Mount your source code into the container
+      # This means changes to your code are reflected immediately (with nodemon)
+      - ./backend/src:/app/src
+      - ./backend/prisma:/app/prisma
+      # Don't mount node_modules - let the container manage its own
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy  # Wait for Postgres to be ready
+      redis:
+        condition: service_healthy  # Wait for Redis to be ready
+    # For development, we'll use nodemon to auto-restart on file changes
+    command: npm run dev
+
+  # ============================================
+  # Background Worker (Document Processing)
+  # ============================================
+  # Same codebase as API, but runs the worker entry point
+  # Processes jobs from the Redis queue
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: studyai-worker
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://studyai:studyai_dev_password@postgres:5432/studyai
+      REDIS_URL: redis://redis:6379
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/prisma:/app/prisma
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: npm run worker:dev
+
+# ============================================
+# Named Volumes
+# ============================================
+# These persist data even when containers are removed
+# To completely reset: docker-compose down -v
+volumes:
+  postgres_data:
+  redis_data:
