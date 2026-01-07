@@ -10,7 +10,7 @@ const { NotFoundError, AuthorizationError, ValidationError } = require('../middl
 const { asyncHandler } = require('../middleware/errorHandler');
 const { canUseChat, recordTokenUsage } = require('../services/tier.service');
 const {
-  gatherClassroomContent,
+  gatherDocumentsContent,
   generateFlashcards,
   createFlashcardSet,
   getFlashcardSetById,
@@ -46,11 +46,22 @@ const createFlashcardSetHandler = asyncHandler(async (req, res) => {
     throw new AuthorizationError('You do not have access to this classroom');
   }
 
-  // Check if there are any processed documents
-  if (classroom.documents.length === 0) {
-    throw new ValidationError(
-      'No processed documents in this classroom. Upload and wait for documents to be processed before generating flashcards.'
-    );
+  // Verify all provided documentIds exist in this classroom
+  if (data.documentIds.length > 0) {
+    const classroomDocIds = new Set(classroom.documents.map((d) => d.id));
+    for (const docId of data.documentIds) {
+      if (!classroomDocIds.has(docId)) {
+        throw new NotFoundError(`Document ${docId} not found in this classroom`);
+      }
+    }
+  }
+
+  // Determine if this is a general knowledge request
+  const isGeneralKnowledge = data.documentIds.length === 0;
+
+  // For general knowledge, focus topic is required
+  if (isGeneralKnowledge && !data.focusTopic) {
+    throw new ValidationError('Focus topic is required when no documents are selected');
   }
 
   // Check token limits
@@ -59,20 +70,30 @@ const createFlashcardSetHandler = asyncHandler(async (req, res) => {
     throw new ValidationError(tierCheck.reason);
   }
 
-  // Gather content from classroom documents
-  const { content, truncated, documentCount } = await gatherClassroomContent(classroomId);
+  let content = '';
+  let truncated = false;
+  let documentCount = 0;
 
-  if (!content) {
-    throw new ValidationError('No content found in classroom documents.');
+  // Gather content from selected documents (if any)
+  if (!isGeneralKnowledge) {
+    const gathered = await gatherDocumentsContent(data.documentIds);
+    content = gathered.content;
+    truncated = gathered.truncated;
+    documentCount = gathered.documentCount;
+
+    if (!content) {
+      throw new ValidationError('No content found in selected documents.');
+    }
+
+    logger.info(`Gathered content from ${documentCount} documents${truncated ? ' (truncated)' : ''}`);
   }
-
-  logger.info(`Gathered content from ${documentCount} documents${truncated ? ' (truncated)' : ''}`);
 
   // Generate flashcards
   const { cards, tokensUsed } = await generateFlashcards({
-    content,
+    content: isGeneralKnowledge ? null : content,
     focusTopic: data.focusTopic,
     count: data.count,
+    isGeneralKnowledge,
   });
 
   // Record token usage
@@ -87,6 +108,7 @@ const createFlashcardSetHandler = asyncHandler(async (req, res) => {
     focusTopic: data.focusTopic,
     classroomId,
     userId: req.user.id,
+    isGeneralKnowledge,
     cards,
   });
 
@@ -97,6 +119,7 @@ const createFlashcardSetHandler = asyncHandler(async (req, res) => {
       tokensUsed,
       tokensRemaining: tierCheck.remaining - tokensUsed,
       contentTruncated: truncated,
+      isGeneralKnowledge,
     },
   });
 });

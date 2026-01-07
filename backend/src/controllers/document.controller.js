@@ -134,6 +134,14 @@ const getDocument = asyncHandler(async (req, res) => {
     where: { id },
     include: {
       classroom: true,
+      chunks: {
+        orderBy: { chunkIndex: 'asc' },
+        select: {
+          id: true,
+          chunkIndex: true,
+          content: true,
+        },
+      },
     },
   });
 

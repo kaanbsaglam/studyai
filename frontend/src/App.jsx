@@ -2,10 +2,14 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
+import ClassroomLayout from './components/ClassroomLayout';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ClassroomsPage from './pages/ClassroomsPage';
-import ClassroomDetailPage from './pages/ClassroomDetailPage';
+import ClassroomDashboard from './pages/ClassroomDashboard';
+import DocumentViewerPage from './pages/DocumentViewerPage';
+import ChatPage from './pages/ChatPage';
+import FlashcardsPage from './pages/FlashcardsPage';
 import AdminPage from './pages/AdminPage';
 import AccountPage from './pages/AccountPage';
 
@@ -32,14 +36,22 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* Classroom routes with shared layout */}
           <Route
             path="/classrooms/:id"
             element={
               <ProtectedRoute>
-                <ClassroomDetailPage />
+                <ClassroomLayout />
               </ProtectedRoute>
             }
-          />
+          >
+            <Route index element={<ClassroomDashboard />} />
+            <Route path="documents/:docId" element={<DocumentViewerPage />} />
+            <Route path="chat" element={<ChatPage />} />
+            <Route path="flashcards" element={<FlashcardsPage />} />
+          </Route>
+
           <Route
             path="/admin"
             element={

@@ -1,7 +1,15 @@
 import { useState, useRef, useEffect } from 'react';
 import api from '../api/axios';
 
-export default function ChatPanel({ classroomId, hasReadyDocuments }) {
+export default function ChatPanel({
+  classroomId,
+  documentIds = [],
+  hasReadyDocuments,
+  compact,
+  fullHeight,
+  selectedDocuments = [],
+  onClearChat,
+}) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -14,6 +22,16 @@ export default function ChatPanel({ classroomId, hasReadyDocuments }) {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Build conversation history for API
+  const getConversationHistory = () => {
+    return messages
+      .filter((m) => !m.isError)
+      .map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -29,6 +47,8 @@ export default function ChatPanel({ classroomId, hasReadyDocuments }) {
     try {
       const response = await api.post(`/classrooms/${classroomId}/chat`, {
         question,
+        documentIds: documentIds,
+        conversationHistory: getConversationHistory(),
       });
 
       const { answer, sources, hasRelevantContext } = response.data.data;
@@ -57,15 +77,49 @@ export default function ChatPanel({ classroomId, hasReadyDocuments }) {
     }
   };
 
+  const handleClearChat = () => {
+    setMessages([]);
+    onClearChat?.();
+  };
+
+  const containerClass = compact
+    ? 'flex flex-col h-full'
+    : fullHeight
+    ? 'bg-white rounded-lg shadow flex flex-col h-[calc(100vh-16rem)]'
+    : 'bg-white rounded-lg shadow flex flex-col h-[500px]';
+
   return (
-    <div className="bg-white rounded-lg shadow flex flex-col h-[500px]">
+    <div className={containerClass}>
       {/* Header */}
-      <div className="px-6 py-4 border-b border-gray-200">
-        <h3 className="text-lg font-medium text-gray-900">AI Study Assistant</h3>
-        <p className="text-sm text-gray-500">
-          Ask questions about your documents
-        </p>
-      </div>
+      {!compact && (
+        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+          <div>
+            <h3 className="text-lg font-medium text-gray-900">AI Study Assistant</h3>
+            <p className="text-sm text-gray-500">
+              {documentIds.length > 0
+                ? `${documentIds.length} document${documentIds.length > 1 ? 's' : ''} selected`
+                : 'Ask questions about your documents'}
+            </p>
+          </div>
+          {messages.length > 0 && (
+            <button
+              onClick={handleClearChat}
+              className="text-sm text-gray-500 hover:text-gray-700"
+            >
+              Clear chat
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Selected documents indicator (compact mode) */}
+      {compact && selectedDocuments.length > 0 && (
+        <div className="px-3 py-2 border-b border-gray-200 bg-blue-50">
+          <p className="text-xs text-blue-700">
+            Context: {selectedDocuments.map((d) => d.originalName).join(', ')}
+          </p>
+        </div>
+      )}
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -116,7 +170,12 @@ export default function ChatPanel({ classroomId, hasReadyDocuments }) {
                       {message.sources.map((source, idx) => (
                         <span
                           key={idx}
-                          className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded"
+                          className={`text-xs px-2 py-0.5 rounded ${
+                            source.isSelected
+                              ? 'bg-blue-100 text-blue-700'
+                              : 'bg-gray-200 text-gray-600'
+                          }`}
+                          title={source.isSelected ? 'Selected document' : 'From RAG search'}
                         >
                           {source.filename}
                         </span>

@@ -18,6 +18,12 @@ const createFlashcardSetSchema = z.object({
     .int('Count must be a whole number')
     .min(5, 'Minimum 5 flashcards')
     .max(50, 'Maximum 50 flashcards'),
+  // Array of document IDs to generate from (empty = general knowledge)
+  documentIds: z
+    .array(z.string().uuid('Invalid document ID'))
+    .max(10, 'Maximum 10 documents allowed')
+    .optional()
+    .default([]),
 });
 
 module.exports = {

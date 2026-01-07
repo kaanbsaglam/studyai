@@ -1,7 +1,7 @@
 /**
  * Flashcard Service
  *
- * Generates flashcards from classroom documents using LLM.
+ * Generates flashcards from documents or general knowledge using LLM.
  */
 
 const { GoogleGenerativeAI } = require('@google/generative-ai');
@@ -14,22 +14,23 @@ const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
 // Maximum characters to include in context (roughly ~15-20k tokens)
-// This prevents context overflow with large document sets
 const MAX_CONTEXT_CHARS = 60000;
 
 /**
- * Gather content from all READY documents in a classroom
- * @param {string} classroomId
- * @returns {Promise<{content: string, truncated: boolean, documentCount: number}>}
+ * Gather content from specified documents
+ * @param {string[]} documentIds - Documents to gather content from
+ * @returns {Promise<{content: string, truncated: boolean, documentCount: number, documentNames: string[]}>}
  */
-async function gatherClassroomContent(classroomId) {
-  // Get all chunks from READY documents in this classroom
+async function gatherDocumentsContent(documentIds) {
+  if (!documentIds || documentIds.length === 0) {
+    return { content: '', truncated: false, documentCount: 0, documentNames: [] };
+  }
+
+  // Get chunks from specified documents
   const chunks = await prisma.documentChunk.findMany({
     where: {
-      document: {
-        classroomId,
-        status: 'READY',
-      },
+      documentId: { in: documentIds },
+      document: { status: 'READY' },
     },
     include: {
       document: {
@@ -46,7 +47,7 @@ async function gatherClassroomContent(classroomId) {
   });
 
   if (chunks.length === 0) {
-    return { content: '', truncated: false, documentCount: 0 };
+    return { content: '', truncated: false, documentCount: 0, documentNames: [] };
   }
 
   // Group chunks by document for better context
@@ -65,8 +66,10 @@ async function gatherClassroomContent(classroomId) {
   // Build content string with document headers
   let content = '';
   let truncated = false;
+  const documentNames = [];
 
   for (const [docId, doc] of docMap) {
+    documentNames.push(doc.name);
     const docContent = `\n\n=== ${doc.name} ===\n${doc.chunks.join('\n\n')}`;
 
     // Check if adding this document would exceed limit
@@ -87,21 +90,27 @@ async function gatherClassroomContent(classroomId) {
     content: content.trim(),
     truncated,
     documentCount: docMap.size,
+    documentNames,
   };
 }
 
 /**
  * Generate flashcards using LLM
  * @param {object} params
- * @param {string} params.content - Document content to generate from
- * @param {string} [params.focusTopic] - Optional topic to focus on
+ * @param {string} [params.content] - Document content to generate from (if any)
+ * @param {string} [params.focusTopic] - Topic to focus on (required if no content)
  * @param {number} params.count - Number of flashcards to generate
+ * @param {boolean} params.isGeneralKnowledge - Whether this is a general knowledge request
  * @returns {Promise<{cards: Array<{front: string, back: string}>, tokensUsed: number}>}
  */
-async function generateFlashcards({ content, focusTopic, count }) {
-  const prompt = buildFlashcardPrompt({ content, focusTopic, count });
+async function generateFlashcards({ content, focusTopic, count, isGeneralKnowledge }) {
+  const prompt = buildFlashcardPrompt({ content, focusTopic, count, isGeneralKnowledge });
 
-  logger.info(`Generating ${count} flashcards${focusTopic ? ` focused on "${focusTopic}"` : ''}`);
+  logger.info(`Generating ${count} flashcards`, {
+    focusTopic: focusTopic || 'none',
+    isGeneralKnowledge,
+    hasContent: !!content,
+  });
 
   const result = await model.generateContent(prompt);
   const responseText = result.response.text();
@@ -121,7 +130,32 @@ async function generateFlashcards({ content, focusTopic, count }) {
 /**
  * Build the prompt for flashcard generation
  */
-function buildFlashcardPrompt({ content, focusTopic, count }) {
+function buildFlashcardPrompt({ content, focusTopic, count, isGeneralKnowledge }) {
+  // General knowledge mode (no documents)
+  if (isGeneralKnowledge) {
+    const topic = focusTopic || 'general study topics';
+    return `You are a study assistant that creates effective flashcards for learning.
+
+Create exactly ${count} flashcards about: "${topic}"
+
+Guidelines for good flashcards:
+- Each card should test ONE concept
+- Questions should be clear and specific
+- Answers should be concise but complete
+- Avoid yes/no questions
+- Include a mix of definitions, concepts, and applications
+- Cover fundamental to intermediate level knowledge
+
+Respond with ONLY a valid JSON array of flashcards in this exact format, no other text:
+[
+  {"front": "Question 1?", "back": "Answer 1"},
+  {"front": "Question 2?", "back": "Answer 2"}
+]
+
+Generate exactly ${count} flashcards:`;
+  }
+
+  // Document-based mode
   const topicInstruction = focusTopic
     ? `Focus specifically on the topic: "${focusTopic}". Only create flashcards related to this topic.`
     : 'Cover the most important concepts from the material.';
@@ -215,16 +249,19 @@ function parseFlashcardResponse(responseText) {
  * @param {string} [params.focusTopic]
  * @param {string} params.classroomId
  * @param {string} params.userId
+ * @param {boolean} params.isGeneralKnowledge
  * @param {Array<{front: string, back: string}>} params.cards
  * @returns {Promise<object>} Created flashcard set with cards
  */
-async function createFlashcardSet({ title, focusTopic, classroomId, userId, cards }) {
+async function createFlashcardSet({ title, focusTopic, classroomId, userId, isGeneralKnowledge, cards }) {
   const flashcardSet = await prisma.flashcardSet.create({
     data: {
       title,
       focusTopic,
       classroomId,
       userId,
+      // Note: We no longer store documentId since we support multiple docs
+      // The set is associated with the classroom
       cards: {
         create: cards.map((card, index) => ({
           front: card.front,
@@ -294,7 +331,7 @@ async function deleteFlashcardSet(id) {
 }
 
 module.exports = {
-  gatherClassroomContent,
+  gatherDocumentsContent,
   generateFlashcards,
   createFlashcardSet,
   getFlashcardSetById,

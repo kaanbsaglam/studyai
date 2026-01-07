@@ -39,11 +39,14 @@ const askQuestion = asyncHandler(async (req, res) => {
     throw new AuthorizationError('You do not have access to this classroom');
   }
 
-  // Check if there are any processed documents
-  if (classroom.documents.length === 0) {
-    throw new ValidationError(
-      'No processed documents in this classroom. Upload and wait for documents to be processed before asking questions.'
-    );
+  // Verify all provided documentIds exist in this classroom
+  if (data.documentIds.length > 0) {
+    const classroomDocIds = new Set(classroom.documents.map((d) => d.id));
+    for (const docId of data.documentIds) {
+      if (!classroomDocIds.has(docId)) {
+        throw new NotFoundError(`Document ${docId} not found in this classroom`);
+      }
+    }
   }
 
   // Check token limits
@@ -53,7 +56,12 @@ const askQuestion = asyncHandler(async (req, res) => {
   }
 
   // Query and generate answer
-  const result = await queryAndAnswer(data.question, classroomId);
+  const result = await queryAndAnswer({
+    question: data.question,
+    classroomId,
+    documentIds: data.documentIds,
+    conversationHistory: data.conversationHistory,
+  });
 
   // Record token usage
   if (result.tokensUsed > 0) {

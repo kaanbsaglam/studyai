@@ -95,10 +95,11 @@ async function deleteVectorsByDocument(documentId) {
  * @param {object} options - Query options
  * @param {number} options.topK - Number of results (default 5)
  * @param {string} options.classroomId - Filter by classroom
+ * @param {string} [options.documentId] - Optional filter by specific document
  * @returns {Promise<object[]>} Similar vectors with scores
  */
 async function querySimilar(queryVector, options = {}) {
-  const { topK = 5, classroomId } = options;
+  const { topK = 5, classroomId, documentId } = options;
 
   const queryOptions = {
     vector: queryVector,
@@ -106,8 +107,17 @@ async function querySimilar(queryVector, options = {}) {
     includeMetadata: true,
   };
 
+  // Build filter based on provided options
+  const filter = {};
   if (classroomId) {
-    queryOptions.filter = { classroomId };
+    filter.classroomId = classroomId;
+  }
+  if (documentId) {
+    filter.documentId = documentId;
+  }
+
+  if (Object.keys(filter).length > 0) {
+    queryOptions.filter = filter;
   }
 
   const result = await index.query(queryOptions);

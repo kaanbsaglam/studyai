@@ -108,11 +108,12 @@ model Document {
   updatedAt   DateTime       @updatedAt @map("updated_at")
 
   // Relations
-  userId      String    @map("user_id")
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  classroomId String    @map("classroom_id")
-  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
-  chunks      DocumentChunk[]
+  userId        String         @map("user_id")
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  classroomId   String         @map("classroom_id")
+  classroom     Classroom      @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  chunks        DocumentChunk[]
+  flashcardSets FlashcardSet[]
 
   @@map("documents")
 }
@@ -150,6 +151,8 @@ model FlashcardSet {
   classroom   Classroom    @relation(fields: [classroomId], references: [id], onDelete: Cascade)
   userId      String       @map("user_id")
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documentId  String?      @map("document_id") // Optional - if set, was generated from this specific document
+  document    Document?    @relation(fields: [documentId], references: [id], onDelete: SetNull)
   cards       Flashcard[]
 
   @@map("flashcard_sets")

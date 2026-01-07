@@ -1,7 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../api/axios';
+import DocumentSelector from './DocumentSelector';
 
-export default function FlashcardsPanel({ classroomId, hasReadyDocuments }) {
+export default function FlashcardsPanel({
+  classroomId,
+  documents = [],
+  initialDocumentIds = [],
+  compact,
+  fullHeight,
+}) {
   const [flashcardSets, setFlashcardSets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -15,17 +22,25 @@ export default function FlashcardsPanel({ classroomId, hasReadyDocuments }) {
   const [formTitle, setFormTitle] = useState('');
   const [formFocusTopic, setFormFocusTopic] = useState('');
   const [formCount, setFormCount] = useState(10);
+  const [selectedDocIds, setSelectedDocIds] = useState(initialDocumentIds);
+
+  const isGeneralKnowledge = selectedDocIds.length === 0;
 
   useEffect(() => {
     fetchFlashcardSets();
   }, [classroomId]);
+
+  // Update selected docs when initialDocumentIds changes
+  useEffect(() => {
+    setSelectedDocIds(initialDocumentIds);
+  }, [initialDocumentIds]);
 
   const fetchFlashcardSets = async () => {
     try {
       const response = await api.get(`/classrooms/${classroomId}/flashcard-sets`);
       setFlashcardSets(response.data.data.flashcardSets);
       setError('');
-    } catch (err) {
+    } catch {
       setError('Failed to load flashcard sets');
     } finally {
       setLoading(false);
@@ -36,6 +51,12 @@ export default function FlashcardsPanel({ classroomId, hasReadyDocuments }) {
     e.preventDefault();
     if (!formTitle.trim()) return;
 
+    // For general knowledge, focus topic is required
+    if (isGeneralKnowledge && !formFocusTopic.trim()) {
+      setError('Focus topic is required when no documents are selected');
+      return;
+    }
+
     setGenerating(true);
     setError('');
 
@@ -44,6 +65,7 @@ export default function FlashcardsPanel({ classroomId, hasReadyDocuments }) {
         title: formTitle.trim(),
         focusTopic: formFocusTopic.trim() || undefined,
         count: formCount,
+        documentIds: selectedDocIds,
       });
 
       setFlashcardSets((prev) => [response.data.data.flashcardSet, ...prev]);
@@ -69,7 +91,7 @@ export default function FlashcardsPanel({ classroomId, hasReadyDocuments }) {
       setActiveSet(response.data.data.flashcardSet);
       setCurrentCardIndex(0);
       setIsFlipped(false);
-    } catch (err) {
+    } catch {
       setError('Failed to load flashcard set');
     }
   };
@@ -83,7 +105,7 @@ export default function FlashcardsPanel({ classroomId, hasReadyDocuments }) {
       if (activeSet?.id === setId) {
         setActiveSet(null);
       }
-    } catch (err) {
+    } catch {
       setError('Failed to delete flashcard set');
     }
   };
@@ -149,7 +171,7 @@ export default function FlashcardsPanel({ classroomId, hasReadyDocuments }) {
     const currentCard = activeSet.cards[currentCardIndex];
 
     return (
-      <div className="bg-white rounded-lg shadow">
+      <div className={compact ? 'flex flex-col h-full' : 'bg-white rounded-lg shadow'}>
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
           <div>
@@ -170,10 +192,10 @@ export default function FlashcardsPanel({ classroomId, hasReadyDocuments }) {
         </div>
 
         {/* Flashcard */}
-        <div className="p-6">
+        <div className="p-6 flex-1 overflow-auto">
           <div
             onClick={() => setIsFlipped(!isFlipped)}
-            className="min-h-[250px] bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-inner cursor-pointer flex items-center justify-center p-8 transition-all hover:shadow-md border border-blue-100"
+            className="min-h-[200px] bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-inner cursor-pointer flex items-center justify-center p-8 transition-all hover:shadow-md border border-blue-100"
           >
             <div className="text-center">
               <p className="text-xs uppercase tracking-wide text-blue-500 mb-4">
@@ -237,7 +259,7 @@ export default function FlashcardsPanel({ classroomId, hasReadyDocuments }) {
   // Generate form view
   if (showGenerateForm) {
     return (
-      <div className="bg-white rounded-lg shadow">
+      <div className={compact ? 'flex flex-col h-full' : 'bg-white rounded-lg shadow'}>
         <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
           <h3 className="text-lg font-medium text-gray-900">Generate Flashcards</h3>
           <button
@@ -250,9 +272,9 @@ export default function FlashcardsPanel({ classroomId, hasReadyDocuments }) {
           </button>
         </div>
 
-        <form onSubmit={handleGenerate} className="p-6 space-y-4">
+        <form onSubmit={handleGenerate} className="p-6 space-y-4 flex-1 overflow-auto">
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
+            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded text-sm">
               {error}
             </div>
           )}
@@ -271,19 +293,36 @@ export default function FlashcardsPanel({ classroomId, hasReadyDocuments }) {
             />
           </div>
 
+          {/* Document selector */}
+          {!compact && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Source Documents
+              </label>
+              <DocumentSelector
+                documents={documents}
+                selectedIds={selectedDocIds}
+                onChange={setSelectedDocIds}
+              />
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Focus Topic (optional)
+              Focus Topic {isGeneralKnowledge ? '*' : '(optional)'}
             </label>
             <input
               type="text"
               value={formFocusTopic}
               onChange={(e) => setFormFocusTopic(e.target.value)}
-              placeholder="e.g., photosynthesis, cell division"
+              placeholder={isGeneralKnowledge ? 'e.g., World War II, Photosynthesis' : 'e.g., photosynthesis, cell division'}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              required={isGeneralKnowledge}
             />
             <p className="text-xs text-gray-500 mt-1">
-              Leave empty to cover all topics from your documents
+              {isGeneralKnowledge
+                ? 'Required - flashcards will be generated from general knowledge'
+                : 'Leave empty to cover all topics from selected documents'}
             </p>
           </div>
 
@@ -308,7 +347,7 @@ export default function FlashcardsPanel({ classroomId, hasReadyDocuments }) {
           <div className="pt-4">
             <button
               type="submit"
-              disabled={generating || !formTitle.trim()}
+              disabled={generating || !formTitle.trim() || (isGeneralKnowledge && !formFocusTopic.trim())}
               className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
               {generating ? (
@@ -323,7 +362,9 @@ export default function FlashcardsPanel({ classroomId, hasReadyDocuments }) {
           </div>
 
           <p className="text-xs text-gray-500 text-center">
-            Flashcards will be generated from all documents in this classroom
+            {isGeneralKnowledge
+              ? 'Flashcards will be generated from AI general knowledge'
+              : `Flashcards will be generated from ${selectedDocIds.length} selected document${selectedDocIds.length !== 1 ? 's' : ''}`}
           </p>
         </form>
       </div>
@@ -331,23 +372,41 @@ export default function FlashcardsPanel({ classroomId, hasReadyDocuments }) {
   }
 
   // List view
-  return (
-    <div className="bg-white rounded-lg shadow">
-      <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-        <div>
-          <h3 className="text-lg font-medium text-gray-900">Flashcards</h3>
-          <p className="text-sm text-gray-500">Study with AI-generated flashcards</p>
-        </div>
-        <button
-          onClick={() => setShowGenerateForm(true)}
-          disabled={!hasReadyDocuments}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          + Generate
-        </button>
-      </div>
+  const containerClass = compact
+    ? 'flex flex-col h-full'
+    : fullHeight
+    ? 'bg-white rounded-lg shadow flex flex-col h-[calc(100vh-16rem)]'
+    : 'bg-white rounded-lg shadow';
 
-      {error && (
+  return (
+    <div className={containerClass}>
+      {!compact && (
+        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+          <div>
+            <h3 className="text-lg font-medium text-gray-900">Flashcards</h3>
+            <p className="text-sm text-gray-500">Study with AI-generated flashcards</p>
+          </div>
+          <button
+            onClick={() => setShowGenerateForm(true)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700"
+          >
+            + Generate
+          </button>
+        </div>
+      )}
+
+      {compact && (
+        <div className="p-3 border-b border-gray-200">
+          <button
+            onClick={() => setShowGenerateForm(true)}
+            className="w-full px-4 py-2 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 text-sm"
+          >
+            + Generate Flashcards
+          </button>
+        </div>
+      )}
+
+      {error && !showGenerateForm && (
         <div className="mx-6 mt-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
           {error}
         </div>
@@ -375,13 +434,11 @@ export default function FlashcardsPanel({ classroomId, hasReadyDocuments }) {
           </svg>
           <p className="mt-2">No flashcard sets yet</p>
           <p className="text-sm">
-            {hasReadyDocuments
-              ? 'Generate flashcards to start studying'
-              : 'Upload and process documents first'}
+            Generate flashcards from documents or general knowledge
           </p>
         </div>
       ) : (
-        <ul className="divide-y divide-gray-200">
+        <ul className="divide-y divide-gray-200 flex-1 overflow-auto">
           {flashcardSets.map((set) => (
             <li key={set.id} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50">
               <div
