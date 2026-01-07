@@ -126,9 +126,9 @@ apiRouter.get('/', (req, res) => {
 
 // Routes
 apiRouter.use('/auth', require('./routes/auth.routes'));
-// TODO: Add more routes
-// apiRouter.use('/classrooms', require('./routes/classroom.routes'));
-// apiRouter.use('/documents', require('./routes/document.routes'));
+apiRouter.use('/classrooms', require('./routes/classroom.routes'));
+apiRouter.use('/', require('./routes/document.routes')); // Handles /classrooms/:id/documents and /documents/:id
+apiRouter.use('/', require('./routes/chat.routes')); // Handles /classrooms/:id/chat
 
 // ============================================
 // 404 Handler
