@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import ChatPanel from '../components/ChatPanel';
+import FlashcardsPanel from '../components/FlashcardsPanel';
 
 export default function ClassroomDetailPage() {
   const { id } = useParams();
@@ -412,9 +413,16 @@ export default function ClassroomDetailPage() {
           )}
         </div>
 
-        {/* Chat Panel */}
-        <div className="mt-6">
+        {/* Study Tools */}
+        <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Chat Panel */}
           <ChatPanel
+            classroomId={id}
+            hasReadyDocuments={classroom.documents?.some((d) => d.status === 'READY')}
+          />
+
+          {/* Flashcards Panel */}
+          <FlashcardsPanel
             classroomId={id}
             hasReadyDocuments={classroom.documents?.some((d) => d.status === 'READY')}
           />

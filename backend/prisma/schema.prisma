@@ -47,9 +47,10 @@ model User {
   updatedAt    DateTime @updatedAt @map("updated_at")
 
   // Relations
-  classrooms   Classroom[]
-  documents    Document[]
-  dailyUsage   DailyUsage[]
+  classrooms    Classroom[]
+  documents     Document[]
+  dailyUsage    DailyUsage[]
+  flashcardSets FlashcardSet[]
 
   @@map("users")
 }
@@ -83,9 +84,10 @@ model Classroom {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   // Relations
-  userId    String   @map("user_id")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  documents Document[]
+  userId        String         @map("user_id")
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documents     Document[]
+  flashcardSets FlashcardSet[]
 
   @@map("classrooms")
 }
@@ -132,4 +134,36 @@ model DocumentChunk {
   document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
   @@map("document_chunks")
+}
+
+// ============================================
+// Study Aids: Flashcards
+// ============================================
+model FlashcardSet {
+  id          String   @id @default(uuid())
+  title       String
+  focusTopic  String?  @map("focus_topic") // Optional topic filter used during generation
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  classroomId String       @map("classroom_id")
+  classroom   Classroom    @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  userId      String       @map("user_id")
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cards       Flashcard[]
+
+  @@map("flashcard_sets")
+}
+
+model Flashcard {
+  id       String @id @default(uuid())
+  front    String // Question side
+  back     String // Answer side
+  position Int    // Order within the set
+
+  // Relations
+  flashcardSetId String       @map("flashcard_set_id")
+  flashcardSet   FlashcardSet @relation(fields: [flashcardSetId], references: [id], onDelete: Cascade)
+
+  @@map("flashcards")
 }
