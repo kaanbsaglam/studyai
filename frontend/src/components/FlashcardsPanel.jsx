@@ -1,6 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import api from '../api/axios';
 import DocumentSelector from './DocumentSelector';
+
+// Fisher-Yates shuffle
+function shuffleArray(array) {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
 
 export default function FlashcardsPanel({
   classroomId,
@@ -17,6 +27,8 @@ export default function FlashcardsPanel({
   const [activeSet, setActiveSet] = useState(null);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
+  const [isShuffled, setIsShuffled] = useState(false);
+  const [shuffledCards, setShuffledCards] = useState([]);
 
   // Form state
   const [formTitle, setFormTitle] = useState('');
@@ -88,13 +100,33 @@ export default function FlashcardsPanel({
   const handleViewSet = async (setId) => {
     try {
       const response = await api.get(`/flashcard-sets/${setId}`);
-      setActiveSet(response.data.data.flashcardSet);
+      const set = response.data.data.flashcardSet;
+      setActiveSet(set);
       setCurrentCardIndex(0);
       setIsFlipped(false);
+      setIsShuffled(false);
+      setShuffledCards([]);
     } catch {
       setError('Failed to load flashcard set');
     }
   };
+
+  const toggleShuffle = () => {
+    if (isShuffled) {
+      // Return to original order
+      setIsShuffled(false);
+      setShuffledCards([]);
+    } else {
+      // Shuffle cards
+      setShuffledCards(shuffleArray(activeSet.cards));
+      setIsShuffled(true);
+    }
+    setCurrentCardIndex(0);
+    setIsFlipped(false);
+  };
+
+  // Get the cards to display (shuffled or original)
+  const displayCards = isShuffled ? shuffledCards : (activeSet?.cards || []);
 
   const handleDeleteSet = async (setId) => {
     if (!confirm('Are you sure you want to delete this flashcard set?')) return;
@@ -111,7 +143,7 @@ export default function FlashcardsPanel({
   };
 
   const nextCard = () => {
-    if (currentCardIndex < activeSet.cards.length - 1) {
+    if (currentCardIndex < displayCards.length - 1) {
       setCurrentCardIndex((prev) => prev + 1);
       setIsFlipped(false);
     }
@@ -129,6 +161,8 @@ export default function FlashcardsPanel({
     (e) => {
       if (!activeSet) return;
 
+      const cards = isShuffled ? shuffledCards : activeSet.cards;
+
       switch (e.key) {
         case ' ':
         case 'Enter':
@@ -138,7 +172,7 @@ export default function FlashcardsPanel({
         case 'ArrowRight':
         case 'ArrowDown':
           e.preventDefault();
-          if (currentCardIndex < activeSet.cards.length - 1) {
+          if (currentCardIndex < cards.length - 1) {
             setCurrentCardIndex((prev) => prev + 1);
             setIsFlipped(false);
           }
@@ -154,9 +188,24 @@ export default function FlashcardsPanel({
         case 'Escape':
           setActiveSet(null);
           break;
+        case 's':
+        case 'S':
+          // Toggle shuffle with 's' key
+          if (activeSet) {
+            if (isShuffled) {
+              setIsShuffled(false);
+              setShuffledCards([]);
+            } else {
+              setShuffledCards(shuffleArray(activeSet.cards));
+              setIsShuffled(true);
+            }
+            setCurrentCardIndex(0);
+            setIsFlipped(false);
+          }
+          break;
       }
     },
-    [activeSet, currentCardIndex]
+    [activeSet, currentCardIndex, isShuffled, shuffledCards]
   );
 
   useEffect(() => {
@@ -168,7 +217,7 @@ export default function FlashcardsPanel({
 
   // Study mode view
   if (activeSet) {
-    const currentCard = activeSet.cards[currentCardIndex];
+    const currentCard = displayCards[currentCardIndex];
 
     return (
       <div className={compact ? 'flex flex-col h-full' : 'bg-white rounded-lg shadow'}>
@@ -177,18 +226,34 @@ export default function FlashcardsPanel({
           <div>
             <h3 className="text-lg font-medium text-gray-900">{activeSet.title}</h3>
             <p className="text-sm text-gray-500">
-              Card {currentCardIndex + 1} of {activeSet.cards.length}
+              Card {currentCardIndex + 1} of {displayCards.length}
+              {isShuffled && ' (shuffled)'}
               {activeSet.focusTopic && ` - Focus: ${activeSet.focusTopic}`}
             </p>
           </div>
-          <button
-            onClick={() => setActiveSet(null)}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={toggleShuffle}
+              className={`p-2 rounded-lg transition-colors ${
+                isShuffled
+                  ? 'bg-blue-100 text-blue-600'
+                  : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
+              }`}
+              title={isShuffled ? 'Return to original order' : 'Shuffle cards'}
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
+            <button
+              onClick={() => setActiveSet(null)}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* Flashcard */}
@@ -221,7 +286,7 @@ export default function FlashcardsPanel({
             </button>
 
             <div className="flex gap-1">
-              {activeSet.cards.map((_, idx) => (
+              {displayCards.map((_, idx) => (
                 <button
                   key={idx}
                   onClick={() => {
@@ -237,7 +302,7 @@ export default function FlashcardsPanel({
 
             <button
               onClick={nextCard}
-              disabled={currentCardIndex === activeSet.cards.length - 1}
+              disabled={currentCardIndex === displayCards.length - 1}
               className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               Next
@@ -249,7 +314,7 @@ export default function FlashcardsPanel({
 
           {/* Keyboard hint */}
           <p className="text-center text-xs text-gray-400 mt-4">
-            Tip: Press Space to flip, Arrow keys to navigate
+            Tip: Space to flip, Arrows to navigate, S to shuffle
           </p>
         </div>
       </div>

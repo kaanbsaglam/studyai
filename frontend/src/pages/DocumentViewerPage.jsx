@@ -4,6 +4,8 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import api from '../api/axios';
 import ChatPanel from '../components/ChatPanel';
 import FlashcardsPanel from '../components/FlashcardsPanel';
+import QuizPanel from '../components/QuizPanel';
+import SummaryPanel from '../components/SummaryPanel';
 
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -89,7 +91,9 @@ export default function DocumentViewerPage() {
 
   const tabs = [
     { id: 'chat', label: 'Chat' },
-    { id: 'flashcards', label: 'Flashcards' },
+    { id: 'flashcards', label: 'Cards' },
+    { id: 'quizzes', label: 'Quiz' },
+    { id: 'summaries', label: 'Summary' },
   ];
 
   if (loading) {
@@ -318,6 +322,22 @@ export default function DocumentViewerPage() {
             )}
             {activeTab === 'flashcards' && (
               <FlashcardsPanel
+                classroomId={classroomId}
+                documents={allDocuments}
+                initialDocumentIds={selectedDocIds}
+                compact
+              />
+            )}
+            {activeTab === 'quizzes' && (
+              <QuizPanel
+                classroomId={classroomId}
+                documents={allDocuments}
+                initialDocumentIds={selectedDocIds}
+                compact
+              />
+            )}
+            {activeTab === 'summaries' && (
+              <SummaryPanel
                 classroomId={classroomId}
                 documents={allDocuments}
                 initialDocumentIds={selectedDocIds}

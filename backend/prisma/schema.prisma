@@ -51,6 +51,8 @@ model User {
   documents     Document[]
   dailyUsage    DailyUsage[]
   flashcardSets FlashcardSet[]
+  quizSets      QuizSet[]
+  summaries     Summary[]
 
   @@map("users")
 }
@@ -88,6 +90,8 @@ model Classroom {
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   documents     Document[]
   flashcardSets FlashcardSet[]
+  quizSets      QuizSet[]
+  summaries     Summary[]
 
   @@map("classrooms")
 }
@@ -169,4 +173,71 @@ model Flashcard {
   flashcardSet   FlashcardSet @relation(fields: [flashcardSetId], references: [id], onDelete: Cascade)
 
   @@map("flashcards")
+}
+
+// ============================================
+// Study Aids: Quizzes
+// ============================================
+model QuizSet {
+  id         String   @id @default(uuid())
+  title      String
+  focusTopic String?  @map("focus_topic") // Optional topic filter used during generation
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // Relations
+  classroomId String        @map("classroom_id")
+  classroom   Classroom     @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  userId      String        @map("user_id")
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questions   QuizQuestion[]
+  attempts    QuizAttempt[]
+
+  @@map("quiz_sets")
+}
+
+model QuizAttempt {
+  id           String   @id @default(uuid())
+  score        Int      // Number of correct answers
+  totalQuestions Int    @map("total_questions") // Total questions in quiz
+  completedAt  DateTime @default(now()) @map("completed_at")
+
+  // Relations
+  quizSetId String  @map("quiz_set_id")
+  quizSet   QuizSet @relation(fields: [quizSetId], references: [id], onDelete: Cascade)
+
+  @@map("quiz_attempts")
+}
+
+model QuizQuestion {
+  id            String   @id @default(uuid())
+  question      String   // The question text
+  correctAnswer String   @map("correct_answer") // The correct answer
+  wrongAnswers  String[] @map("wrong_answers") // Array of 3 wrong answers (distractors)
+  position      Int      // Order within the set
+
+  // Relations
+  quizSetId String  @map("quiz_set_id")
+  quizSet   QuizSet @relation(fields: [quizSetId], references: [id], onDelete: Cascade)
+
+  @@map("quiz_questions")
+}
+
+// ============================================
+// Study Aids: Summaries
+// ============================================
+model Summary {
+  id         String   @id @default(uuid())
+  title      String
+  focusTopic String?  @map("focus_topic") // Optional topic filter used during generation
+  content    String   // The generated summary text
+  length     String   // short, medium, long
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // Relations
+  classroomId String    @map("classroom_id")
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  userId      String    @map("user_id")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("summaries")
 }

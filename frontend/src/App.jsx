@@ -10,6 +10,8 @@ import ClassroomDashboard from './pages/ClassroomDashboard';
 import DocumentViewerPage from './pages/DocumentViewerPage';
 import ChatPage from './pages/ChatPage';
 import FlashcardsPage from './pages/FlashcardsPage';
+import QuizPage from './pages/QuizPage';
+import SummaryPage from './pages/SummaryPage';
 import AdminPage from './pages/AdminPage';
 import AccountPage from './pages/AccountPage';
 
@@ -50,6 +52,8 @@ function App() {
             <Route path="documents/:docId" element={<DocumentViewerPage />} />
             <Route path="chat" element={<ChatPage />} />
             <Route path="flashcards" element={<FlashcardsPage />} />
+            <Route path="quizzes" element={<QuizPage />} />
+            <Route path="summaries" element={<SummaryPage />} />
           </Route>
 
           <Route

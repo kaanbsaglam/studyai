@@ -8,91 +8,11 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { env } = require('../config/env');
 const prisma = require('../lib/prisma');
 const logger = require('../config/logger');
+const { gatherDocumentsContent, MAX_CONTEXT_CHARS } = require('./documentContent.service');
 
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-
-// Maximum characters to include in context (roughly ~15-20k tokens)
-const MAX_CONTEXT_CHARS = 60000;
-
-/**
- * Gather content from specified documents
- * @param {string[]} documentIds - Documents to gather content from
- * @returns {Promise<{content: string, truncated: boolean, documentCount: number, documentNames: string[]}>}
- */
-async function gatherDocumentsContent(documentIds) {
-  if (!documentIds || documentIds.length === 0) {
-    return { content: '', truncated: false, documentCount: 0, documentNames: [] };
-  }
-
-  // Get chunks from specified documents
-  const chunks = await prisma.documentChunk.findMany({
-    where: {
-      documentId: { in: documentIds },
-      document: { status: 'READY' },
-    },
-    include: {
-      document: {
-        select: {
-          id: true,
-          originalName: true,
-        },
-      },
-    },
-    orderBy: [
-      { documentId: 'asc' },
-      { chunkIndex: 'asc' },
-    ],
-  });
-
-  if (chunks.length === 0) {
-    return { content: '', truncated: false, documentCount: 0, documentNames: [] };
-  }
-
-  // Group chunks by document for better context
-  const docMap = new Map();
-  for (const chunk of chunks) {
-    const docId = chunk.document.id;
-    if (!docMap.has(docId)) {
-      docMap.set(docId, {
-        name: chunk.document.originalName,
-        chunks: [],
-      });
-    }
-    docMap.get(docId).chunks.push(chunk.content);
-  }
-
-  // Build content string with document headers
-  let content = '';
-  let truncated = false;
-  const documentNames = [];
-
-  for (const [docId, doc] of docMap) {
-    documentNames.push(doc.name);
-    const docContent = `\n\n=== ${doc.name} ===\n${doc.chunks.join('\n\n')}`;
-
-    // Check if adding this document would exceed limit
-    if (content.length + docContent.length > MAX_CONTEXT_CHARS) {
-      truncated = true;
-      // Try to add partial content if there's room
-      const remaining = MAX_CONTEXT_CHARS - content.length;
-      if (remaining > 500) {
-        content += docContent.substring(0, remaining) + '\n\n[Content truncated...]';
-      }
-      break;
-    }
-
-    content += docContent;
-  }
-
-  return {
-    content: content.trim(),
-    truncated,
-    documentCount: docMap.size,
-    documentNames,
-  };
-}
 
 /**
  * Generate flashcards using LLM
@@ -331,7 +251,7 @@ async function deleteFlashcardSet(id) {
 }
 
 module.exports = {
-  gatherDocumentsContent,
+  gatherDocumentsContent, // Re-export from shared service
   generateFlashcards,
   createFlashcardSet,
   getFlashcardSetById,
