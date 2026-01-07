@@ -115,7 +115,7 @@ app.get('/health', async (req, res) => {
 const apiRouter = express.Router();
 app.use('/api/v1', apiRouter);
 
-// Placeholder route (we'll add actual routes next)
+// Placeholder route
 apiRouter.get('/', (req, res) => {
   res.json({
     success: true,
@@ -124,8 +124,9 @@ apiRouter.get('/', (req, res) => {
   });
 });
 
-// TODO: Add routes
-// apiRouter.use('/auth', require('./routes/auth.routes'));
+// Routes
+apiRouter.use('/auth', require('./routes/auth.routes'));
+// TODO: Add more routes
 // apiRouter.use('/classrooms', require('./routes/classroom.routes'));
 // apiRouter.use('/documents', require('./routes/document.routes'));
 
