@@ -10,6 +10,7 @@ const { validateFile } = require('../validators/document.validator');
 const { addDocumentProcessingJob } = require('../lib/queue');
 const { NotFoundError, AuthorizationError, ValidationError } = require('../middleware/errorHandler');
 const { asyncHandler } = require('../middleware/errorHandler');
+const { canUploadDocument } = require('../services/tier.service');
 const logger = require('../config/logger');
 
 /**
@@ -24,6 +25,12 @@ const uploadDocument = asyncHandler(async (req, res) => {
   const validation = validateFile(file);
   if (!validation.valid) {
     throw new ValidationError(validation.error);
+  }
+
+  // Check storage tier limits
+  const tierCheck = await canUploadDocument(req.user.id, req.user.tier, file.size);
+  if (!tierCheck.allowed) {
+    throw new ValidationError(tierCheck.reason);
   }
 
   // Check classroom exists and belongs to user

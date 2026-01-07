@@ -6,8 +6,9 @@
 
 const prisma = require('../lib/prisma');
 const { createClassroomSchema, updateClassroomSchema } = require('../validators/classroom.validator');
-const { NotFoundError, AuthorizationError } = require('../middleware/errorHandler');
+const { NotFoundError, AuthorizationError, ValidationError } = require('../middleware/errorHandler');
 const { asyncHandler } = require('../middleware/errorHandler');
+const { canCreateClassroom } = require('../services/tier.service');
 
 /**
  * Create a new classroom
@@ -15,6 +16,12 @@ const { asyncHandler } = require('../middleware/errorHandler');
  */
 const createClassroom = asyncHandler(async (req, res) => {
   const data = createClassroomSchema.parse(req.body);
+
+  // Check tier limits
+  const tierCheck = await canCreateClassroom(req.user.id, req.user.tier);
+  if (!tierCheck.allowed) {
+    throw new ValidationError(tierCheck.reason);
+  }
 
   const classroom = await prisma.classroom.create({
     data: {

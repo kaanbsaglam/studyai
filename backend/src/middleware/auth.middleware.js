@@ -39,6 +39,8 @@ async function authenticate(req, res, next) {
         id: true,
         email: true,
         name: true,
+        role: true,
+        tier: true,
         createdAt: true,
         updatedAt: true,
         // Don't select passwordHash

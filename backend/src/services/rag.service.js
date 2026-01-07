@@ -22,7 +22,7 @@ const TOP_K = 5;
  * Query documents and generate an answer
  * @param {string} question - User's question
  * @param {string} classroomId - Classroom to search in
- * @returns {Promise<{answer: string, sources: object[], hasRelevantContext: boolean}>}
+ * @returns {Promise<{answer: string, sources: object[], hasRelevantContext: boolean, tokensUsed: number}>}
  */
 async function queryAndAnswer(question, classroomId) {
   logger.info(`RAG query: "${question}" in classroom ${classroomId}`);
@@ -51,10 +51,15 @@ async function queryAndAnswer(question, classroomId) {
     const result = await chatModel.generateContent(generalPrompt);
     const answer = result.response.text();
 
+    // Get token usage from response
+    const usageMetadata = result.response.usageMetadata;
+    const tokensUsed = usageMetadata?.totalTokenCount || 0;
+
     return {
       answer,
       sources: [],
       hasRelevantContext: false,
+      tokensUsed,
     };
   }
 
@@ -92,6 +97,10 @@ async function queryAndAnswer(question, classroomId) {
   const result = await chatModel.generateContent(prompt);
   const answer = result.response.text();
 
+  // Get token usage from response
+  const usageMetadata = result.response.usageMetadata;
+  const tokensUsed = usageMetadata?.totalTokenCount || 0;
+
   // Build sources for citation
   const sources = relevantMatches.map((match) => {
     const chunk = chunkMap.get(match.id);
@@ -103,12 +112,13 @@ async function queryAndAnswer(question, classroomId) {
     };
   });
 
-  logger.info(`Generated answer with ${sources.length} sources`);
+  logger.info(`Generated answer with ${sources.length} sources, ${tokensUsed} tokens used`);
 
   return {
     answer,
     sources,
     hasRelevantContext: true,
+    tokensUsed,
   };
 }
 

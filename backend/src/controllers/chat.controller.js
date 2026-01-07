@@ -9,6 +9,7 @@ const { queryAndAnswer } = require('../services/rag.service');
 const { chatQuerySchema } = require('../validators/chat.validator');
 const { NotFoundError, AuthorizationError, ValidationError } = require('../middleware/errorHandler');
 const { asyncHandler } = require('../middleware/errorHandler');
+const { canUseChat, recordTokenUsage } = require('../services/tier.service');
 const logger = require('../config/logger');
 
 /**
@@ -45,8 +46,20 @@ const askQuestion = asyncHandler(async (req, res) => {
     );
   }
 
+  // Check token limits
+  const tierCheck = await canUseChat(req.user.id, req.user.tier);
+  if (!tierCheck.allowed) {
+    throw new ValidationError(tierCheck.reason);
+  }
+
   // Query and generate answer
   const result = await queryAndAnswer(data.question, classroomId);
+
+  // Record token usage
+  if (result.tokensUsed > 0) {
+    await recordTokenUsage(req.user.id, result.tokensUsed);
+    logger.info(`Recorded ${result.tokensUsed} tokens for user ${req.user.id}`);
+  }
 
   res.json({
     success: true,
@@ -55,6 +68,8 @@ const askQuestion = asyncHandler(async (req, res) => {
       answer: result.answer,
       sources: result.sources,
       hasRelevantContext: result.hasRelevantContext,
+      tokensUsed: result.tokensUsed,
+      tokensRemaining: tierCheck.remaining - result.tokensUsed,
     },
   });
 });

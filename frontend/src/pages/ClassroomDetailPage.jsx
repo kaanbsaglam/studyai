@@ -217,6 +217,24 @@ export default function ClassroomDetailPage() {
               <h1 className="text-xl font-bold text-gray-900">StudyAI</h1>
             </div>
             <div className="flex items-center gap-4">
+              {user?.role === 'ADMIN' && (
+                <Link
+                  to="/admin"
+                  className="text-sm bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200"
+                >
+                  Admin
+                </Link>
+              )}
+              <Link
+                to="/account"
+                className={`text-sm px-3 py-1 rounded ${
+                  user?.tier === 'PREMIUM'
+                    ? 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {user?.tier || 'FREE'}
+              </Link>
               <span className="text-gray-600">{user?.name || user?.email}</span>
               <button
                 onClick={logout}

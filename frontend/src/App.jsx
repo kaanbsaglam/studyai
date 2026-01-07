@@ -1,10 +1,13 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import AdminRoute from './components/AdminRoute';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ClassroomsPage from './pages/ClassroomsPage';
 import ClassroomDetailPage from './pages/ClassroomDetailPage';
+import AdminPage from './pages/AdminPage';
+import AccountPage from './pages/AccountPage';
 
 function App() {
   return (
@@ -34,6 +37,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <ClassroomDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <AdminRoute>
+                <AdminPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/account"
+            element={
+              <ProtectedRoute>
+                <AccountPage />
               </ProtectedRoute>
             }
           />
