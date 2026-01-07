@@ -1,0 +1,48 @@
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import ClassroomsPage from './pages/ClassroomsPage';
+import ClassroomDetailPage from './pages/ClassroomDetailPage';
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <Navigate to="/classrooms" replace />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/classrooms"
+            element={
+              <ProtectedRoute>
+                <ClassroomsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/classrooms/:id"
+            element={
+              <ProtectedRoute>
+                <ClassroomDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          {/* Redirect unknown routes to classrooms */}
+          <Route path="*" element={<Navigate to="/classrooms" replace />} />
+        </Routes>
+      </AuthProvider>
+    </BrowserRouter>
+  );
+}
+
+export default App;
