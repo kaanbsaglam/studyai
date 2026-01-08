@@ -21,6 +21,8 @@ export default function SummaryPanel({
   const [formFocusTopic, setFormFocusTopic] = useState('');
   const [formLength, setFormLength] = useState('medium');
   const [selectedDocIds, setSelectedDocIds] = useState(initialDocumentIds);
+  const [savingAsNote, setSavingAsNote] = useState(false);
+  const [savedAsNote, setSavedAsNote] = useState(false);
 
   const isGeneralKnowledge = selectedDocIds.length === 0;
 
@@ -111,6 +113,27 @@ export default function SummaryPanel({
     }
   };
 
+  const handleSaveAsNote = async () => {
+    if (!activeSummary) return;
+
+    setSavingAsNote(true);
+    setError('');
+
+    try {
+      await api.post(`/classrooms/${classroomId}/notes`, {
+        title: `${activeSummary.title} (Note)`,
+        content: activeSummary.content,
+      });
+      setSavedAsNote(true);
+      // Reset after 3 seconds
+      setTimeout(() => setSavedAsNote(false), 3000);
+    } catch (err) {
+      setError(err.response?.data?.error?.message || 'Failed to save as note');
+    } finally {
+      setSavingAsNote(false);
+    }
+  };
+
   // View summary content
   if (activeSummary) {
     return (
@@ -123,15 +146,57 @@ export default function SummaryPanel({
               {activeSummary.focusTopic && ` - Focus: ${activeSummary.focusTopic}`}
             </p>
           </div>
-          <button
-            onClick={() => setActiveSummary(null)}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleSaveAsNote}
+              disabled={savingAsNote || savedAsNote}
+              className={`px-3 py-1 text-sm rounded flex items-center gap-1 ${
+                savedAsNote
+                  ? 'bg-green-100 text-green-700'
+                  : 'text-blue-600 hover:bg-blue-50'
+              }`}
+              title="Save as editable note"
+            >
+              {savingAsNote ? (
+                <>
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                  Saving...
+                </>
+              ) : savedAsNote ? (
+                <>
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Saved!
+                </>
+              ) : (
+                <>
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  Save as Note
+                </>
+              )}
+            </button>
+            <button
+              onClick={() => {
+                setActiveSummary(null);
+                setSavedAsNote(false);
+              }}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
+
+        {error && (
+          <div className="mx-6 mt-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded text-sm">
+            {error}
+          </div>
+        )}
 
         <div className="p-6 flex-1 overflow-auto">
           <div className="prose prose-sm max-w-none">

@@ -6,6 +6,7 @@ import ChatPanel from '../components/ChatPanel';
 import FlashcardsPanel from '../components/FlashcardsPanel';
 import QuizPanel from '../components/QuizPanel';
 import SummaryPanel from '../components/SummaryPanel';
+import NotesPanel from '../components/NotesPanel';
 
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -27,6 +28,7 @@ export default function DocumentViewerPage() {
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('chat');
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [notesOpen, setNotesOpen] = useState(true);
 
   // Document selection - current doc is pre-selected
   const [selectedDocIds, setSelectedDocIds] = useState([docId]);
@@ -122,11 +124,32 @@ export default function DocumentViewerPage() {
 
   return (
     <div className="flex gap-4 h-[calc(100vh-12rem)]">
-      {/* Document Viewer */}
-      <div className={`flex-1 bg-white rounded-lg shadow flex flex-col overflow-hidden ${sidebarOpen ? '' : 'w-full'}`}>
+      {/* Notes Panel (Left) */}
+      {notesOpen && (
+        <div className="w-80 flex flex-col bg-white rounded-lg shadow overflow-hidden">
+          <NotesPanel
+            classroomId={classroomId}
+            documentId={docId}
+            compact
+          />
+        </div>
+      )}
+
+      {/* Document Viewer (Center) */}
+      <div className="flex-1 bg-white rounded-lg shadow flex flex-col overflow-hidden">
         {/* Document Header */}
         <div className="px-4 py-3 border-b border-gray-200 flex justify-between items-center bg-gray-50">
           <div className="flex items-center gap-3">
+            {/* Notes toggle */}
+            <button
+              onClick={() => setNotesOpen(!notesOpen)}
+              className={`p-1 rounded ${notesOpen ? 'text-blue-600 bg-blue-50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200'}`}
+              title={notesOpen ? 'Hide notes' : 'Show notes'}
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </button>
             <h2 className="font-medium text-gray-900 truncate max-w-md">{document?.originalName}</h2>
           </div>
           <div className="flex items-center gap-2">
@@ -154,10 +177,11 @@ export default function DocumentViewerPage() {
                 <span className="text-gray-300 mx-2">|</span>
               </>
             )}
+            {/* Tools sidebar toggle */}
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded"
-              title={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
+              className={`p-1 rounded ${sidebarOpen ? 'text-blue-600 bg-blue-50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200'}`}
+              title={sidebarOpen ? 'Hide tools' : 'Show tools'}
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />

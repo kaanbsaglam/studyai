@@ -53,6 +53,7 @@ model User {
   flashcardSets FlashcardSet[]
   quizSets      QuizSet[]
   summaries     Summary[]
+  notes         Note[]
 
   @@map("users")
 }
@@ -92,6 +93,7 @@ model Classroom {
   flashcardSets FlashcardSet[]
   quizSets      QuizSet[]
   summaries     Summary[]
+  notes         Note[]
 
   @@map("classrooms")
 }
@@ -118,6 +120,7 @@ model Document {
   classroom     Classroom      @relation(fields: [classroomId], references: [id], onDelete: Cascade)
   chunks        DocumentChunk[]
   flashcardSets FlashcardSet[]
+  notes         Note[]
 
   @@map("documents")
 }
@@ -240,4 +243,25 @@ model Summary {
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("summaries")
+}
+
+// ============================================
+// Notes (User-written)
+// ============================================
+model Note {
+  id        String   @id @default(uuid())
+  title     String
+  content   String   @db.Text // Markdown content
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  classroomId String    @map("classroom_id")
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  userId      String    @map("user_id")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documentId  String?   @map("document_id") // Optional link to source document
+  document    Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  @@map("notes")
 }

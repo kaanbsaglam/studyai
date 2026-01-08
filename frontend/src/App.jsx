@@ -12,6 +12,7 @@ import ChatPage from './pages/ChatPage';
 import FlashcardsPage from './pages/FlashcardsPage';
 import QuizPage from './pages/QuizPage';
 import SummaryPage from './pages/SummaryPage';
+import NotesPage from './pages/NotesPage';
 import AdminPage from './pages/AdminPage';
 import AccountPage from './pages/AccountPage';
 
@@ -54,6 +55,7 @@ function App() {
             <Route path="flashcards" element={<FlashcardsPage />} />
             <Route path="quizzes" element={<QuizPage />} />
             <Route path="summaries" element={<SummaryPage />} />
+            <Route path="notes" element={<NotesPage />} />
           </Route>
 
           <Route

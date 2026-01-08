@@ -132,6 +132,7 @@ apiRouter.use('/', require('./routes/chat.routes')); // Handles /classrooms/:id/
 apiRouter.use('/', require('./routes/flashcard.routes')); // Handles /classrooms/:id/flashcard-sets and /flashcard-sets/:id
 apiRouter.use('/', require('./routes/quiz.routes')); // Handles /classrooms/:id/quiz-sets and /quiz-sets/:id
 apiRouter.use('/', require('./routes/summary.routes')); // Handles /classrooms/:id/summaries and /summaries/:id
+apiRouter.use('/', require('./routes/note.routes')); // Handles /classrooms/:id/notes and /notes/:id
 apiRouter.use('/account', require('./routes/account.routes')); // Account management and tier upgrades
 apiRouter.use('/admin', require('./routes/admin.routes')); // Admin panel endpoints
 
