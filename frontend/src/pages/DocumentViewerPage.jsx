@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link, useOutletContext } from 'react-router-dom';
 import { Document, Page, pdfjs } from 'react-pdf';
 import api from '../api/axios';
@@ -28,7 +28,11 @@ export default function DocumentViewerPage() {
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('chat');
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [notesOpen, setNotesOpen] = useState(true);
+  const [notesOpen, setNotesOpen] = useState(true); // Both panels open by default
+
+  // PDF container width for auto-fit
+  const pdfContainerRef = useRef(null);
+  const [containerWidth, setContainerWidth] = useState(null);
 
   // Document selection - current doc is pre-selected
   const [selectedDocIds, setSelectedDocIds] = useState([docId]);
@@ -42,6 +46,22 @@ export default function DocumentViewerPage() {
     // Pre-select current document when docId changes
     setSelectedDocIds([docId]);
   }, [docId]);
+
+  // Track container width for PDF auto-fit
+  useEffect(() => {
+    if (!pdfContainerRef.current) return;
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        // Subtract padding (8px on each side)
+        const width = entry.contentRect.width - 16;
+        setContainerWidth(width > 0 ? width : null);
+      }
+    });
+
+    resizeObserver.observe(pdfContainerRef.current);
+    return () => resizeObserver.disconnect();
+  }, [pdfUrl]); // Re-attach when PDF loads
 
   const fetchDocument = async () => {
     try {
@@ -123,10 +143,10 @@ export default function DocumentViewerPage() {
   }
 
   return (
-    <div className="flex gap-4 h-[calc(100vh-12rem)]">
+    <div className="flex gap-2 h-[calc(100vh-12rem)]">
       {/* Notes Panel (Left) */}
       {notesOpen && (
-        <div className="w-80 flex flex-col bg-white rounded-lg shadow overflow-hidden">
+        <div className="w-80 flex-shrink-0 flex flex-col bg-white rounded-lg shadow overflow-hidden">
           <NotesPanel
             classroomId={classroomId}
             documentId={docId}
@@ -138,19 +158,24 @@ export default function DocumentViewerPage() {
       {/* Document Viewer (Center) */}
       <div className="flex-1 bg-white rounded-lg shadow flex flex-col overflow-hidden">
         {/* Document Header */}
-        <div className="px-4 py-3 border-b border-gray-200 flex justify-between items-center bg-gray-50">
-          <div className="flex items-center gap-3">
-            {/* Notes toggle */}
+        <div className="px-3 py-2 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+          <div className="flex items-center gap-2">
+            {/* Notes toggle - with label */}
             <button
               onClick={() => setNotesOpen(!notesOpen)}
-              className={`p-1 rounded ${notesOpen ? 'text-blue-600 bg-blue-50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200'}`}
-              title={notesOpen ? 'Hide notes' : 'Show notes'}
+              className={`px-2 py-1 rounded text-xs font-medium flex items-center gap-1 ${
+                notesOpen
+                  ? 'text-blue-700 bg-blue-100'
+                  : 'text-gray-600 bg-gray-200 hover:bg-gray-300'
+              }`}
             >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg>
+              Notes
             </button>
-            <h2 className="font-medium text-gray-900 truncate max-w-md">{document?.originalName}</h2>
+            <span className="text-gray-300">|</span>
+            <h2 className="font-medium text-gray-900 truncate max-w-sm text-sm">{document?.originalName}</h2>
           </div>
           <div className="flex items-center gap-2">
             {document?.mimeType === 'application/pdf' && numPages && (
@@ -160,38 +185,42 @@ export default function DocumentViewerPage() {
                   className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded"
                   title="Zoom out"
                 >
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
                   </svg>
                 </button>
-                <span className="text-sm text-gray-500">{Math.round(scale * 100)}%</span>
+                <span className="text-xs text-gray-500 w-10 text-center">{Math.round(scale * 100)}%</span>
                 <button
                   onClick={() => setScale((s) => Math.min(s + 0.25, 2.5))}
                   className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded"
                   title="Zoom in"
                 >
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
                 </button>
-                <span className="text-gray-300 mx-2">|</span>
+                <span className="text-gray-300">|</span>
               </>
             )}
-            {/* Tools sidebar toggle */}
+            {/* Tools sidebar toggle - with label */}
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className={`p-1 rounded ${sidebarOpen ? 'text-blue-600 bg-blue-50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200'}`}
-              title={sidebarOpen ? 'Hide tools' : 'Show tools'}
+              className={`px-2 py-1 rounded text-xs font-medium flex items-center gap-1 ${
+                sidebarOpen
+                  ? 'text-blue-700 bg-blue-100'
+                  : 'text-gray-600 bg-gray-200 hover:bg-gray-300'
+              }`}
             >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
               </svg>
+              Tools
             </button>
           </div>
         </div>
 
         {/* Document Content */}
-        <div className="flex-1 overflow-auto bg-gray-100 p-4">
+        <div ref={pdfContainerRef} className="flex-1 overflow-auto bg-gray-50 p-2">
           {document?.mimeType === 'application/pdf' && pdfUrl ? (
             <div className="flex flex-col items-center">
               <Document
@@ -210,7 +239,7 @@ export default function DocumentViewerPage() {
               >
                 <Page
                   pageNumber={pageNumber}
-                  scale={scale}
+                  width={containerWidth ? Math.min(containerWidth, 900) * scale : undefined}
                   className="shadow-lg"
                   renderTextLayer={true}
                   renderAnnotationLayer={true}
@@ -219,7 +248,7 @@ export default function DocumentViewerPage() {
 
               {/* PDF Navigation */}
               {numPages && (
-                <div className="flex items-center gap-4 mt-4 bg-white rounded-lg shadow px-4 py-2">
+                <div className="flex items-center gap-3 mt-2 bg-white rounded-lg shadow px-3 py-1.5">
                   <button
                     onClick={goToPrevPage}
                     disabled={pageNumber <= 1}
@@ -254,7 +283,7 @@ export default function DocumentViewerPage() {
 
       {/* Sidebar */}
       {sidebarOpen && (
-        <div className="w-96 flex flex-col bg-white rounded-lg shadow overflow-hidden">
+        <div className="w-96 flex-shrink-0 flex flex-col bg-white rounded-lg shadow overflow-hidden">
           {/* Sidebar Tabs */}
           <div className="flex border-b border-gray-200">
             {tabs.map((tab) => (

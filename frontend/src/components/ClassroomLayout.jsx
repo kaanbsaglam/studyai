@@ -147,7 +147,12 @@ export default function ClassroomLayout() {
       </div>
 
       {/* Page Content */}
-      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      {/* Use full width for document viewer, constrained width for other pages */}
+      <main className={
+        location.pathname.includes('/documents/')
+          ? 'py-4 px-4'
+          : 'max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8'
+      }>
         <Outlet context={{ classroom, refreshClassroom: fetchClassroom }} />
       </main>
     </div>
