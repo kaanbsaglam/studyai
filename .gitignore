@@ -18,8 +18,11 @@ npm-debug.log*
 # IDE
 .vscode/
 .idea/
+.claude/
 *.swp
 *.swo
+*.swn
+.history/
 
 # OS
 .DS_Store
@@ -39,4 +42,6 @@ redis_data/
 tmp/
 temp/
 
+
 notes.md
+mobile.md

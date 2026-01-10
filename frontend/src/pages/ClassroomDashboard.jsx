@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useOutletContext, useParams, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
+import ClassroomStudyStats from '../components/stats/ClassroomStudyStats';
 
 export default function ClassroomDashboard() {
   const { id } = useParams();
@@ -180,24 +181,7 @@ export default function ClassroomDashboard() {
           <div className="text-sm text-gray-500">Flashcard Sets</div>
           <div className="text-2xl font-bold text-gray-900">{flashcardCount}</div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-sm text-gray-500">Quick Actions</div>
-          <div className="flex gap-2 mt-1">
-            <Link
-              to={`/classrooms/${id}/chat`}
-              className="text-sm text-blue-600 hover:text-blue-800"
-            >
-              Chat
-            </Link>
-            <span className="text-gray-300">|</span>
-            <Link
-              to={`/classrooms/${id}/flashcards`}
-              className="text-sm text-blue-600 hover:text-blue-800"
-            >
-              Flashcards
-            </Link>
-          </div>
-        </div>
+        <ClassroomStudyStats classroomId={id} />
       </div>
 
       {/* Classroom Settings */}

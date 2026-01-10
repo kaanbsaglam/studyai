@@ -7,6 +7,7 @@ import FlashcardsPanel from '../components/FlashcardsPanel';
 import QuizPanel from '../components/QuizPanel';
 import SummaryPanel from '../components/SummaryPanel';
 import NotesPanel from '../components/NotesPanel';
+import { useStudyTracker } from '../hooks/useStudyTracker';
 
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -17,6 +18,9 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/b
 export default function DocumentViewerPage() {
   const { id: classroomId, docId } = useParams();
   const { classroom } = useOutletContext();
+
+  // Track study time for this document
+  useStudyTracker(classroomId, 'DOCUMENT', docId);
 
   const [document, setDocument] = useState(null);
   const [content, setContent] = useState('');

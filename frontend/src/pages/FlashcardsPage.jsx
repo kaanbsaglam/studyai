@@ -1,9 +1,13 @@
 import { useParams, useOutletContext } from 'react-router-dom';
 import FlashcardsPanel from '../components/FlashcardsPanel';
+import { useStudyTracker } from '../hooks/useStudyTracker';
 
 export default function FlashcardsPage() {
   const { id: classroomId } = useParams();
   const { classroom } = useOutletContext();
+
+  // Track study time for flashcards activity
+  useStudyTracker(classroomId, 'FLASHCARDS');
 
   const documents = classroom?.documents || [];
 

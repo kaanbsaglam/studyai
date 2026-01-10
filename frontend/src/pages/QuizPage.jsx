@@ -1,9 +1,13 @@
 import { useParams, useOutletContext } from 'react-router-dom';
 import QuizPanel from '../components/QuizPanel';
+import { useStudyTracker } from '../hooks/useStudyTracker';
 
 export default function QuizPage() {
   const { id: classroomId } = useParams();
   const { classroom } = useOutletContext();
+
+  // Track study time for quiz activity
+  useStudyTracker(classroomId, 'QUIZ');
 
   const documents = classroom?.documents || [];
 

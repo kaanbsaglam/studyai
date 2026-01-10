@@ -54,6 +54,7 @@ model User {
   quizSets      QuizSet[]
   summaries     Summary[]
   notes         Note[]
+  studySessions StudySession[]
 
   @@map("users")
 }
@@ -94,6 +95,7 @@ model Classroom {
   quizSets      QuizSet[]
   summaries     Summary[]
   notes         Note[]
+  studySessions StudySession[]
 
   @@map("classrooms")
 }
@@ -121,6 +123,7 @@ model Document {
   chunks        DocumentChunk[]
   flashcardSets FlashcardSet[]
   notes         Note[]
+  studySessions StudySession[]
 
   @@map("documents")
 }
@@ -264,4 +267,38 @@ model Note {
   document    Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
 
   @@map("notes")
+}
+
+// ============================================
+// Study Time Tracking
+// ============================================
+enum ActivityType {
+  DOCUMENT
+  CHAT
+  FLASHCARDS
+  QUIZ
+  SUMMARY
+  NOTES
+}
+
+model StudySession {
+  id              String       @id @default(uuid())
+  startedAt       DateTime     @map("started_at")
+  endedAt         DateTime?    @map("ended_at")
+  durationSeconds Int          @default(0) @map("duration_seconds")
+  activityType    ActivityType @default(DOCUMENT) @map("activity_type")
+  classroomName   String       @map("classroom_name") // Cached for when classroom is deleted
+  documentName    String?      @map("document_name")  // Cached for when document is deleted
+
+  // Relations
+  userId      String     @map("user_id")
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  classroomId String?    @map("classroom_id")
+  classroom   Classroom? @relation(fields: [classroomId], references: [id], onDelete: SetNull)
+  documentId  String?    @map("document_id")
+  document    Document?  @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  @@index([userId, startedAt])
+  @@index([classroomId, startedAt])
+  @@map("study_sessions")
 }

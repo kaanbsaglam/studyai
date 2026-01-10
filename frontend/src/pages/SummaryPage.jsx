@@ -1,9 +1,13 @@
 import { useParams, useOutletContext } from 'react-router-dom';
 import SummaryPanel from '../components/SummaryPanel';
+import { useStudyTracker } from '../hooks/useStudyTracker';
 
 export default function SummaryPage() {
   const { id: classroomId } = useParams();
   const { classroom } = useOutletContext();
+
+  // Track study time for summary activity
+  useStudyTracker(classroomId, 'SUMMARY');
 
   const documents = classroom?.documents || [];
 

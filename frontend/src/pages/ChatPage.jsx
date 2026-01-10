@@ -2,11 +2,15 @@ import { useState } from 'react';
 import { useParams, useOutletContext } from 'react-router-dom';
 import ChatPanel from '../components/ChatPanel';
 import DocumentSelector from '../components/DocumentSelector';
+import { useStudyTracker } from '../hooks/useStudyTracker';
 
 export default function ChatPage() {
   const { id: classroomId } = useParams();
   const { classroom } = useOutletContext();
   const [selectedDocIds, setSelectedDocIds] = useState([]);
+
+  // Track study time for chat activity
+  useStudyTracker(classroomId, 'CHAT');
 
   const documents = classroom?.documents || [];
   const hasReadyDocuments = documents.some((d) => d.status === 'READY');

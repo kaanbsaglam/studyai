@@ -2,17 +2,33 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
+import StudyStatsCard from '../components/stats/StudyStatsCard';
+import ActivityHeatmap from '../components/stats/ActivityHeatmap';
+import DayBreakdownModal from '../components/stats/DayBreakdownModal';
 
 export default function ClassroomsPage() {
   const [classrooms, setClassrooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [studyStats, setStudyStats] = useState(null);
+  const [selectedDay, setSelectedDay] = useState(null);
   const { user, logout } = useAuth();
 
   useEffect(() => {
     fetchClassrooms();
+    fetchStudyStats();
   }, []);
+
+  const fetchStudyStats = async () => {
+    try {
+      const response = await api.get('/study-stats');
+      setStudyStats(response.data.data);
+    } catch (err) {
+      // Silently fail - stats are optional enhancement
+      console.error('Failed to load study stats:', err);
+    }
+  };
 
   const fetchClassrooms = async () => {
     try {
@@ -108,6 +124,23 @@ export default function ClassroomsPage() {
           </div>
         )}
 
+        {/* Study Stats Section */}
+        {studyStats && (studyStats.todaySeconds > 0 || studyStats.weekSeconds > 0 || studyStats.dailyData?.length > 0) && (
+          <div className="mb-6 space-y-4">
+            <StudyStatsCard stats={studyStats} />
+            {studyStats.dailyData?.length > 0 && (
+              <div className="bg-white rounded-lg shadow p-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Activity</h3>
+                <ActivityHeatmap
+                  dailyData={studyStats.dailyData}
+                  weeks={12}
+                  onDayClick={(date) => setSelectedDay(date)}
+                />
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Loading state */}
         {loading ? (
           <div className="text-center py-12">
@@ -192,6 +225,14 @@ export default function ClassroomsPage() {
         <CreateClassroomModal
           onClose={() => setShowCreateModal(false)}
           onCreate={handleCreateClassroom}
+        />
+      )}
+
+      {/* Day Breakdown Modal */}
+      {selectedDay && (
+        <DayBreakdownModal
+          date={selectedDay}
+          onClose={() => setSelectedDay(null)}
         />
       )}
     </div>

@@ -1,9 +1,13 @@
 import { useParams, useOutletContext } from 'react-router-dom';
 import NotesPanel from '../components/NotesPanel';
+import { useStudyTracker } from '../hooks/useStudyTracker';
 
 export default function NotesPage() {
   const { id: classroomId } = useParams();
   const { classroom } = useOutletContext();
+
+  // Track study time for notes activity
+  useStudyTracker(classroomId, 'NOTES');
 
   return (
     <div className="max-w-4xl mx-auto">
