@@ -22,7 +22,8 @@ export default function ClassroomsPage() {
 
   const fetchStudyStats = async () => {
     try {
-      const response = await api.get('/study-stats');
+      const tzOffset = new Date().getTimezoneOffset();
+      const response = await api.get(`/study-stats?tzOffset=${tzOffset}`);
       setStudyStats(response.data.data);
     } catch (err) {
       // Silently fail - stats are optional enhancement

@@ -18,7 +18,8 @@ export default function DayBreakdownModal({ date, onClose }) {
       try {
         setLoading(true);
         setError(null);
-        const response = await api.get(`/study-stats/day/${date}`);
+        const tzOffset = new Date().getTimezoneOffset();
+        const response = await api.get(`/study-stats/day/${date}?tzOffset=${tzOffset}`);
         setData(response.data.data);
       } catch (err) {
         console.error('Failed to load day stats:', err);

@@ -7,6 +7,14 @@
 
 import { useState, useMemo } from 'react';
 
+// Helper to format date as YYYY-MM-DD in local timezone (not UTC)
+const toLocalDateStr = (d) => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export default function ActivityHeatmap({
   dailyData = [],
   weeks = 12,
@@ -21,7 +29,7 @@ export default function ActivityHeatmap({
     const monthLabels = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = toLocalDateStr(today);
 
     // End on today, aligned to Saturday (end of week)
     // Start from (weeks) full weeks before that
@@ -43,7 +51,7 @@ export default function ActivityHeatmap({
     for (let i = 0; i < totalDays; i++) {
       const date = new Date(startDate);
       date.setDate(startDate.getDate() + i);
-      const dateStr = date.toISOString().split('T')[0];
+      const dateStr = toLocalDateStr(date);
 
       // Track month changes for labels
       if (date.getMonth() !== lastMonth && date.getDay() === 0) {

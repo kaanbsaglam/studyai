@@ -118,9 +118,9 @@ const endSession = asyncHandler(async (req, res) => {
  * GET /api/v1/study-stats
  */
 const getStats = asyncHandler(async (req, res) => {
-  const { days } = getStatsQuerySchema.parse(req.query);
+  const { days, tzOffset } = getStatsQuerySchema.parse(req.query);
 
-  const stats = await studySessionService.getUserStats(req.user.id, days);
+  const stats = await studySessionService.getUserStats(req.user.id, days, tzOffset);
 
   res.json({
     success: true,
@@ -134,8 +134,9 @@ const getStats = asyncHandler(async (req, res) => {
  */
 const getDayStats = asyncHandler(async (req, res) => {
   const { date } = getDayStatsSchema.parse(req.params);
+  const { tzOffset } = getStatsQuerySchema.parse(req.query);
 
-  const breakdown = await studySessionService.getDayBreakdown(req.user.id, date);
+  const breakdown = await studySessionService.getDayBreakdown(req.user.id, date, tzOffset);
 
   res.json({
     success: true,
@@ -149,7 +150,7 @@ const getDayStats = asyncHandler(async (req, res) => {
  */
 const getClassroomStats = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { days } = getClassroomStatsQuerySchema.parse(req.query);
+  const { days, tzOffset } = getClassroomStatsQuerySchema.parse(req.query);
 
   // Verify classroom exists and belongs to user
   const classroom = await prisma.classroom.findUnique({
@@ -164,7 +165,7 @@ const getClassroomStats = asyncHandler(async (req, res) => {
     throw new AuthorizationError('You do not have access to this classroom');
   }
 
-  const stats = await studySessionService.getClassroomStats(id, days);
+  const stats = await studySessionService.getClassroomStats(id, days, tzOffset);
 
   res.json({
     success: true,

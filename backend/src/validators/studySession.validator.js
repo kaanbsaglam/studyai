@@ -42,6 +42,7 @@ const heartbeatSchema = z.object({
 
 /**
  * Schema for query parameters when fetching stats
+ * tzOffset: Timezone offset in minutes from getTimezoneOffset() (negative for UTC+, positive for UTC-)
  */
 const getStatsQuerySchema = z.object({
   days: z.coerce
@@ -50,6 +51,12 @@ const getStatsQuerySchema = z.object({
     .min(1, 'Must request at least 1 day')
     .max(365, 'Cannot exceed 365 days')
     .default(90),
+  tzOffset: z.coerce
+    .number()
+    .int('Timezone offset must be a whole number')
+    .min(-720, 'Invalid timezone offset') // UTC+12
+    .max(840, 'Invalid timezone offset')  // UTC-14
+    .default(0),
 });
 
 /**
@@ -71,6 +78,12 @@ const getClassroomStatsQuerySchema = z.object({
     .min(1, 'Must request at least 1 day')
     .max(365, 'Cannot exceed 365 days')
     .default(30),
+  tzOffset: z.coerce
+    .number()
+    .int('Timezone offset must be a whole number')
+    .min(-720, 'Invalid timezone offset')
+    .max(840, 'Invalid timezone offset')
+    .default(0),
 });
 
 module.exports = {

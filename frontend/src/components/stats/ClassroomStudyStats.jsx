@@ -17,7 +17,8 @@ export default function ClassroomStudyStats({ classroomId }) {
     const fetchStats = async () => {
       try {
         setLoading(true);
-        const response = await api.get(`/classrooms/${classroomId}/study-stats`);
+        const tzOffset = new Date().getTimezoneOffset();
+        const response = await api.get(`/classrooms/${classroomId}/study-stats?tzOffset=${tzOffset}`);
         setStats(response.data.data);
       } catch (err) {
         console.error('Failed to load classroom stats:', err);
