@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { TimerProvider } from './context/TimerContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import ClassroomLayout from './components/ClassroomLayout';
@@ -15,12 +16,14 @@ import SummaryPage from './pages/SummaryPage';
 import NotesPage from './pages/NotesPage';
 import AdminPage from './pages/AdminPage';
 import AccountPage from './pages/AccountPage';
+import SettingsPage from './pages/SettingsPage';
 
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Routes>
+        <TimerProvider>
+          <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route
@@ -74,9 +77,18 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <SettingsPage />
+              </ProtectedRoute>
+            }
+          />
           {/* Redirect unknown routes to classrooms */}
           <Route path="*" element={<Navigate to="/classrooms" replace />} />
-        </Routes>
+          </Routes>
+        </TimerProvider>
       </AuthProvider>
     </BrowserRouter>
   );

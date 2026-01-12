@@ -134,6 +134,7 @@ apiRouter.use('/', require('./routes/quiz.routes')); // Handles /classrooms/:id/
 apiRouter.use('/', require('./routes/summary.routes')); // Handles /classrooms/:id/summaries and /summaries/:id
 apiRouter.use('/', require('./routes/note.routes')); // Handles /classrooms/:id/notes and /notes/:id
 apiRouter.use('/', require('./routes/studySession.routes')); // Handles /study-sessions/* and /study-stats/*
+apiRouter.use('/', require('./routes/pomodoro.routes')); // Handles /pomodoro/settings
 apiRouter.use('/account', require('./routes/account.routes')); // Account management and tier upgrades
 apiRouter.use('/admin', require('./routes/admin.routes')); // Admin panel endpoints
 

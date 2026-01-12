@@ -47,14 +47,15 @@ model User {
   updatedAt    DateTime @updatedAt @map("updated_at")
 
   // Relations
-  classrooms    Classroom[]
-  documents     Document[]
-  dailyUsage    DailyUsage[]
-  flashcardSets FlashcardSet[]
-  quizSets      QuizSet[]
-  summaries     Summary[]
-  notes         Note[]
-  studySessions StudySession[]
+  classrooms       Classroom[]
+  documents        Document[]
+  dailyUsage       DailyUsage[]
+  flashcardSets    FlashcardSet[]
+  quizSets         QuizSet[]
+  summaries        Summary[]
+  notes            Note[]
+  studySessions    StudySession[]
+  pomodoroSettings PomodoroSettings?
 
   @@map("users")
 }
@@ -301,4 +302,23 @@ model StudySession {
   @@index([userId, startedAt])
   @@index([classroomId, startedAt])
   @@map("study_sessions")
+}
+
+// ============================================
+// Pomodoro Timer Settings
+// ============================================
+model PomodoroSettings {
+  id                 String  @id @default(uuid())
+  focusDuration      Int     @default(25) @map("focus_duration")
+  shortBreakDuration Int     @default(5) @map("short_break_duration")
+  longBreakDuration  Int     @default(15) @map("long_break_duration")
+  sessionsBeforeLong Int     @default(4) @map("sessions_before_long")
+  soundEnabled       Boolean @default(true) @map("sound_enabled")
+  autoStartBreaks    Boolean @default(false) @map("auto_start_breaks")
+
+  // Relations
+  userId String @unique @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("pomodoro_settings")
 }
