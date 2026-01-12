@@ -116,6 +116,21 @@ async function canUploadDocument(userId, tier, fileSize) {
 }
 
 /**
+ * Check if user can upload an audio file (premium only)
+ * @param {string} tier
+ * @returns {{allowed: boolean, reason?: string}}
+ */
+function canUploadAudio(tier) {
+  if (tier !== 'PREMIUM') {
+    return {
+      allowed: false,
+      reason: 'Audio file uploads are a premium feature. Upgrade to upload audio files.',
+    };
+  }
+  return { allowed: true };
+}
+
+/**
  * Check if user can send a chat message (has tokens remaining)
  * @param {string} userId
  * @param {string} tier
@@ -187,6 +202,7 @@ module.exports = {
   getUserUsage,
   canCreateClassroom,
   canUploadDocument,
+  canUploadAudio,
   canUseChat,
   recordTokenUsage,
   formatBytes,

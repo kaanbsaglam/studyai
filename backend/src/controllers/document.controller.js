@@ -6,11 +6,11 @@
 
 const prisma = require('../lib/prisma');
 const { uploadFile, deleteFile, getPresignedUrl } = require('../services/s3.service');
-const { validateFile } = require('../validators/document.validator');
+const { validateFile, isAudioFile } = require('../validators/document.validator');
 const { addDocumentProcessingJob } = require('../lib/queue');
 const { NotFoundError, AuthorizationError, ValidationError } = require('../middleware/errorHandler');
 const { asyncHandler } = require('../middleware/errorHandler');
-const { canUploadDocument } = require('../services/tier.service');
+const { canUploadDocument, canUploadAudio } = require('../services/tier.service');
 const logger = require('../config/logger');
 
 /**
@@ -25,6 +25,14 @@ const uploadDocument = asyncHandler(async (req, res) => {
   const validation = validateFile(file);
   if (!validation.valid) {
     throw new ValidationError(validation.error);
+  }
+
+  // Check if audio file requires premium tier
+  if (isAudioFile(file.mimetype)) {
+    const audioCheck = canUploadAudio(req.user.tier);
+    if (!audioCheck.allowed) {
+      throw new ValidationError(audioCheck.reason);
+    }
   }
 
   // Check storage tier limits

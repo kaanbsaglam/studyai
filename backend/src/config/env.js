@@ -41,6 +41,9 @@ const envSchema = z.object({
   // Google Gemini
   GEMINI_API_KEY: z.string().min(1, 'GEMINI_API_KEY is required'),
 
+  // OpenAI (for audio transcription)
+  OPENAI_SECRET_KEY: z.string().optional(),
+
   // Rate Limiting
   RATE_LIMIT_WINDOW_MS: z.string().transform(Number).default('900000'), // 15 minutes
   RATE_LIMIT_MAX_REQUESTS: z.string().transform(Number).default('100'),

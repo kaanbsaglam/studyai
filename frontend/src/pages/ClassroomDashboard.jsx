@@ -79,10 +79,15 @@ export default function ClassroomDashboard() {
       'application/pdf',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'text/plain',
+      'audio/mpeg', // .mp3
+      'audio/wav',
+      'audio/x-wav',
+      'audio/mp4', // .m4a
+      'audio/x-m4a',
     ];
 
     if (!allowedTypes.includes(file.type)) {
-      setError('Invalid file type. Allowed: PDF, DOCX, TXT');
+      setError('Invalid file type. Allowed: PDF, DOCX, TXT, MP3, WAV, M4A');
       return;
     }
 
@@ -261,7 +266,7 @@ export default function ClassroomDashboard() {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+              accept=".pdf,.docx,.txt,.mp3,.wav,.m4a,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,audio/mpeg,audio/wav,audio/mp4"
               onChange={handleFileSelect}
               className="hidden"
               id="file-upload"
