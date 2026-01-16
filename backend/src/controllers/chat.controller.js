@@ -61,6 +61,7 @@ const askQuestion = asyncHandler(async (req, res) => {
     classroomId,
     documentIds: data.documentIds,
     conversationHistory: data.conversationHistory,
+    tier: req.user.tier,
   });
 
   // Record token usage

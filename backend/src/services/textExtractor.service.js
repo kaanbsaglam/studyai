@@ -11,8 +11,8 @@ const { env } = require('../config/env');
 const logger = require('../config/logger');
 
 // Initialize OpenAI client for audio transcription (only if API key is provided)
-const openai = env.OPENAI_SECRET_KEY
-  ? new OpenAI({ apiKey: env.OPENAI_SECRET_KEY })
+const openai = env.OPENAI_WHISPER_SECRET_KEY
+  ? new OpenAI({ apiKey: env.OPENAI_WHISPER_SECRET_KEY })
   : null;
 
 /**
@@ -79,7 +79,7 @@ async function extractFromDocx(buffer) {
  */
 async function transcribeAudio(buffer, mimeType) {
   if (!openai) {
-    throw new Error('Audio transcription is not configured. OPENAI_SECRET_KEY is missing.');
+    throw new Error('Audio transcription is not configured. OPENAI_WHISPER_SECRET_KEY is missing.');
   }
 
   try {

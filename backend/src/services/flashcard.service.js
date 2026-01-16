@@ -4,15 +4,10 @@
  * Generates flashcards from documents or general knowledge using LLM.
  */
 
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { env } = require('../config/env');
 const prisma = require('../lib/prisma');
 const logger = require('../config/logger');
 const { gatherDocumentsContent, MAX_CONTEXT_CHARS } = require('./documentContent.service');
-
-// Initialize Gemini
-const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+const { generateText } = require('./llm.service');
 
 /**
  * Generate flashcards using LLM
@@ -21,9 +16,10 @@ const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
  * @param {string} [params.focusTopic] - Topic to focus on (required if no content)
  * @param {number} params.count - Number of flashcards to generate
  * @param {boolean} params.isGeneralKnowledge - Whether this is a general knowledge request
+ * @param {string} [params.tier='FREE'] - User tier for model selection
  * @returns {Promise<{cards: Array<{front: string, back: string}>, tokensUsed: number}>}
  */
-async function generateFlashcards({ content, focusTopic, count, isGeneralKnowledge }) {
+async function generateFlashcards({ content, focusTopic, count, isGeneralKnowledge, tier = 'FREE' }) {
   const prompt = buildFlashcardPrompt({ content, focusTopic, count, isGeneralKnowledge });
 
   logger.info(`Generating ${count} flashcards`, {
@@ -32,12 +28,8 @@ async function generateFlashcards({ content, focusTopic, count, isGeneralKnowled
     hasContent: !!content,
   });
 
-  const result = await model.generateContent(prompt);
-  const responseText = result.response.text();
-
-  // Get token usage
-  const usageMetadata = result.response.usageMetadata;
-  const tokensUsed = usageMetadata?.totalTokenCount || 0;
+  // Generate using LLM abstraction
+  const { text: responseText, tokensUsed } = await generateText(prompt, { tier });
 
   // Parse the JSON response
   const cards = parseFlashcardResponse(responseText);

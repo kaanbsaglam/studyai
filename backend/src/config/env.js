@@ -41,8 +41,11 @@ const envSchema = z.object({
   // Google Gemini
   GEMINI_API_KEY: z.string().min(1, 'GEMINI_API_KEY is required'),
 
-  // OpenAI (for audio transcription)
-  OPENAI_SECRET_KEY: z.string().optional(),
+  // OpenAI (for audio transcription via Whisper)
+  OPENAI_WHISPER_SECRET_KEY: z.string().optional(),
+
+  // OpenAI (for LLM text generation)
+  OPENAI_LLM_SECRET_KEY: z.string().optional(),
 
   // Rate Limiting
   RATE_LIMIT_WINDOW_MS: z.string().transform(Number).default('900000'), // 15 minutes

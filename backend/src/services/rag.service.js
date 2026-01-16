@@ -10,15 +10,10 @@
  * - Less restrictive prompts: Allows general knowledge answers
  */
 
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { env } = require('../config/env');
 const { generateEmbedding, querySimilar } = require('./embedding.service');
+const { generateText } = require('./llm.service');
 const prisma = require('../lib/prisma');
 const logger = require('../config/logger');
-
-// Initialize Gemini for chat
-const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
-const chatModel = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
 // Similarity threshold - chunks below this score are considered irrelevant
 const SIMILARITY_THRESHOLD = 0.4;
@@ -36,9 +31,10 @@ const MAX_CONVERSATION_HISTORY = 20;
  * @param {string} params.classroomId - Classroom to search in
  * @param {string[]} params.documentIds - Documents to use as full context
  * @param {Array<{role: string, content: string}>} params.conversationHistory - Previous messages
+ * @param {string} [params.tier='FREE'] - User tier for model selection
  * @returns {Promise<{answer: string, sources: object[], hasRelevantContext: boolean, tokensUsed: number}>}
  */
-async function queryAndAnswer({ question, classroomId, documentIds = [], conversationHistory = [] }) {
+async function queryAndAnswer({ question, classroomId, documentIds = [], conversationHistory = [], tier = 'FREE' }) {
   logger.info(`RAG query: "${question}" in classroom ${classroomId}`, {
     selectedDocs: documentIds.length,
     historyLength: conversationHistory.length,
@@ -59,12 +55,8 @@ async function queryAndAnswer({ question, classroomId, documentIds = [], convers
     conversationHistory: trimmedHistory,
   });
 
-  // Generate answer
-  const result = await chatModel.generateContent(prompt);
-  const answer = result.response.text();
-
-  const usageMetadata = result.response.usageMetadata;
-  const tokensUsed = usageMetadata?.totalTokenCount || 0;
+  // Generate answer using LLM abstraction
+  const { text: answer, tokensUsed } = await generateText(prompt, { tier });
 
   // Combine sources (selected docs first, then RAG)
   const allSources = [...selectedDocsSources, ...ragSources];

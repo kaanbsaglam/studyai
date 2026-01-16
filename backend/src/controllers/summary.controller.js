@@ -94,6 +94,7 @@ const createSummaryHandler = asyncHandler(async (req, res) => {
     focusTopic: data.focusTopic,
     length: data.length,
     isGeneralKnowledge,
+    tier: req.user.tier,
   });
 
   // Record token usage

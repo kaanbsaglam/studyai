@@ -94,6 +94,7 @@ const createFlashcardSetHandler = asyncHandler(async (req, res) => {
     focusTopic: data.focusTopic,
     count: data.count,
     isGeneralKnowledge,
+    tier: req.user.tier,
   });
 
   // Record token usage

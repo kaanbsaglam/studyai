@@ -4,15 +4,10 @@
  * Generates summaries from documents or general knowledge using LLM.
  */
 
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { env } = require('../config/env');
 const prisma = require('../lib/prisma');
 const logger = require('../config/logger');
 const { gatherDocumentsContent, MAX_CONTEXT_CHARS } = require('./documentContent.service');
-
-// Initialize Gemini
-const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+const { generateText } = require('./llm.service');
 
 // Length configurations
 const LENGTH_CONFIG = {
@@ -28,9 +23,10 @@ const LENGTH_CONFIG = {
  * @param {string} [params.focusTopic] - Topic to focus on
  * @param {string} params.length - short, medium, or long
  * @param {boolean} params.isGeneralKnowledge - Whether this is a general knowledge request
+ * @param {string} [params.tier='FREE'] - User tier for model selection
  * @returns {Promise<{summary: string, tokensUsed: number}>}
  */
-async function generateSummary({ content, focusTopic, length, isGeneralKnowledge }) {
+async function generateSummary({ content, focusTopic, length, isGeneralKnowledge, tier = 'FREE' }) {
   const prompt = buildSummaryPrompt({ content, focusTopic, length, isGeneralKnowledge });
 
   logger.info(`Generating ${length} summary`, {
@@ -39,11 +35,9 @@ async function generateSummary({ content, focusTopic, length, isGeneralKnowledge
     hasContent: !!content,
   });
 
-  const result = await model.generateContent(prompt);
-  const summary = result.response.text().trim();
-
-  const usageMetadata = result.response.usageMetadata;
-  const tokensUsed = usageMetadata?.totalTokenCount || 0;
+  // Generate using LLM abstraction
+  const { text, tokensUsed } = await generateText(prompt, { tier });
+  const summary = text.trim();
 
   logger.info(`Generated summary (${summary.length} chars), ${tokensUsed} tokens used`);
 
