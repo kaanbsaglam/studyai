@@ -9,6 +9,7 @@ const mammoth = require('mammoth');
 const OpenAI = require('openai');
 const { env } = require('../config/env');
 const logger = require('../config/logger');
+const { extractPdf } = require('./extractor.service');
 
 // Initialize OpenAI client for audio transcription (only if API key is provided)
 const openai = env.OPENAI_WHISPER_SECRET_KEY
@@ -122,6 +123,29 @@ function getAudioExtension(mimeType) {
   return map[mimeType] || 'mp3';
 }
 
+/**
+ * Extract text from a file buffer based on MIME type with tier-based extraction
+ * @param {Buffer} buffer - File content
+ * @param {string} mimeType - File MIME type
+ * @param {string} tier - User tier ('FREE' or 'PREMIUM')
+ * @returns {Promise<{text: string, tokensUsed: number, extractionMethod: string|null}>}
+ */
+async function extractTextWithTier(buffer, mimeType, tier) {
+  // For PDFs, use tier-based extraction
+  if (mimeType === 'application/pdf') {
+    return await extractPdf(buffer, { tier });
+  }
+
+  // For other types, use the standard extraction (no tokens used, no extraction method)
+  const text = await extractText(buffer, mimeType);
+  return {
+    text,
+    tokensUsed: 0,
+    extractionMethod: null,
+  };
+}
+
 module.exports = {
   extractText,
+  extractTextWithTier,
 };

@@ -14,8 +14,9 @@ const logger = require('./config/logger');
 const prisma = require('./lib/prisma');
 const { connection } = require('./lib/queue');
 const { getFile, deleteFile } = require('./services/s3.service');
-const { extractText } = require('./services/textExtractor.service');
+const { extractTextWithTier } = require('./services/textExtractor.service');
 const { chunkText } = require('./services/chunker.service');
+const { recordTokenUsage } = require('./services/tier.service');
 const { generateEmbeddings, upsertVectors, deleteVectorsByDocument } = require('./services/embedding.service');
 const { v4: uuidv4 } = require('uuid');
 
@@ -29,15 +30,20 @@ async function processDocument(job) {
   const { documentId } = job.data;
   logger.info(`Processing document: ${documentId}`);
 
-  // Get document from database
+  // Get document from database with user for tier-based extraction
   const document = await prisma.document.findUnique({
     where: { id: documentId },
-    include: { classroom: true },
+    include: {
+      classroom: true,
+      user: { select: { id: true, tier: true } },
+    },
   });
 
   if (!document) {
     throw new Error(`Document not found: ${documentId}`);
   }
+
+  const userTier = document.user?.tier || 'FREE';
 
   // Update status to PROCESSING
   await prisma.document.update({
@@ -50,15 +56,28 @@ async function processDocument(job) {
     logger.info(`Downloading file from S3: ${document.s3Key}`);
     const fileBuffer = await getFile(document.s3Key);
 
-    // Step 2: Extract text
-    logger.info(`Extracting text from ${document.mimeType}`);
-    const text = await extractText(fileBuffer, document.mimeType);
+    // Step 2: Extract text (tier-based for PDFs)
+    logger.info(`Extracting text from ${document.mimeType}`, { tier: userTier });
+    const { text, tokensUsed, extractionMethod } = await extractTextWithTier(
+      fileBuffer,
+      document.mimeType,
+      userTier
+    );
 
     if (!text || text.trim().length === 0) {
       throw new Error('No text could be extracted from the document');
     }
 
-    logger.info(`Extracted ${text.length} characters`);
+    logger.info(`Extracted ${text.length} characters`, {
+      tokensUsed,
+      extractionMethod,
+    });
+
+    // Record token usage if any tokens were used (e.g., Gemini Vision)
+    if (tokensUsed > 0) {
+      await recordTokenUsage(document.userId, tokensUsed);
+      logger.info(`Recorded ${tokensUsed} tokens for extraction`);
+    }
 
     // Step 3: Chunk text
     logger.info('Chunking text...');
@@ -106,10 +125,13 @@ async function processDocument(job) {
       })),
     });
 
-    // Step 8: Update document status to READY
+    // Step 8: Update document status to READY and save extraction method
     await prisma.document.update({
       where: { id: documentId },
-      data: { status: 'READY' },
+      data: {
+        status: 'READY',
+        extractionMethod: extractionMethod || undefined,
+      },
     });
 
     logger.info(`✅ Document processed successfully: ${documentId}`);
