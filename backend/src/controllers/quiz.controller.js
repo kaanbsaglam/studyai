@@ -10,7 +10,7 @@ const { NotFoundError, AuthorizationError, ValidationError } = require('../middl
 const { asyncHandler } = require('../middleware/errorHandler');
 const { canUseChat, recordTokenUsage } = require('../services/tier.service');
 const {
-  gatherDocumentsContent,
+  gatherDocumentsContentStructured,
   generateQuiz,
   createQuizSet,
   getQuizSetById,
@@ -72,27 +72,24 @@ const createQuizSetHandler = asyncHandler(async (req, res) => {
     throw new ValidationError(tierCheck.reason);
   }
 
-  let content = '';
-  let truncated = false;
+  let documents = [];
   let documentCount = 0;
 
   // Gather content from selected documents (if any)
   if (!isGeneralKnowledge) {
-    const gathered = await gatherDocumentsContent(data.documentIds);
-    content = gathered.content;
-    truncated = gathered.truncated;
-    documentCount = gathered.documentCount;
+    documents = await gatherDocumentsContentStructured(data.documentIds);
+    documentCount = documents.length;
 
-    if (!content) {
+    if (documents.length === 0) {
       throw new ValidationError('No content found in selected documents.');
     }
 
-    logger.info(`Gathered content from ${documentCount} documents${truncated ? ' (truncated)' : ''}`);
+    logger.info(`Gathered content from ${documentCount} documents`);
   }
 
   // Generate quiz
-  const { questions, tokensUsed } = await generateQuiz({
-    content: isGeneralKnowledge ? null : content,
+  const { questions, tokensUsed, warnings } = await generateQuiz({
+    documents: isGeneralKnowledge ? null : documents,
     focusTopic: data.focusTopic,
     count: data.count,
     isGeneralKnowledge,
@@ -120,8 +117,8 @@ const createQuizSetHandler = asyncHandler(async (req, res) => {
       quizSet,
       tokensUsed,
       tokensRemaining: tierCheck.remaining - tokensUsed,
-      contentTruncated: truncated,
       isGeneralKnowledge,
+      warnings,
     },
   });
 });

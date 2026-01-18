@@ -6,37 +6,49 @@
 
 const prisma = require('../lib/prisma');
 const logger = require('../config/logger');
-const { gatherDocumentsContent, MAX_CONTEXT_CHARS } = require('./documentContent.service');
+const { gatherDocumentsContent, gatherDocumentsContentStructured, MAX_CONTEXT_CHARS } = require('./documentContent.service');
 const { generateText } = require('./llm.service');
+const { generateWithStrategy } = require('./pipeline.service');
 
 /**
  * Generate flashcards using LLM
  * @param {object} params
- * @param {string} [params.content] - Document content to generate from (if any)
+ * @param {string} [params.content] - Document content to generate from (legacy, use documents instead)
+ * @param {Array<{id: string, name: string, content: string}>} [params.documents] - Structured documents
  * @param {string} [params.focusTopic] - Topic to focus on (required if no content)
  * @param {number} params.count - Number of flashcards to generate
  * @param {boolean} params.isGeneralKnowledge - Whether this is a general knowledge request
  * @param {string} [params.tier='FREE'] - User tier for model selection
- * @returns {Promise<{cards: Array<{front: string, back: string}>, tokensUsed: number}>}
+ * @returns {Promise<{cards: Array<{front: string, back: string}>, tokensUsed: number, warnings?: string[]}>}
  */
-async function generateFlashcards({ content, focusTopic, count, isGeneralKnowledge, tier = 'FREE' }) {
-  const prompt = buildFlashcardPrompt({ content, focusTopic, count, isGeneralKnowledge });
-
+async function generateFlashcards({ content, documents, focusTopic, count, isGeneralKnowledge, tier = 'FREE' }) {
   logger.info(`Generating ${count} flashcards`, {
     focusTopic: focusTopic || 'none',
     isGeneralKnowledge,
     hasContent: !!content,
+    hasDocuments: !!documents,
   });
 
-  // Generate using LLM abstraction
-  const { text: responseText, tokensUsed } = await generateText(prompt, { tier });
+  // General knowledge mode - use direct LLM call (no content to chunk)
+  if (isGeneralKnowledge) {
+    const prompt = buildFlashcardPrompt({ content: null, focusTopic, count, isGeneralKnowledge: true });
+    const { text: responseText, tokensUsed } = await generateText(prompt, { tier });
+    const cards = parseFlashcardResponse(responseText);
+    logger.info(`Generated ${cards.length} flashcards, ${tokensUsed} tokens used`);
+    return { cards, tokensUsed };
+  }
 
-  // Parse the JSON response
-  const cards = parseFlashcardResponse(responseText);
+  // Document-based mode - use pipeline for adaptive processing
+  const contentInput = documents || content;
+  const { result: cards, tokensUsed, warnings } = await generateWithStrategy(
+    'flashcard',
+    contentInput,
+    { count, focusTopic },
+    { tier }
+  );
 
   logger.info(`Generated ${cards.length} flashcards, ${tokensUsed} tokens used`);
-
-  return { cards, tokensUsed };
+  return { cards, tokensUsed, warnings };
 }
 
 /**
@@ -244,6 +256,7 @@ async function deleteFlashcardSet(id) {
 
 module.exports = {
   gatherDocumentsContent, // Re-export from shared service
+  gatherDocumentsContentStructured, // Re-export for structured document access
   generateFlashcards,
   createFlashcardSet,
   getFlashcardSetById,

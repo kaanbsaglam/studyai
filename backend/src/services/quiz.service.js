@@ -6,36 +6,49 @@
 
 const prisma = require('../lib/prisma');
 const logger = require('../config/logger');
-const { gatherDocumentsContent, MAX_CONTEXT_CHARS } = require('./documentContent.service');
+const { gatherDocumentsContent, gatherDocumentsContentStructured, MAX_CONTEXT_CHARS } = require('./documentContent.service');
 const { generateText } = require('./llm.service');
+const { generateWithStrategy } = require('./pipeline.service');
 
 /**
  * Generate quiz questions using LLM
  * @param {object} params
- * @param {string} [params.content] - Document content to generate from
+ * @param {string} [params.content] - Document content to generate from (legacy, use documents instead)
+ * @param {Array<{id: string, name: string, content: string}>} [params.documents] - Structured documents
  * @param {string} [params.focusTopic] - Topic to focus on
  * @param {number} params.count - Number of questions to generate
  * @param {boolean} params.isGeneralKnowledge - Whether this is a general knowledge request
  * @param {string} [params.tier='FREE'] - User tier for model selection
- * @returns {Promise<{questions: Array, tokensUsed: number}>}
+ * @returns {Promise<{questions: Array, tokensUsed: number, warnings?: string[]}>}
  */
-async function generateQuiz({ content, focusTopic, count, isGeneralKnowledge, tier = 'FREE' }) {
-  const prompt = buildQuizPrompt({ content, focusTopic, count, isGeneralKnowledge });
-
+async function generateQuiz({ content, documents, focusTopic, count, isGeneralKnowledge, tier = 'FREE' }) {
   logger.info(`Generating ${count} quiz questions`, {
     focusTopic: focusTopic || 'none',
     isGeneralKnowledge,
     hasContent: !!content,
+    hasDocuments: !!documents,
   });
 
-  // Generate using LLM abstraction
-  const { text: responseText, tokensUsed } = await generateText(prompt, { tier });
+  // General knowledge mode - use direct LLM call (no content to chunk)
+  if (isGeneralKnowledge) {
+    const prompt = buildQuizPrompt({ content: null, focusTopic, count, isGeneralKnowledge: true });
+    const { text: responseText, tokensUsed } = await generateText(prompt, { tier });
+    const questions = parseQuizResponse(responseText);
+    logger.info(`Generated ${questions.length} quiz questions, ${tokensUsed} tokens used`);
+    return { questions, tokensUsed };
+  }
 
-  const questions = parseQuizResponse(responseText);
+  // Document-based mode - use pipeline for adaptive processing
+  const contentInput = documents || content;
+  const { result: questions, tokensUsed, warnings } = await generateWithStrategy(
+    'quiz',
+    contentInput,
+    { count, focusTopic },
+    { tier }
+  );
 
   logger.info(`Generated ${questions.length} quiz questions, ${tokensUsed} tokens used`);
-
-  return { questions, tokensUsed };
+  return { questions, tokensUsed, warnings };
 }
 
 /**
@@ -262,6 +275,7 @@ async function getQuizAttempts(quizSetId, limit = 10) {
 
 module.exports = {
   gatherDocumentsContent, // Re-export from shared service
+  gatherDocumentsContentStructured, // Re-export for structured document access
   generateQuiz,
   createQuizSet,
   getQuizSetById,

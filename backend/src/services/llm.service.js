@@ -28,15 +28,17 @@ function getConfigForTier(tier) {
  * @param {string} prompt - The input prompt
  * @param {object} options - Options
  * @param {string} [options.tier='FREE'] - User tier for model selection
+ * @param {string} [options.model] - Explicit model override (bypasses tier config)
  * @param {boolean} [options.useFallback=false] - Use fallback model instead of primary
  * @returns {Promise<{text: string, tokensUsed: number}>}
  */
 async function generateText(prompt, options = {}) {
-  const { tier = 'FREE', useFallback = false } = options;
+  const { tier = 'FREE', model: explicitModel, useFallback = false } = options;
 
   const tierConfig = getConfigForTier(tier);
   const providerName = tierConfig.provider;
-  const model = useFallback ? tierConfig.fallback : tierConfig.primary;
+  // Allow explicit model override, otherwise use tier config
+  const model = explicitModel || (useFallback ? tierConfig.fallback : tierConfig.primary);
 
   logger.info('LLM generateText', {
     tier,

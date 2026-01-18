@@ -10,7 +10,7 @@ const { NotFoundError, AuthorizationError, ValidationError } = require('../middl
 const { asyncHandler } = require('../middleware/errorHandler');
 const { canUseChat, recordTokenUsage } = require('../services/tier.service');
 const {
-  gatherDocumentsContent,
+  gatherDocumentsContentStructured,
   generateFlashcards,
   createFlashcardSet,
   getFlashcardSetById,
@@ -70,27 +70,24 @@ const createFlashcardSetHandler = asyncHandler(async (req, res) => {
     throw new ValidationError(tierCheck.reason);
   }
 
-  let content = '';
-  let truncated = false;
+  let documents = [];
   let documentCount = 0;
 
   // Gather content from selected documents (if any)
   if (!isGeneralKnowledge) {
-    const gathered = await gatherDocumentsContent(data.documentIds);
-    content = gathered.content;
-    truncated = gathered.truncated;
-    documentCount = gathered.documentCount;
+    documents = await gatherDocumentsContentStructured(data.documentIds);
+    documentCount = documents.length;
 
-    if (!content) {
+    if (documents.length === 0) {
       throw new ValidationError('No content found in selected documents.');
     }
 
-    logger.info(`Gathered content from ${documentCount} documents${truncated ? ' (truncated)' : ''}`);
+    logger.info(`Gathered content from ${documentCount} documents`);
   }
 
   // Generate flashcards
-  const { cards, tokensUsed } = await generateFlashcards({
-    content: isGeneralKnowledge ? null : content,
+  const { cards, tokensUsed, warnings } = await generateFlashcards({
+    documents: isGeneralKnowledge ? null : documents,
     focusTopic: data.focusTopic,
     count: data.count,
     isGeneralKnowledge,
@@ -119,8 +116,8 @@ const createFlashcardSetHandler = asyncHandler(async (req, res) => {
       flashcardSet,
       tokensUsed,
       tokensRemaining: tierCheck.remaining - tokensUsed,
-      contentTruncated: truncated,
       isGeneralKnowledge,
+      warnings,
     },
   });
 });

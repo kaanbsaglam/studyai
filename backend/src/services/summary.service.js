@@ -6,8 +6,9 @@
 
 const prisma = require('../lib/prisma');
 const logger = require('../config/logger');
-const { gatherDocumentsContent, MAX_CONTEXT_CHARS } = require('./documentContent.service');
+const { gatherDocumentsContent, gatherDocumentsContentStructured, MAX_CONTEXT_CHARS } = require('./documentContent.service');
 const { generateText } = require('./llm.service');
+const { generateWithStrategy } = require('./pipeline.service');
 
 // Length configurations
 const LENGTH_CONFIG = {
@@ -19,29 +20,42 @@ const LENGTH_CONFIG = {
 /**
  * Generate a summary using LLM
  * @param {object} params
- * @param {string} [params.content] - Document content to summarize
+ * @param {string} [params.content] - Document content to summarize (legacy, use documents instead)
+ * @param {Array<{id: string, name: string, content: string}>} [params.documents] - Structured documents
  * @param {string} [params.focusTopic] - Topic to focus on
  * @param {string} params.length - short, medium, or long
  * @param {boolean} params.isGeneralKnowledge - Whether this is a general knowledge request
  * @param {string} [params.tier='FREE'] - User tier for model selection
- * @returns {Promise<{summary: string, tokensUsed: number}>}
+ * @returns {Promise<{summary: string, tokensUsed: number, warnings?: string[]}>}
  */
-async function generateSummary({ content, focusTopic, length, isGeneralKnowledge, tier = 'FREE' }) {
-  const prompt = buildSummaryPrompt({ content, focusTopic, length, isGeneralKnowledge });
-
+async function generateSummary({ content, documents, focusTopic, length, isGeneralKnowledge, tier = 'FREE' }) {
   logger.info(`Generating ${length} summary`, {
     focusTopic: focusTopic || 'none',
     isGeneralKnowledge,
     hasContent: !!content,
+    hasDocuments: !!documents,
   });
 
-  // Generate using LLM abstraction
-  const { text, tokensUsed } = await generateText(prompt, { tier });
-  const summary = text.trim();
+  // General knowledge mode - use direct LLM call (no content to chunk)
+  if (isGeneralKnowledge) {
+    const prompt = buildSummaryPrompt({ content: null, focusTopic, length, isGeneralKnowledge: true });
+    const { text, tokensUsed } = await generateText(prompt, { tier });
+    const summary = text.trim();
+    logger.info(`Generated summary (${summary.length} chars), ${tokensUsed} tokens used`);
+    return { summary, tokensUsed };
+  }
+
+  // Document-based mode - use pipeline for adaptive processing
+  const contentInput = documents || content;
+  const { result: summary, tokensUsed, warnings } = await generateWithStrategy(
+    'summary',
+    contentInput,
+    { length, focusTopic },
+    { tier }
+  );
 
   logger.info(`Generated summary (${summary.length} chars), ${tokensUsed} tokens used`);
-
-  return { summary, tokensUsed };
+  return { summary, tokensUsed, warnings };
 }
 
 /**
@@ -162,6 +176,7 @@ async function deleteSummary(id) {
 
 module.exports = {
   gatherDocumentsContent, // Re-export from shared service
+  gatherDocumentsContentStructured, // Re-export for structured document access
   generateSummary,
   createSummary,
   getSummaryById,
