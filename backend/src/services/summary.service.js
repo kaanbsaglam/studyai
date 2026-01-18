@@ -8,7 +8,7 @@ const prisma = require('../lib/prisma');
 const logger = require('../config/logger');
 const { gatherDocumentsContent, gatherDocumentsContentStructured, MAX_CONTEXT_CHARS } = require('./documentContent.service');
 const { generateText } = require('./llm.service');
-const { generateWithStrategy } = require('./pipeline.service');
+const { generateWithGenerator } = require('./pipeline.service');
 
 // Length configurations
 const LENGTH_CONFIG = {
@@ -47,7 +47,7 @@ async function generateSummary({ content, documents, focusTopic, length, isGener
 
   // Document-based mode - use pipeline for adaptive processing
   const contentInput = documents || content;
-  const { result: summary, tokensUsed, warnings } = await generateWithStrategy(
+  const { result: summary, tokensUsed, warnings } = await generateWithGenerator(
     'summary',
     contentInput,
     { length, focusTopic },

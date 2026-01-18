@@ -1,20 +1,24 @@
 /**
- * Flashcard Strategy
+ * Flashcard Generator
  *
  * Generates flashcards (front/back pairs) from content.
  * Handles map-reduce for large content with deduplication.
  */
 
-const Strategy = require('./Strategy');
+const Generator = require('./Generator');
 const logger = require('../config/logger');
 
-class FlashcardStrategy extends Strategy {
+class FlashcardGenerator extends Generator {
   getName() {
     return 'flashcard';
   }
 
   needsDocumentContext() {
     return false;
+  }
+
+  getSummarizationFocus() {
+    return 'Focus on key concepts, definitions, terms, and their explanations. Preserve vocabulary, formulas, and factual information that can be turned into question-answer pairs.';
   }
 
   buildMapPrompt(content, params, depth) {
@@ -28,7 +32,7 @@ class FlashcardStrategy extends Strategy {
 
     if (depth > 0) {
       // Intermediate extraction - simpler task
-      return `Extract key concept pairs from this content and generate ${targetCount} flashcards.
+      return `Extract key concept pairs from this content and generate up to ${targetCount} flashcards.
 
 ${topicInstruction}
 
@@ -39,17 +43,16 @@ Requirements:
 - Each card should test ONE concept
 - Front should be a clear question or prompt
 - Back should be a concise but complete answer
+- If the content has no suitable concepts, return an empty array []
 
-Respond with ONLY a valid JSON array:
-[{"front": "Question?", "back": "Answer"}]
-
-Generate ${targetCount} flashcards:`;
+Respond with ONLY a valid JSON array (can be empty if no flashcards possible):
+[{"front": "Question?", "back": "Answer"}]`;
     }
 
     // Depth 0 - final output quality
     return `You are a study assistant that creates effective flashcards for learning.
 
-Based on the following study material, create exactly ${targetCount} flashcards.
+Based on the following study material, create up to ${targetCount} flashcards.
 ${topicInstruction}
 
 Guidelines for good flashcards:
@@ -58,27 +61,33 @@ Guidelines for good flashcards:
 - Answers should be concise but complete
 - Avoid yes/no questions
 - Include a mix of definitions, concepts, and applications
+- If the content has no suitable concepts, return an empty array []
 
 Study Material:
 ${content}
 
 Respond with ONLY a valid JSON array of flashcards in this exact format, no other text:
-[{"front": "Question 1?", "back": "Answer 1"}, {"front": "Question 2?", "back": "Answer 2"}]
-
-Generate exactly ${targetCount} flashcards:`;
+[{"front": "Question 1?", "back": "Answer 1"}, {"front": "Question 2?", "back": "Answer 2"}]`;
   }
 
   buildReducePrompt(partialResults, params, depth) {
     const { count, focusTopic } = params;
     const allCards = partialResults.flat();
 
+    // Handle case where no cards were generated
+    if (allCards.length === 0) {
+      return null; // Signal that reduce is not needed
+    }
+
     const topicInstruction = focusTopic
       ? `All cards should relate to: "${focusTopic}".`
       : '';
 
+    const targetCount = Math.min(count, allCards.length);
+
     return `You are curating flashcards for quality and variety.
 
-From these ${allCards.length} candidate flashcards, select the best ${count} cards.
+From these ${allCards.length} candidate flashcards, select the best ${targetCount} cards.
 
 ${topicInstruction}
 
@@ -91,10 +100,8 @@ Selection criteria:
 Candidate flashcards:
 ${JSON.stringify(allCards, null, 2)}
 
-Respond with ONLY a valid JSON array of exactly ${count} flashcards:
-[{"front": "...", "back": "..."}]
-
-Select the best ${count} flashcards:`;
+Respond with ONLY a valid JSON array of up to ${targetCount} flashcards:
+[{"front": "...", "back": "..."}]`;
   }
 
   parseResponse(responseText, depth) {
@@ -104,12 +111,12 @@ Select the best ${count} flashcards:`;
     try {
       parsed = JSON.parse(jsonStr);
     } catch (e) {
-      logger.error('FlashcardStrategy: Failed to parse JSON response', { error: e.message });
+      logger.error('FlashcardGenerator: Failed to parse JSON response', { error: e.message });
       throw new Error('Failed to parse flashcard response. Please try again.');
     }
 
     if (!Array.isArray(parsed)) {
-      logger.error('FlashcardStrategy: Response is not an array', { parsed });
+      logger.error('FlashcardGenerator: Response is not an array', { parsed });
       throw new Error('Invalid flashcard response format. Please try again.');
     }
 
@@ -118,7 +125,7 @@ Select the best ${count} flashcards:`;
     for (let i = 0; i < parsed.length; i++) {
       const card = parsed[i];
       if (!card || typeof card.front !== 'string' || typeof card.back !== 'string') {
-        logger.warn(`FlashcardStrategy: Invalid card at index ${i}`, { card });
+        logger.warn(`FlashcardGenerator: Invalid card at index ${i}`, { card });
         continue;
       }
       cards.push({
@@ -139,16 +146,22 @@ Select the best ${count} flashcards:`;
   validateResult(result, params) {
     const { count } = params;
 
-    if (!Array.isArray(result) || result.length === 0) {
-      throw new Error('No valid flashcards were generated.');
+    if (!Array.isArray(result)) {
+      throw new Error('Invalid flashcard result format.');
+    }
+
+    // Empty array is valid - content may not have suitable concepts
+    if (result.length === 0) {
+      logger.info('FlashcardGenerator: No flashcards generated (content may not have suitable concepts)');
+      return [];
     }
 
     // Take requested count, or all if we have fewer
     const finalCards = result.slice(0, count);
 
-    logger.info(`FlashcardStrategy: Validated ${finalCards.length}/${count} cards`);
+    logger.info(`FlashcardGenerator: Validated ${finalCards.length}/${count} cards`);
     return finalCards;
   }
 }
 
-module.exports = FlashcardStrategy;
+module.exports = FlashcardGenerator;

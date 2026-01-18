@@ -1,20 +1,21 @@
 /**
- * Strategy Base Class
+ * Generator Base Class
  *
- * Abstract base class that defines the interface for all content processing strategies.
- * Strategies handle the map-reduce logic for different content generation tasks.
+ * Abstract base class that defines the interface for all content generators.
+ * Generators handle the map-reduce logic for different content generation tasks
+ * (quiz, flashcard, summary).
  */
 
-class Strategy {
+class Generator {
   constructor(config = {}) {
-    if (this.constructor === Strategy) {
-      throw new Error('Strategy is an abstract class and cannot be instantiated directly');
+    if (this.constructor === Generator) {
+      throw new Error('Generator is an abstract class and cannot be instantiated directly');
     }
     this.config = config;
   }
 
   /**
-   * Get the strategy identifier
+   * Get the generator identifier
    * @returns {string}
    */
   getName() {
@@ -22,7 +23,7 @@ class Strategy {
   }
 
   /**
-   * Whether this strategy needs document context (affects chunking mode selection)
+   * Whether this generator needs document context (affects chunking mode selection)
    * - true: prefers BY_DOCUMENT chunking to preserve document boundaries
    * - false: prefers BY_TOKENS chunking for efficiency
    * @returns {boolean}
@@ -32,9 +33,18 @@ class Strategy {
   }
 
   /**
+   * Get the focus instruction for summarizing oversized content before task processing.
+   * Each generator can customize what aspects to preserve during summarization.
+   * @returns {string} Focus instruction for summarization prompt
+   */
+  getSummarizationFocus() {
+    return 'Preserve the key information, main concepts, and important details.';
+  }
+
+  /**
    * Build the prompt for processing a chunk of content
    * @param {string} content - The content chunk to process
-   * @param {object} params - Strategy-specific parameters (count, focusTopic, etc.)
+   * @param {object} params - Generator-specific parameters (count, focusTopic, etc.)
    * @param {number} depth - Current recursion depth (0 = final output, 1+ = intermediate)
    * @returns {string} The prompt to send to the LLM
    */
@@ -45,7 +55,7 @@ class Strategy {
   /**
    * Build the prompt for combining partial results
    * @param {Array} partialResults - Results from previous processing step
-   * @param {object} params - Strategy-specific parameters
+   * @param {object} params - Generator-specific parameters
    * @param {number} depth - Current recursion depth
    * @returns {string} The prompt to send to the LLM
    */
@@ -57,7 +67,7 @@ class Strategy {
    * Parse the LLM response into structured data
    * @param {string} responseText - Raw text response from LLM
    * @param {number} depth - Current recursion depth
-   * @returns {*} Parsed result (structure depends on strategy)
+   * @returns {*} Parsed result (structure depends on generator)
    */
   parseResponse(responseText, depth) {
     throw new Error('parseResponse() must be implemented by subclass');
@@ -66,7 +76,7 @@ class Strategy {
   /**
    * Combine results from multiple chunks
    * @param {Array} results - Array of parsed results from chunks
-   * @param {object} params - Strategy-specific parameters
+   * @param {object} params - Generator-specific parameters
    * @returns {*} Combined result
    */
   combineResults(results, params) {
@@ -76,7 +86,7 @@ class Strategy {
   /**
    * Validate the final result meets requirements
    * @param {*} result - The result to validate
-   * @param {object} params - Strategy-specific parameters
+   * @param {object} params - Generator-specific parameters
    * @returns {*} Validated/cleaned result
    * @throws {Error} If validation fails
    */
@@ -121,4 +131,4 @@ class Strategy {
   }
 }
 
-module.exports = Strategy;
+module.exports = Generator;

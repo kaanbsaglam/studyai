@@ -8,7 +8,7 @@ const prisma = require('../lib/prisma');
 const logger = require('../config/logger');
 const { gatherDocumentsContent, gatherDocumentsContentStructured, MAX_CONTEXT_CHARS } = require('./documentContent.service');
 const { generateText } = require('./llm.service');
-const { generateWithStrategy } = require('./pipeline.service');
+const { generateWithGenerator } = require('./pipeline.service');
 
 /**
  * Generate quiz questions using LLM
@@ -40,7 +40,7 @@ async function generateQuiz({ content, documents, focusTopic, count, isGeneralKn
 
   // Document-based mode - use pipeline for adaptive processing
   const contentInput = documents || content;
-  const { result: questions, tokensUsed, warnings } = await generateWithStrategy(
+  const { result: questions, tokensUsed, warnings } = await generateWithGenerator(
     'quiz',
     contentInput,
     { count, focusTopic },

@@ -4,9 +4,14 @@
  * Core adaptive content processing pipeline that handles LLM content generation
  * regardless of input size. Automatically decides whether to process directly
  * or use map-reduce based on content size.
+ *
+ * Key features:
+ * - Recursive summarization for oversized documents before task processing
+ * - Depth-based model selection (cheaper models for deeper recursion)
+ * - Upfront validation to reject content that exceeds processable limits
  */
 
-const { getStrategy } = require('../strategies');
+const { getGenerator } = require('../generators');
 const { generateText } = require('./llm.service');
 const pipelineConfig = require('../config/pipeline.config');
 const logger = require('../config/logger');
@@ -29,6 +34,42 @@ function estimateTokens(content) {
   }
 
   return Math.ceil((charCount / charsPerToken) * overheadMultiplier);
+}
+
+/**
+ * Calculate maximum processable tokens for a tier configuration
+ * With recursive summarization, each level can handle maxChunks * chunkSize tokens
+ * @param {object} tierConfig - Tier configuration
+ * @returns {number} Maximum processable tokens
+ */
+function calculateMaxProcessableTokens(tierConfig) {
+  const { chunkSize, maxChunks, maxDepth } = tierConfig;
+  const { summarizationCompression } = pipelineConfig;
+
+  // At depth 0 (task level): maxChunks * chunkSize
+  // With summarization (depth 1+): each chunk can be up to maxChunks * chunkSize before being summarized
+  // Summarization compresses by ~summarizationCompression factor
+  let maxTokens = chunkSize * maxChunks;
+
+  for (let d = 1; d <= maxDepth; d++) {
+    // Each level can handle more due to compression
+    maxTokens *= summarizationCompression;
+  }
+
+  return maxTokens;
+}
+
+/**
+ * Get the appropriate model for a given depth and phase
+ * @param {object} tierConfig - Tier configuration
+ * @param {number} depth - Current depth (0 = task, 1+ = summarization)
+ * @param {'map' | 'reduce'} phase - Processing phase
+ * @returns {string} Model name
+ */
+function getModelForDepth(tierConfig, depth, phase) {
+  const models = tierConfig.models;
+  const depthConfig = models[Math.min(depth, models.length - 1)];
+  return depthConfig[phase] || depthConfig.map;
 }
 
 /**
@@ -104,50 +145,148 @@ function findSentenceBreak(text, target) {
 }
 
 /**
- * Chunk content by document, preserving document identity
- * @param {Array<{id: string, name: string, content: string}>} documents - Documents to chunk
- * @param {number} chunkSize - Target tokens per chunk
- * @returns {string[]} Array of content chunks
+ * Build summarization prompt for oversized content
+ * @param {string} content - Content to summarize
+ * @param {string} focus - What to focus on when summarizing (from strategy)
+ * @returns {string} Summarization prompt
  */
-function chunkByDocument(documents, chunkSize) {
-  const { charsPerToken } = pipelineConfig.tokenEstimation;
-  const targetChars = chunkSize * charsPerToken;
+function buildSummarizationPrompt(content, focus) {
+  return `Summarize the following content concisely while preserving the most important information.
 
-  const chunks = [];
-  let currentChunk = '';
+Focus: ${focus}
+
+Content:
+${content}
+
+Requirements:
+- Preserve key facts, concepts, and details
+- Maintain accuracy to the source
+- Be concise but comprehensive
+- Do not add information not present in the source
+
+Write the summary:`;
+}
+
+/**
+ * Recursively summarize content that exceeds chunk size
+ * @param {string} content - Content to summarize
+ * @param {object} generator - Generator instance (for summarization focus)
+ * @param {number} depth - Current recursion depth
+ * @param {string} tier - User tier
+ * @param {object} tierConfig - Tier configuration
+ * @returns {Promise<{content: string, tokensUsed: number}>}
+ */
+async function summarizeOversizedContent(content, generator, depth, tier, tierConfig) {
+  const { chunkSize, maxDepth, maxChunks } = tierConfig;
+  const contentTokens = estimateTokens(content);
+
+  // If content fits in chunk size, return as-is
+  if (contentTokens <= chunkSize) {
+    return { content, tokensUsed: 0 };
+  }
+
+  // If we've exceeded max depth, just truncate and warn
+  if (depth > maxDepth) {
+    logger.warn(`summarizeOversizedContent: Max depth ${maxDepth} exceeded, truncating content`);
+    const { charsPerToken } = pipelineConfig.tokenEstimation;
+    const truncated = content.slice(0, chunkSize * charsPerToken);
+    return { content: truncated, tokensUsed: 0 };
+  }
+
+  logger.info(`summarizeOversizedContent: Content (${contentTokens} tokens) exceeds chunkSize (${chunkSize}), summarizing at depth ${depth}`);
+
+  // Split into chunks
+  const chunks = chunkByTokens(content, chunkSize);
+
+  // Limit chunks
+  if (chunks.length > maxChunks) {
+    logger.warn(`summarizeOversizedContent: Truncating from ${chunks.length} to ${maxChunks} chunks`);
+    chunks.length = maxChunks;
+  }
+
+  // Get summarization focus from generator
+  const focus = generator.getSummarizationFocus();
+  const model = getModelForDepth(tierConfig, depth, 'map');
+
+  // Summarize each chunk
+  let totalTokensUsed = 0;
+  const summaries = [];
+
+  for (const chunk of chunks) {
+    const prompt = buildSummarizationPrompt(chunk, focus);
+
+    try {
+      const { text, tokensUsed } = await generateText(prompt, { tier, model });
+      summaries.push(text.trim());
+      totalTokensUsed += tokensUsed;
+    } catch (error) {
+      logger.error('summarizeOversizedContent: Chunk summarization failed', { error: error.message });
+      // Use truncated original as fallback
+      const { charsPerToken } = pipelineConfig.tokenEstimation;
+      summaries.push(chunk.slice(0, chunkSize * charsPerToken * 0.5));
+    }
+  }
+
+  // Combine summaries
+  const combined = summaries.join('\n\n');
+  const combinedTokens = estimateTokens(combined);
+
+  // If combined still exceeds chunk size, recurse
+  if (combinedTokens > chunkSize) {
+    logger.info(`summarizeOversizedContent: Combined (${combinedTokens} tokens) still exceeds chunkSize, recursing`);
+    const recurseResult = await summarizeOversizedContent(combined, generator, depth + 1, tier, tierConfig);
+    return {
+      content: recurseResult.content,
+      tokensUsed: totalTokensUsed + recurseResult.tokensUsed,
+    };
+  }
+
+  return { content: combined, tokensUsed: totalTokensUsed };
+}
+
+/**
+ * Pre-process documents, summarizing any that exceed chunk size
+ * @param {Array<{id: string, name: string, content: string}>} documents - Documents to process
+ * @param {object} generator - Generator instance
+ * @param {string} tier - User tier
+ * @param {object} tierConfig - Tier configuration
+ * @returns {Promise<{documents: Array, tokensUsed: number, summarized: string[]}>}
+ */
+async function preprocessOversizedDocuments(documents, generator, tier, tierConfig) {
+  const { chunkSize } = tierConfig;
+  const processedDocs = [];
+  let totalTokensUsed = 0;
+  const summarizedDocs = [];
 
   for (const doc of documents) {
-    const docContent = `\n\n=== ${doc.name} ===\n${doc.content}`;
+    const docTokens = estimateTokens(doc.content);
 
-    // If single doc is larger than chunk size, subdivide it
-    if (docContent.length > targetChars) {
-      // Flush current chunk first
-      if (currentChunk) {
-        chunks.push(currentChunk.trim());
-        currentChunk = '';
-      }
+    if (docTokens > chunkSize) {
+      logger.info(`preprocessOversizedDocuments: Document "${doc.name}" (${docTokens} tokens) exceeds chunkSize, summarizing`);
 
-      // Split the large document
-      const subChunks = chunkByTokens(docContent, chunkSize);
-      chunks.push(...subChunks);
-      continue;
-    }
+      const { content: summarized, tokensUsed } = await summarizeOversizedContent(
+        doc.content,
+        generator,
+        1, // Start at depth 1 (summarization level)
+        tier,
+        tierConfig
+      );
 
-    // Check if adding this doc would exceed chunk size
-    if (currentChunk.length + docContent.length > targetChars) {
-      chunks.push(currentChunk.trim());
-      currentChunk = docContent;
+      processedDocs.push({
+        ...doc,
+        content: summarized,
+        originalTokens: docTokens,
+        wasSummarized: true,
+      });
+
+      totalTokensUsed += tokensUsed;
+      summarizedDocs.push(doc.name);
     } else {
-      currentChunk += docContent;
+      processedDocs.push({ ...doc, wasSummarized: false });
     }
   }
 
-  // Don't forget the last chunk
-  if (currentChunk.trim()) {
-    chunks.push(currentChunk.trim());
-  }
-
-  return chunks;
+  return { documents: processedDocs, tokensUsed: totalTokensUsed, summarized: summarizedDocs };
 }
 
 /**
@@ -160,15 +299,13 @@ function chunkByDocument(documents, chunkSize) {
  * @param {object} tierConfig - Tier configuration
  * @returns {Promise<{result: *, tokensUsed: number, failed: boolean, error?: string}>}
  */
-async function processChunk(strategy, chunk, params, depth, tier, tierConfig) {
-  const prompt = strategy.buildMapPrompt(chunk, params, depth);
-
-  // Select model based on depth
-  const model = depth === 0 ? tierConfig.models.reduce : tierConfig.models.map;
+async function processChunk(generator, chunk, params, depth, tier, tierConfig) {
+  const prompt = generator.buildMapPrompt(chunk, params, depth);
+  const model = getModelForDepth(tierConfig, depth, 'map');
 
   try {
     const { text, tokensUsed } = await generateText(prompt, { tier, model });
-    const result = strategy.parseResponse(text, depth);
+    const result = generator.parseResponse(text, depth);
 
     return { result, tokensUsed, failed: false };
   } catch (error) {
@@ -180,7 +317,7 @@ async function processChunk(strategy, chunk, params, depth, tier, tierConfig) {
     // Try fallback
     try {
       const { text, tokensUsed } = await generateText(prompt, { tier, useFallback: true });
-      const result = strategy.parseResponse(text, depth);
+      const result = generator.parseResponse(text, depth);
 
       return { result, tokensUsed, failed: false };
     } catch (fallbackError) {
@@ -201,15 +338,15 @@ async function processChunk(strategy, chunk, params, depth, tier, tierConfig) {
 
 /**
  * Process multiple chunks in parallel with concurrency limit
- * @param {Strategy} strategy - Strategy instance
+ * @param {Generator} generator - Generator instance
  * @param {string[]} chunks - Content chunks
- * @param {object} params - Strategy parameters
+ * @param {object} params - Generator parameters
  * @param {number} depth - Current recursion depth
  * @param {string} tier - User tier
  * @param {object} tierConfig - Tier configuration
  * @returns {Promise<{results: Array, tokensUsed: number, failures: number}>}
  */
-async function processChunksParallel(strategy, chunks, params, depth, tier, tierConfig) {
+async function processChunksParallel(generator, chunks, params, depth, tier, tierConfig) {
   const { parallelLimit } = tierConfig;
 
   const allResults = [];
@@ -220,7 +357,7 @@ async function processChunksParallel(strategy, chunks, params, depth, tier, tier
   for (let i = 0; i < chunks.length; i += parallelLimit) {
     const batch = chunks.slice(i, i + parallelLimit);
 
-    const batchPromises = batch.map((chunk) => processChunk(strategy, chunk, params, depth, tier, tierConfig));
+    const batchPromises = batch.map((chunk) => processChunk(generator, chunk, params, depth, tier, tierConfig));
 
     const batchResults = await Promise.all(batchPromises);
 
@@ -244,92 +381,6 @@ async function processChunksParallel(strategy, chunks, params, depth, tier, tier
 }
 
 /**
- * Recursive map-reduce processing
- * @param {Strategy} strategy - Strategy instance
- * @param {string[]} chunks - Content chunks
- * @param {object} params - Strategy parameters
- * @param {number} depth - Current recursion depth
- * @param {string} tier - User tier
- * @param {object} tierConfig - Tier configuration
- * @returns {Promise<{result: *, tokensUsed: number, warnings: string[]}>}
- */
-async function mapReduce(strategy, chunks, params, depth, tier, tierConfig) {
-  const warnings = [];
-
-  logger.info(`mapReduce: Starting at depth ${depth}`, {
-    chunks: chunks.length,
-    maxDepth: tierConfig.maxDepth,
-  });
-
-  // Process all chunks at this depth
-  const { results, tokensUsed, failures } = await processChunksParallel(
-    strategy,
-    chunks,
-    params,
-    depth + 1, // map processing is depth + 1
-    tier,
-    tierConfig
-  );
-
-  if (failures > 0) {
-    warnings.push(`${failures} chunk(s) failed to process`);
-  }
-
-  if (results.length === 0) {
-    throw new Error('All chunks failed to process');
-  }
-
-  // Combine results from this level
-  const combined = strategy.combineResults(results, params);
-
-  // Check if we need another reduce pass
-  const combinedTokens = estimateTokens(JSON.stringify(combined));
-
-  if (combinedTokens > tierConfig.threshold && depth < tierConfig.maxDepth) {
-    // Need another level of reduction
-    logger.info(`mapReduce: Combined still too large (${combinedTokens} tokens), reducing further`);
-
-    // Build reduce prompt and process
-    const reducePrompt = strategy.buildReducePrompt(results, params, depth);
-    const { text, tokensUsed: reduceTokens } = await generateText(reducePrompt, {
-      tier,
-      model: tierConfig.models.reduce,
-    });
-
-    const reduceResult = strategy.parseResponse(text, depth);
-
-    return {
-      result: reduceResult,
-      tokensUsed: tokensUsed + reduceTokens,
-      warnings,
-    };
-  }
-
-  // Final reduce at depth 0
-  if (depth === 0 || results.length > 1) {
-    const reducePrompt = strategy.buildReducePrompt(results, params, 0);
-    const { text, tokensUsed: reduceTokens } = await generateText(reducePrompt, {
-      tier,
-      model: tierConfig.models.reduce,
-    });
-
-    const finalResult = strategy.parseResponse(text, 0);
-
-    return {
-      result: finalResult,
-      tokensUsed: tokensUsed + reduceTokens,
-      warnings,
-    };
-  }
-
-  return {
-    result: combined,
-    tokensUsed,
-    warnings,
-  };
-}
-
-/**
  * Get content as string from various input formats
  * @param {string|Array} content - Content string or array of documents
  * @returns {string} Content as string
@@ -347,93 +398,236 @@ function getContentString(content) {
 }
 
 /**
- * Main entry point: Generate content using a strategy
- * @param {string} strategyName - Strategy name ('quiz', 'flashcard', 'summary')
+ * Chunk content by document, keeping documents together when possible
+ * @param {Array<{id: string, name: string, content: string}>} documents - Documents to chunk
+ * @param {number} chunkSize - Target tokens per chunk
+ * @returns {string[]} Array of content chunks
+ */
+function chunkByDocument(documents, chunkSize) {
+  const { charsPerToken } = pipelineConfig.tokenEstimation;
+  const targetChars = chunkSize * charsPerToken;
+
+  const chunks = [];
+  let currentChunk = '';
+
+  for (const doc of documents) {
+    const docContent = `\n\n=== ${doc.name} ===\n${doc.content}`;
+
+    // Check if adding this doc would exceed chunk size
+    if (currentChunk.length + docContent.length > targetChars) {
+      if (currentChunk) {
+        chunks.push(currentChunk.trim());
+      }
+      currentChunk = docContent;
+    } else {
+      currentChunk += docContent;
+    }
+  }
+
+  // Don't forget the last chunk
+  if (currentChunk.trim()) {
+    chunks.push(currentChunk.trim());
+  }
+
+  return chunks;
+}
+
+/**
+ * Main entry point: Generate content using a generator
+ * @param {string} generatorName - Generator name ('quiz', 'flashcard', 'summary')
  * @param {string|Array} content - Content string or array of documents
- * @param {object} params - Strategy-specific parameters
+ * @param {object} params - Generator-specific parameters
  * @param {object} options - Processing options
  * @param {string} [options.tier='FREE'] - User tier
  * @param {string} [options.chunkingMode] - Force chunking mode ('by-tokens' or 'by-document')
- * @returns {Promise<{result: *, tokensUsed: number, warnings?: string[], partialFailure?: boolean}>}
+ * @param {number} [options.chunkSizeOverride] - Override chunk size threshold
+ * @returns {Promise<{result: *, tokensUsed: number, warnings?: string[], summarizedDocs?: string[]}>}
  */
-async function generateWithStrategy(strategyName, content, params, options = {}) {
-  const { tier = 'FREE', chunkingMode: forcedChunkingMode } = options;
+async function generateWithGenerator(generatorName, content, params, options = {}) {
+  const { tier = 'FREE', chunkingMode: forcedChunkingMode, chunkSizeOverride } = options;
 
-  // Get strategy and config
-  const strategy = getStrategy(strategyName);
-  const tierConfig = pipelineConfig.tiers[tier] || pipelineConfig.tiers.FREE;
+  // Get generator and config
+  const generator = getGenerator(generatorName);
+  const tierConfig = { ...pipelineConfig.tiers[tier] || pipelineConfig.tiers.FREE };
+
+  // Apply chunk size override if provided
+  if (chunkSizeOverride) {
+    tierConfig.chunkSize = chunkSizeOverride;
+  }
 
   // Determine chunking mode
   const chunkingMode =
     forcedChunkingMode ||
-    (strategy.needsDocumentContext() ? pipelineConfig.chunkingModes.BY_DOCUMENT : pipelineConfig.chunkingModes.BY_TOKENS);
+    (generator.needsDocumentContext() ? pipelineConfig.chunkingModes.BY_DOCUMENT : pipelineConfig.chunkingModes.BY_TOKENS);
 
   // Estimate content size
   const tokenEstimate = estimateTokens(content);
+  const maxProcessable = calculateMaxProcessableTokens(tierConfig);
 
-  logger.info(`generateWithStrategy: Starting`, {
-    strategy: strategyName,
+  logger.info(`generateWithGenerator: Starting`, {
+    generator: generatorName,
     tier,
     estimatedTokens: tokenEstimate,
     threshold: tierConfig.threshold,
+    maxProcessable,
     chunkingMode,
   });
 
-  // If under threshold, process directly
-  if (tokenEstimate <= tierConfig.threshold) {
-    logger.info(`generateWithStrategy: Direct processing (under threshold)`);
+  // Check if content exceeds absolute maximum
+  if (tokenEstimate > maxProcessable) {
+    const error = new Error(
+      `Content too large to process. Estimated ${tokenEstimate} tokens exceeds maximum ${maxProcessable} tokens. ` +
+        `Please select fewer documents or use smaller documents.`
+    );
+    error.code = 'CONTENT_TOO_LARGE';
+    error.tokenEstimate = tokenEstimate;
+    error.maxProcessable = maxProcessable;
+    throw error;
+  }
 
-    const contentStr = getContentString(content);
-    const prompt = strategy.buildMapPrompt(contentStr, params, 0);
+  const warnings = [];
+  let totalTokensUsed = 0;
+  let summarizedDocs = [];
 
-    const { text, tokensUsed } = await generateText(prompt, {
+  // Pre-process oversized documents (if array of documents)
+  let processedContent = content;
+  if (Array.isArray(content)) {
+    const preprocessResult = await preprocessOversizedDocuments(content, generator, tier, tierConfig);
+    processedContent = preprocessResult.documents;
+    totalTokensUsed += preprocessResult.tokensUsed;
+    summarizedDocs = preprocessResult.summarized;
+
+    if (summarizedDocs.length > 0) {
+      warnings.push(`${summarizedDocs.length} document(s) were summarized before processing due to size`);
+      logger.info(`generateWithGenerator: Summarized ${summarizedDocs.length} oversized documents`);
+    }
+  } else if (typeof content === 'string' && estimateTokens(content) > tierConfig.chunkSize) {
+    // String content that's oversized - summarize it
+    const { content: summarized, tokensUsed } = await summarizeOversizedContent(
+      content,
+      generator,
+      1,
       tier,
-      model: tierConfig.models.reduce,
-    });
+      tierConfig
+    );
+    processedContent = summarized;
+    totalTokensUsed += tokensUsed;
+    warnings.push('Content was summarized before processing due to size');
+  }
 
-    const result = strategy.parseResponse(text, 0);
-    const validated = strategy.validateResult(result, params);
+  // Re-estimate after preprocessing
+  const processedTokens = estimateTokens(processedContent);
 
-    return { result: validated, tokensUsed };
+  // If under threshold after preprocessing, process directly
+  if (processedTokens <= tierConfig.threshold) {
+    logger.info(`generateWithGenerator: Direct processing (${processedTokens} tokens under threshold)`);
+
+    const contentStr = getContentString(processedContent);
+    const prompt = generator.buildMapPrompt(contentStr, params, 0);
+    const model = getModelForDepth(tierConfig, 0, 'reduce');
+
+    const { text, tokensUsed } = await generateText(prompt, { tier, model });
+    totalTokensUsed += tokensUsed;
+
+    const result = generator.parseResponse(text, 0);
+    const validated = generator.validateResult(result, params);
+
+    return {
+      result: validated,
+      tokensUsed: totalTokensUsed,
+      warnings: warnings.length > 0 ? warnings : undefined,
+      summarizedDocs: summarizedDocs.length > 0 ? summarizedDocs : undefined,
+    };
   }
 
   // Over threshold - use map-reduce
-  logger.info(`generateWithStrategy: Map-reduce processing (over threshold)`);
+  logger.info(`generateWithGenerator: Map-reduce processing (${processedTokens} tokens over threshold)`);
 
   // Chunk the content
   let chunks;
-  if (chunkingMode === pipelineConfig.chunkingModes.BY_DOCUMENT && Array.isArray(content)) {
-    chunks = chunkByDocument(content, tierConfig.chunkSize);
+  if (chunkingMode === pipelineConfig.chunkingModes.BY_DOCUMENT && Array.isArray(processedContent)) {
+    chunks = chunkByDocument(processedContent, tierConfig.chunkSize);
   } else {
-    const contentStr = getContentString(content);
+    const contentStr = getContentString(processedContent);
     chunks = chunkByTokens(contentStr, tierConfig.chunkSize);
   }
 
   // Limit chunks if necessary
   if (chunks.length > tierConfig.maxChunks) {
-    logger.warn(`generateWithStrategy: Truncating chunks from ${chunks.length} to ${tierConfig.maxChunks}`);
+    logger.warn(`generateWithGenerator: Truncating chunks from ${chunks.length} to ${tierConfig.maxChunks}`);
+    warnings.push(`Content truncated from ${chunks.length} to ${tierConfig.maxChunks} chunks`);
     chunks = chunks.slice(0, tierConfig.maxChunks);
   }
 
-  logger.info(`generateWithStrategy: Created ${chunks.length} chunks`);
+  logger.info(`generateWithGenerator: Created ${chunks.length} chunks`);
 
-  // Run map-reduce
-  const { result, tokensUsed, warnings } = await mapReduce(strategy, chunks, params, 0, tier, tierConfig);
+  // Map phase - process all chunks
+  const { results, tokensUsed: mapTokens, failures } = await processChunksParallel(
+    generator,
+    chunks,
+    params,
+    0, // depth 0 for task-level processing
+    tier,
+    tierConfig
+  );
 
-  // Validate final result
-  const validated = strategy.validateResult(result, params);
+  totalTokensUsed += mapTokens;
+
+  if (failures > 0) {
+    warnings.push(`${failures} chunk(s) failed to process`);
+  }
+
+  if (results.length === 0) {
+    // All chunks failed or returned empty - return empty result
+    const emptyResult = generator.validateResult([], params);
+    return {
+      result: emptyResult,
+      tokensUsed: totalTokensUsed,
+      warnings: warnings.length > 0 ? warnings : undefined,
+      summarizedDocs: summarizedDocs.length > 0 ? summarizedDocs : undefined,
+    };
+  }
+
+  // Combine results
+  const combined = generator.combineResults(results, params);
+
+  // Reduce phase - curate final results
+  const reducePrompt = generator.buildReducePrompt(results, params, 0);
+
+  // If buildReducePrompt returns null, skip reduce phase
+  if (reducePrompt === null) {
+    const validated = generator.validateResult(combined, params);
+    return {
+      result: validated,
+      tokensUsed: totalTokensUsed,
+      warnings: warnings.length > 0 ? warnings : undefined,
+      summarizedDocs: summarizedDocs.length > 0 ? summarizedDocs : undefined,
+    };
+  }
+
+  const reduceModel = getModelForDepth(tierConfig, 0, 'reduce');
+  const { text: reduceText, tokensUsed: reduceTokens } = await generateText(reducePrompt, {
+    tier,
+    model: reduceModel,
+  });
+
+  totalTokensUsed += reduceTokens;
+
+  const finalResult = generator.parseResponse(reduceText, 0);
+  const validated = generator.validateResult(finalResult, params);
 
   return {
     result: validated,
-    tokensUsed,
+    tokensUsed: totalTokensUsed,
     warnings: warnings.length > 0 ? warnings : undefined,
-    partialFailure: warnings.length > 0,
+    summarizedDocs: summarizedDocs.length > 0 ? summarizedDocs : undefined,
   };
 }
 
 module.exports = {
-  generateWithStrategy,
+  generateWithGenerator,
   estimateTokens,
+  calculateMaxProcessableTokens,
   chunkByTokens,
   chunkByDocument,
 };

@@ -8,7 +8,7 @@ const prisma = require('../lib/prisma');
 const logger = require('../config/logger');
 const { gatherDocumentsContent, gatherDocumentsContentStructured, MAX_CONTEXT_CHARS } = require('./documentContent.service');
 const { generateText } = require('./llm.service');
-const { generateWithStrategy } = require('./pipeline.service');
+const { generateWithGenerator } = require('./pipeline.service');
 
 /**
  * Generate flashcards using LLM
@@ -40,7 +40,7 @@ async function generateFlashcards({ content, documents, focusTopic, count, isGen
 
   // Document-based mode - use pipeline for adaptive processing
   const contentInput = documents || content;
-  const { result: cards, tokensUsed, warnings } = await generateWithStrategy(
+  const { result: cards, tokensUsed, warnings } = await generateWithGenerator(
     'flashcard',
     contentInput,
     { count, focusTopic },

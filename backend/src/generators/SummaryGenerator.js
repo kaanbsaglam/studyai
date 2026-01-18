@@ -1,11 +1,11 @@
 /**
- * Summary Strategy
+ * Summary Generator
  *
  * Generates summaries from content.
  * Handles map-reduce for large content by extracting key points and synthesizing.
  */
 
-const Strategy = require('./Strategy');
+const Generator = require('./Generator');
 const logger = require('../config/logger');
 
 // Length configurations
@@ -15,7 +15,7 @@ const LENGTH_CONFIG = {
   long: { words: '800-1200', keyPoints: 15, description: 'comprehensive summary' },
 };
 
-class SummaryStrategy extends Strategy {
+class SummaryGenerator extends Generator {
   getName() {
     return 'summary';
   }
@@ -23,6 +23,10 @@ class SummaryStrategy extends Strategy {
   needsDocumentContext() {
     // Summaries benefit from document context for better organization
     return true;
+  }
+
+  getSummarizationFocus() {
+    return 'Preserve the main ideas, key arguments, and important conclusions. Maintain the logical structure and flow of the content.';
   }
 
   buildMapPrompt(content, params, depth) {
@@ -84,6 +88,11 @@ Write the summary in a flowing, readable format. Generate the summary:`;
       }
     }
 
+    // Handle case where no key points were extracted
+    if (allKeyPoints.length === 0 && allTopics.length === 0) {
+      return null; // Signal that reduce is not needed
+    }
+
     const topicInstruction = focusTopic
       ? `Focus specifically on aspects related to: "${focusTopic}".`
       : '';
@@ -135,7 +144,7 @@ Write the summary as flowing prose (not bullet points):`;
       try {
         parsed = JSON.parse(jsonStr);
       } catch (e) {
-        logger.warn('SummaryStrategy: Failed to parse JSON, extracting as text', { error: e.message });
+        logger.warn('SummaryGenerator: Failed to parse JSON, extracting as text', { error: e.message });
         // Fallback: treat as plain text key points
         return {
           keyPoints: [responseText.trim()],
@@ -189,18 +198,20 @@ Write the summary as flowing prose (not bullet points):`;
   validateResult(result, params) {
     // If we have a summary string, return it
     if (result.summary && typeof result.summary === 'string' && result.summary.length > 0) {
-      logger.info('SummaryStrategy: Returning prose summary');
+      logger.info('SummaryGenerator: Returning prose summary');
       return result.summary;
     }
 
     // If we only have key points, join them into a summary
     if (result.keyPoints && result.keyPoints.length > 0) {
-      logger.info('SummaryStrategy: Converting key points to summary');
+      logger.info('SummaryGenerator: Converting key points to summary');
       return result.keyPoints.join('\n\n');
     }
 
-    throw new Error('No valid summary was generated.');
+    // Empty result is valid - content may not have summarizable information
+    logger.info('SummaryGenerator: No summary generated (content may not have summarizable information)');
+    return '';
   }
 }
 
-module.exports = SummaryStrategy;
+module.exports = SummaryGenerator;
