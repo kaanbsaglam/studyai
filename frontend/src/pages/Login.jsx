@@ -1,4 +1,5 @@
 import { useState, useContext } from "react";
+import { FiEye, FiEyeOff } from "react-icons/fi";
 import { loginUser } from "../api/authApi";
 import { AuthContext } from "../context/AuthContext";
 import toast from "react-hot-toast";
@@ -10,11 +11,32 @@ export default function Login() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+
+  const isValidEmail = (value) => /\S+@\S+\.\S+/.test(value);
+  const isValidPassword = (value) => value.length >= 8 && value.length <= 64;
 
   async function handleLogin(e) {
     e.preventDefault();
+    const trimmedEmail = email.trim();
+
+    if (!trimmedEmail || !password) {
+      toast.error("Email and password are required.");
+      return;
+    }
+
+    if (!isValidEmail(trimmedEmail)) {
+      toast.error("Please enter a valid email address.");
+      return;
+    }
+
+    if (!isValidPassword(password)) {
+      toast.error("Password must be 8-64 characters.");
+      return;
+    }
+
     try {
-      const res = await loginUser(email, password);
+      const res = await loginUser(trimmedEmail, password);
       login(res.data.token);
       toast.success("Logged in!");
       navigate("/");
@@ -104,6 +126,7 @@ export default function Login() {
                   placeholder="student@mail.com"
                   type="email"
                   value={email}
+                  maxLength={254}
                   onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
@@ -120,22 +143,35 @@ export default function Login() {
                     Forgot password ?
                   </div>
                 </div>
-                <input
-                  className="w-full"
-                  style={{
-                    height: "48px",
-                    padding: "0 12px",
-                    backgroundColor: "#0f141c",
-                    border: "1px solid #324467",
-                    borderRadius: "8px",
-                    color: "white",
-                    outline: "none",
-                  }}
-                  placeholder="••••••••"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
+                <div className="relative">
+                  <input
+                    className="w-full"
+                    style={{
+                      height: "48px",
+                      padding: "0 44px 0 12px",
+                      backgroundColor: "#0f141c",
+                      border: "1px solid #324467",
+                      borderRadius: "8px",
+                      color: "white",
+                      outline: "none",
+                    }}
+                    placeholder="••••••••"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    minLength={8}
+                    maxLength={64}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-transparent"
+                    style={{ color: "#9aa4b2" }}
+                  >
+                    {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+                  </button>
+                </div>
               </div>
 
               <div style={{ marginTop: "8px" }}>
