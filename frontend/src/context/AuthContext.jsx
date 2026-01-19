@@ -4,13 +4,24 @@ import { jwtDecode } from "jwt-decode";
 export const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
+  const isTokenExpired = (decoded) => {
+    if (!decoded?.exp) return true;
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    return decoded.exp <= nowSeconds;
+  };
+
   // Initialize user *synchronously* from localStorage
   const initialUser = (() => {
     const token = localStorage.getItem("token");
     if (!token) return null;
 
     try {
-      return jwtDecode(token);
+      const decoded = jwtDecode(token);
+      if (isTokenExpired(decoded)) {
+        localStorage.removeItem("token");
+        return null;
+      }
+      return decoded;
     } catch {
       localStorage.removeItem("token");
       return null;
@@ -21,7 +32,13 @@ export function AuthProvider({ children }) {
 
   const login = (token) => {
     localStorage.setItem("token", token);
-    setUser(jwtDecode(token));
+    const decoded = jwtDecode(token);
+    if (isTokenExpired(decoded)) {
+      localStorage.removeItem("token");
+      setUser(null);
+      return;
+    }
+    setUser(decoded);
   };
 
   const logout = () => {
