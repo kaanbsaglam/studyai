@@ -32,4 +32,11 @@ module.exports = {
       model: 'gemini-2.0-flash',
     },
   },
+
+  // Vision extractor chunking settings for large PDFs
+  visionChunking: {
+    enabled: true,
+    pagesPerChunk: 8, // Number of pages per chunk
+    thresholdPages: 12, // Only chunk if PDF has more pages than this
+  },
 };
