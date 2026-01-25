@@ -38,15 +38,15 @@ export default function Pomodoro() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-full bg-white rounded-xl shadow-sm border p-10">
-      <h2 className="text-3xl font-bold mb-8 text-gray-700">Pomodoro Timer</h2>
+    <div className="flex flex-col items-center justify-center h-full bg-white rounded-xl shadow-sm border p-10 dark:bg-slate-900 dark:border-slate-800">
+      <h2 className="text-3xl font-bold mb-8 text-gray-700 dark:text-slate-200">Pomodoro Timer</h2>
 
       {/* Mode Toggles */}
       <div className="flex gap-4 mb-8">
         <button 
           onClick={() => switchMode("work")}
           className={`px-6 py-2 rounded-full font-medium transition-colors ${
-            mode === "work" ? "bg-red-100 text-red-600" : "bg-gray-100 text-gray-500"
+            mode === "work" ? "bg-red-100 text-red-600 dark:bg-red-900/30" : "bg-gray-100 text-gray-500 dark:bg-slate-800 dark:text-slate-400"
           }`}
         >
           Work (25m)
@@ -54,7 +54,7 @@ export default function Pomodoro() {
         <button 
           onClick={() => switchMode("break")}
           className={`px-6 py-2 rounded-full font-medium transition-colors ${
-            mode === "break" ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-500"
+            mode === "break" ? "bg-green-100 text-green-600 dark:bg-green-900/30" : "bg-gray-100 text-gray-500 dark:bg-slate-800 dark:text-slate-400"
           }`}
         >
           Break (5m)
@@ -63,7 +63,7 @@ export default function Pomodoro() {
 
       {/* Timer Display */}
       <div className={`text-9xl font-mono mb-12 tracking-wider ${
-        mode === "work" ? "text-gray-800" : "text-green-600"
+        mode === "work" ? "text-gray-800 dark:text-slate-100" : "text-green-600"
       }`}>
         {formatTime(timeLeft)}
       </div>
@@ -81,7 +81,7 @@ export default function Pomodoro() {
 
         <button 
           onClick={handleReset}
-          className="w-16 h-16 rounded-full flex items-center justify-center bg-gray-200 text-gray-600 text-xl shadow hover:bg-gray-300 transition-transform hover:scale-110 active:scale-95"
+          className="w-16 h-16 rounded-full flex items-center justify-center bg-gray-200 text-gray-600 text-xl shadow hover:bg-gray-300 transition-transform hover:scale-110 active:scale-95 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
         >
           <FaRedo />
         </button>

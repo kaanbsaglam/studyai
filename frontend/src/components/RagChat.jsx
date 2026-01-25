@@ -31,25 +31,25 @@ export default function RagChat({ classroomId }) {
   }
 
   return (
-    <div className="flex flex-col h-[500px] bg-white rounded shadow">
+    <div className="flex flex-col h-[500px] bg-white rounded shadow dark:bg-slate-900 dark:border dark:border-slate-800">
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
             <div className={`max-w-[80%] p-3 rounded-lg ${
-              msg.role === "user" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-800"
+              msg.role === "user" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-800 dark:bg-slate-800 dark:text-slate-100"
             }`}>
               {msg.text}
             </div>
           </div>
         ))}
-        {loading && <div className="text-gray-400 text-sm ml-4">Thinking...</div>}
+        {loading && <div className="text-gray-400 dark:text-slate-500 text-sm ml-4">Thinking...</div>}
       </div>
 
       {/* Input Area */}
-      <div className="p-4 border-t flex gap-2">
+      <div className="p-4 border-t flex gap-2 dark:border-slate-800">
         <input
-          className="flex-1 p-2 border rounded"
+          className="flex-1 p-2 border rounded bg-white text-slate-900 border-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSend()}

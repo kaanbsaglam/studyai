@@ -4,6 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { 
   FaBook, FaRobot, FaBrain, FaStickyNote, FaClock, FaBars, FaLayerGroup 
 } from "react-icons/fa"; 
+import ThemeToggle from "../components/ThemeToggle";
 
 import DocumentManager from "../components/DocumentManager";
 import RagChat from "../components/RagChat";
@@ -28,13 +29,19 @@ export default function Classroom() {
   ];
 
   return (
-    <div className="flex h-screen bg-gray-100 overflow-hidden">
+    <div className="flex h-screen bg-gray-100 overflow-hidden dark:bg-slate-900">
       
       {/* Sidebar */}
-      <div className={`bg-white border-r transition-all duration-300 flex flex-col ${isSidebarOpen ? "w-64" : "w-16"}`}>
-        <div className="p-4 flex items-center justify-between border-b h-16">
-          {isSidebarOpen && <span className="font-bold text-lg text-indigo-600">StudyAI</span>}
-          <button onClick={() => setSidebarOpen(!isSidebarOpen)} className="p-1 hover:bg-gray-100 rounded text-gray-500">
+      <div className={`bg-white border-r transition-all duration-300 flex flex-col dark:bg-slate-900 dark:border-slate-800 ${isSidebarOpen ? "w-64" : "w-16"}`}>
+        <div className="p-4 flex items-center justify-between border-b h-16 dark:border-slate-800">
+          {isSidebarOpen && (
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-lg text-indigo-600 dark:text-indigo-300">StudyAI</span>
+              <ThemeToggle />
+            </div>
+          )}
+          {!isSidebarOpen && <ThemeToggle />}
+          <button onClick={() => setSidebarOpen(!isSidebarOpen)} className="p-1 hover:bg-gray-100 rounded text-gray-500 dark:text-slate-300 dark:hover:bg-slate-800">
             <FaBars />
           </button>
         </div>
@@ -46,8 +53,8 @@ export default function Classroom() {
               onClick={() => setActiveTab(item.id)}
               className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors ${
                 activeTab === item.id 
-                  ? "bg-indigo-50 text-indigo-600 font-medium" 
-                  : "text-gray-600 hover:bg-gray-50"
+                  ? "bg-indigo-50 text-indigo-600 font-medium dark:bg-indigo-900/40 dark:text-indigo-300" 
+                  : "text-gray-600 hover:bg-gray-50 dark:text-slate-300 dark:hover:bg-slate-800"
               }`}
             >
               <span className="text-xl min-w-[20px]">{item.icon}</span>
@@ -56,10 +63,10 @@ export default function Classroom() {
           ))}
         </nav>
 
-        <div className="p-4 border-t">
+        <div className="p-4 border-t dark:border-slate-800">
           <button 
             onClick={() => navigate("/")} 
-            className={`flex items-center gap-3 text-sm text-gray-500 hover:text-red-500 transition-colors w-full p-2 rounded hover:bg-red-50`}
+            className={`flex items-center gap-3 text-sm text-gray-500 hover:text-red-500 transition-colors w-full p-2 rounded hover:bg-red-50 dark:text-slate-300 dark:hover:bg-red-900/20`}
           >
              <span>←</span>
              {isSidebarOpen && <span>Exit Classroom</span>}
@@ -68,7 +75,7 @@ export default function Classroom() {
       </div>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-auto relative bg-gray-50">
+      <main className="flex-1 overflow-auto relative bg-gray-50 dark:bg-slate-950">
         <div className="p-8 max-w-6xl mx-auto h-full">
             {activeTab === "documents" && <DocumentManager classroomId={id} />}
             {activeTab === "chat" && <RagChat classroomId={id} />}

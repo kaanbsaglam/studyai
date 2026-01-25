@@ -53,20 +53,20 @@ export default function FlashcardGenerator({ classroomId }) {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto space-y-6 text-slate-900 dark:text-slate-100">
       <div className="flex justify-between items-center">
          <h2 className="text-2xl font-bold">Flashcards</h2>
          {cards.length > 0 && (
-             <button onClick={handleSave} className="flex items-center gap-2 text-indigo-600 hover:bg-indigo-50 px-3 py-1 rounded">
+             <button onClick={handleSave} className="flex items-center gap-2 text-indigo-600 hover:bg-indigo-50 px-3 py-1 rounded dark:text-indigo-300 dark:hover:bg-indigo-900/40">
                  <FaSave /> Save Deck
              </button>
          )}
       </div>
 
       {/* Controls */}
-      <div className="bg-white p-4 rounded-lg shadow-sm flex gap-4">
+      <div className="bg-white p-4 rounded-lg shadow-sm flex gap-4 dark:bg-slate-900 dark:border dark:border-slate-800">
         <select 
-          className="border p-2 rounded flex-1"
+          className="border p-2 rounded flex-1 bg-white text-slate-900 border-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700"
           value={selectedDoc}
           onChange={(e) => setSelectedDoc(e.target.value)}
         >
@@ -90,9 +90,9 @@ export default function FlashcardGenerator({ classroomId }) {
               <div className={`relative w-full h-full transition-transform duration-500 transform-style-3d shadow-lg rounded-xl border ${isFlipped ? "rotate-y-180" : ""}`}>
                 
                 {/* Front */}
-                <div className="absolute w-full h-full bg-white flex items-center justify-center p-8 backface-hidden rounded-xl">
-                  <p className="text-2xl font-semibold text-center text-gray-800">{cards[currentIndex].front}</p>
-                  <span className="absolute bottom-4 text-xs text-gray-400">Click to flip</span>
+                <div className="absolute w-full h-full bg-white flex items-center justify-center p-8 backface-hidden rounded-xl dark:bg-slate-900">
+                  <p className="text-2xl font-semibold text-center text-gray-800 dark:text-slate-100">{cards[currentIndex].front}</p>
+                  <span className="absolute bottom-4 text-xs text-gray-400 dark:text-slate-500">Click to flip</span>
                 </div>
 
                 {/* Back */}
@@ -105,18 +105,18 @@ export default function FlashcardGenerator({ classroomId }) {
 
             {/* Navigation */}
             <div className="flex items-center gap-8">
-                <button onClick={prevCard} disabled={currentIndex === 0} className="p-3 rounded-full bg-white shadow hover:bg-gray-50 disabled:opacity-50">
+                <button onClick={prevCard} disabled={currentIndex === 0} className="p-3 rounded-full bg-white shadow hover:bg-gray-50 disabled:opacity-50 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-100">
                     <FaArrowLeft />
                 </button>
-                <span className="font-mono text-gray-500">{currentIndex + 1} / {cards.length}</span>
-                <button onClick={nextCard} disabled={currentIndex === cards.length - 1} className="p-3 rounded-full bg-white shadow hover:bg-gray-50 disabled:opacity-50">
+                <span className="font-mono text-gray-500 dark:text-slate-400">{currentIndex + 1} / {cards.length}</span>
+                <button onClick={nextCard} disabled={currentIndex === cards.length - 1} className="p-3 rounded-full bg-white shadow hover:bg-gray-50 disabled:opacity-50 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-100">
                     <FaArrowRight />
                 </button>
             </div>
         </div>
       ) : (
-          <div className="text-center py-20 bg-gray-50 rounded-lg border-2 border-dashed">
-              <p className="text-gray-500">Select a document to generate flashcards.</p>
+              <div className="text-center py-20 bg-gray-50 rounded-lg border-2 border-dashed dark:bg-slate-900 dark:border-slate-700">
+                <p className="text-gray-500 dark:text-slate-400">Select a document to generate flashcards.</p>
           </div>
       )}
 

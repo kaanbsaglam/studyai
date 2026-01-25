@@ -44,13 +44,13 @@ export default function QuizGenerator({ classroomId }) {
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto space-y-6 text-slate-900 dark:text-slate-100">
       <h2 className="text-2xl font-bold">AI Quiz Generator</h2>
       
       {/* Controls */}
-      <div className="bg-white p-4 rounded-lg shadow-sm flex gap-4 items-center">
+      <div className="bg-white p-4 rounded-lg shadow-sm flex gap-4 items-center dark:bg-slate-900 dark:border dark:border-slate-800">
         <select 
-            className="border p-2 rounded flex-1"
+        className="border p-2 rounded flex-1 bg-white text-slate-900 border-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700"
             value={selectedDoc}
             onChange={(e) => setSelectedDoc(e.target.value)}
         >
@@ -66,12 +66,12 @@ export default function QuizGenerator({ classroomId }) {
       {quiz && (
         <div className="space-y-6 animate-fade-in">
           {quiz.map((q, index) => (
-            <div key={index} className="bg-white p-6 rounded-lg shadow-sm border">
+            <div key={index} className="bg-white p-6 rounded-lg shadow-sm border dark:bg-slate-900 dark:border-slate-800">
               <p className="font-semibold text-lg mb-4">{index + 1}. {q.question}</p>
               <div className="space-y-2">
                 {q.options.map((opt, optIndex) => (
                   <label key={optIndex} className={`flex items-center p-3 rounded-lg border cursor-pointer transition-colors ${
-                    answers[index] === optIndex ? "bg-indigo-50 border-indigo-200" : "hover:bg-gray-50"
+                    answers[index] === optIndex ? "bg-indigo-50 border-indigo-200 dark:bg-indigo-900/40 dark:border-indigo-700" : "hover:bg-gray-50 dark:hover:bg-slate-800"
                   }`}>
                     <input 
                       type="radio" 

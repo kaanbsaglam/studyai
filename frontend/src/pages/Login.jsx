@@ -4,6 +4,7 @@ import { loginUser } from "../api/authApi";
 import { AuthContext } from "../context/AuthContext";
 import toast from "react-hot-toast";
 import { Link, useNavigate } from "react-router-dom";
+import ThemeToggle from "../components/ThemeToggle";
 
 export default function Login() {
   const { login } = useContext(AuthContext);
@@ -48,8 +49,11 @@ export default function Login() {
   return (
     <div
       className="p-6 w-full min-h-screen flex flex-col relative overflow-hidden font-display"
-      style={{ backgroundColor: "#1f2631" }}
+      style={{ backgroundColor: "var(--page-bg)" }}
     >
+      <div className="absolute top-4 right-4 z-20">
+        <ThemeToggle />
+      </div>
       {/* main bg shadow */}
       <div
         className="absolute top-0 left-1/2 -translate-x-1/2 pointer-events-none z-0 rounded-full blur-3xl opacity-50"
@@ -57,7 +61,7 @@ export default function Login() {
           width: "800px",
           height: "800px",
           background:
-            "radial-gradient(circle at center, rgba(228, 228, 228, 0.15) 0%, rgba(16,22,34,0) 70%)",
+            "radial-gradient(circle at center, rgba(148, 163, 184, 0.25) 0%, rgba(16,22,34,0) 70%)",
         }}
       ></div>
 
@@ -69,10 +73,10 @@ export default function Login() {
           className="w-full"
           style={{
             maxWidth: "480px",
-            backgroundColor: "#1a1d23",
+            backgroundColor: "var(--card-bg)",
             borderRadius: "16px",
-            border: "1px solid #232f48",
-            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
+            border: "1px solid var(--card-border)",
+            boxShadow: "var(--shadow)",
           }}
         >
           <div style={{ padding: "32px 32px 16px 32px", textAlign: "center" }}>
@@ -81,19 +85,19 @@ export default function Login() {
               style={{ gap: "12px", marginBottom: "24px" }}
             >
               <h2
-                style={{
-                  color: "white",
-                  fontSize: "36px",
-                  fontWeight: 700,
-                  letterSpacing: "-0.015em",
-                }}
+                  style={{
+                    color: "var(--text-primary)",
+                    fontSize: "36px",
+                    fontWeight: 700,
+                    letterSpacing: "-0.015em",
+                  }}
               >
                 StudyAI
               </h2>
             </div>
             <h1
               style={{
-                color: "#777777",
+                  color: "var(--text-secondary)",
                 fontSize: "28px",
                 fontWeight: 700,
                 marginBottom: "8px",
@@ -101,7 +105,7 @@ export default function Login() {
             >
               Welcome back
             </h1>
-            <p style={{ color: "#7d8ca3", fontSize: "14px" }}>
+              <p style={{ color: "var(--text-secondary)", fontSize: "14px" }}>
               Please enter your details to access your workspace.
             </p>
           </div>
@@ -109,7 +113,7 @@ export default function Login() {
           <div style={{ padding: "8px 32px 32px 32px" }}>
             <form onSubmit={handleLogin} className="flex flex-col" style={{ gap: "20px" }}>
               <div className="flex flex-col" style={{ gap: "8px" }}>
-                <label style={{ color: "white", fontSize: "14px", fontWeight: 500 }}>
+                <label style={{ color: "var(--text-primary)", fontSize: "14px", fontWeight: 500 }}>
                   Email
                 </label>
                 <input
@@ -117,10 +121,10 @@ export default function Login() {
                   style={{
                     height: "48px",
                     padding: "0 12px",
-                    backgroundColor: "#0f141c",
-                    border: "1px solid #324467",
+                    backgroundColor: "var(--input-bg)",
+                    border: "1px solid var(--input-border)",
                     borderRadius: "8px",
-                    color: "white",
+                    color: "var(--text-primary)",
                     outline: "none",
                   }}
                   placeholder="student@mail.com"
@@ -133,12 +137,12 @@ export default function Login() {
 
               <div className="flex flex-col" style={{ gap: "8px" }}>
                 <div className="flex justify-between items-center">
-                  <p style={{ color: "white", fontSize: "14px", fontWeight: 500 }}>
+                  <p style={{ color: "var(--text-primary)", fontSize: "14px", fontWeight: 500 }}>
                     Password
                   </p>
                   <div
                     className="text-sm cursor-pointer p-2"
-                    style={{ color: "#2b6cee", fontWeight: 500 }}
+                    style={{ color: "var(--accent)", fontWeight: 500 }}
                   >
                     Forgot password ?
                   </div>
@@ -149,10 +153,10 @@ export default function Login() {
                     style={{
                       height: "48px",
                       padding: "0 44px 0 12px",
-                      backgroundColor: "#0f141c",
-                      border: "1px solid #324467",
+                      backgroundColor: "var(--input-bg)",
+                      border: "1px solid var(--input-border)",
                       borderRadius: "8px",
-                      color: "white",
+                      color: "var(--text-primary)",
                       outline: "none",
                     }}
                     placeholder="••••••••"
@@ -167,7 +171,7 @@ export default function Login() {
                     aria-label={showPassword ? "Hide password" : "Show password"}
                     onClick={() => setShowPassword((prev) => !prev)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-transparent"
-                    style={{ color: "#9aa4b2" }}
+                    style={{ color: "var(--text-secondary)" }}
                   >
                     {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
                   </button>
@@ -180,9 +184,9 @@ export default function Login() {
                   className="w-full"
                   style={{
                     height: "48px",
-                    backgroundColor: "#2b6cee",
+                    backgroundColor: "var(--accent)",
                     borderRadius: "8px",
-                    color: "white",
+                    color: "#ffffff",
                     fontSize: "14px",
                     fontWeight: 700,
                   }}
@@ -195,13 +199,13 @@ export default function Login() {
             <p
               style={{
                 textAlign: "center",
-                color: "#7d8ca3",
+                color: "var(--text-secondary)",
                 fontSize: "14px",
                 marginTop: "24px",
               }}
             >
               Don&apos;t have an account?{" "}
-              <Link to="/register" style={{ color: "#2b6cee", fontWeight: 700, textDecoration: "none" }}>
+              <Link to="/register" style={{ color: "var(--accent)", fontWeight: 700, textDecoration: "none" }}>
                 Sign up
               </Link>
             </p>

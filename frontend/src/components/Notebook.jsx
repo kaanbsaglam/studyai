@@ -24,9 +24,9 @@ export default function Notebook({ classroomId }) {
   };
 
   return (
-    <div className="h-[80vh] flex flex-col bg-white rounded-xl shadow-sm border overflow-hidden">
-      <div className="p-3 border-b bg-gray-50 flex justify-between items-center">
-        <span className="font-semibold text-gray-600">Classroom Notebook</span>
+    <div className="h-[80vh] flex flex-col bg-white rounded-xl shadow-sm border overflow-hidden dark:bg-slate-900 dark:border-slate-800">
+      <div className="p-3 border-b bg-gray-50 flex justify-between items-center dark:bg-slate-800 dark:border-slate-700">
+        <span className="font-semibold text-gray-600 dark:text-slate-200">Classroom Notebook</span>
         <button 
           onClick={handleSave} 
           disabled={saving}
@@ -36,7 +36,7 @@ export default function Notebook({ classroomId }) {
         </button>
       </div>
       <textarea 
-        className="flex-1 p-6 resize-none focus:outline-none text-lg leading-relaxed text-gray-800"
+        className="flex-1 p-6 resize-none focus:outline-none text-lg leading-relaxed text-gray-800 dark:text-slate-100 dark:bg-slate-900"
         value={content}
         onChange={(e) => setContent(e.target.value)}
         placeholder="Start typing your lecture notes here..."
