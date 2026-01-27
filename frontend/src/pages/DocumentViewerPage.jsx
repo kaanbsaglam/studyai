@@ -164,6 +164,12 @@ export default function DocumentViewerPage() {
         {/* Document Header */}
         <div className="px-3 py-2 border-b border-gray-200 flex justify-between items-center bg-gray-50">
           <div className="flex items-center gap-2">
+            <Link
+              to={`/classrooms/${classroomId}/documents`}
+              className="px-2 py-1 rounded text-xs font-medium text-gray-600 bg-gray-200 hover:bg-gray-300"
+            >
+              Back
+            </Link>
             {/* Notes toggle - with label */}
             <button
               onClick={() => setNotesOpen(!notesOpen)}

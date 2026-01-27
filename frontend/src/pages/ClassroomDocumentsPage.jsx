@@ -1,25 +1,16 @@
-import { useState, useEffect, useRef } from 'react';
-import { Link, useOutletContext, useParams, useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useOutletContext, useParams } from 'react-router-dom';
 import api from '../api/axios';
-import ClassroomStudyStats from '../components/stats/ClassroomStudyStats';
 
-export default function ClassroomDashboard() {
+export default function ClassroomDocumentsPage() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const { classroom, refreshClassroom } = useOutletContext();
   const fileInputRef = useRef(null);
 
-  const [isEditing, setIsEditing] = useState(false);
-  const [editName, setEditName] = useState(classroom?.name || '');
-  const [editDescription, setEditDescription] = useState(classroom?.description || '');
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    setEditName(classroom?.name || '');
-    setEditDescription(classroom?.description || '');
-  }, [classroom]);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Auto-refresh when documents are processing
   useEffect(() => {
@@ -31,40 +22,7 @@ export default function ClassroomDashboard() {
       const interval = setInterval(refreshClassroom, 3000);
       return () => clearInterval(interval);
     }
-  }, [classroom?.documents]);
-
-  const handleUpdate = async () => {
-    try {
-      await api.patch(`/classrooms/${id}`, {
-        name: editName,
-        description: editDescription || null,
-      });
-      await refreshClassroom();
-      setIsEditing(false);
-      setError('');
-    } catch (err) {
-      setError(err.response?.data?.error?.message || 'Failed to update classroom');
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this classroom? All documents will be deleted.')) {
-      return;
-    }
-
-    try {
-      await api.delete(`/classrooms/${id}`);
-      navigate('/classrooms');
-    } catch (err) {
-      setError('Failed to delete classroom');
-    }
-  };
-
-  const formatFileSize = (bytes) => {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  };
+  }, [classroom?.documents, refreshClassroom]);
 
   const handleFileSelect = async (e) => {
     const file = e.target.files?.[0];
@@ -132,6 +90,12 @@ export default function ClassroomDashboard() {
     }
   };
 
+  const formatFileSize = (bytes) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
   const getStatusBadge = (status) => {
     const styles = {
       PENDING: 'bg-yellow-100 text-yellow-800',
@@ -152,16 +116,13 @@ export default function ClassroomDashboard() {
     );
   };
 
-  const getDocTimestamp = (doc) => {
-    const rawDate = doc.createdAt || doc.updatedAt;
-    if (!rawDate) return 0;
-    const timestamp = new Date(rawDate).getTime();
-    return Number.isNaN(timestamp) ? 0 : timestamp;
-  };
+  const documents = classroom?.documents || [];
 
-  const recentDocuments = [...(classroom?.documents || [])]
-    .sort((a, b) => getDocTimestamp(b) - getDocTimestamp(a))
-    .slice(0, 5);
+  const filteredDocuments = useMemo(() => {
+    const normalized = searchQuery.trim().toLowerCase();
+    if (!normalized) return documents;
+    return documents.filter((doc) => doc.originalName?.toLowerCase().includes(normalized));
+  }, [documents, searchQuery]);
 
   return (
     <div className="space-y-6">
@@ -171,88 +132,22 @@ export default function ClassroomDashboard() {
         </div>
       )}
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 gap-4">
-        <ClassroomStudyStats classroomId={id} />
-      </div>
-
-      {/* Classroom Settings */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex justify-between items-start mb-4">
-          <h3 className="text-lg font-medium text-gray-900">Classroom Settings</h3>
-          {!isEditing && (
-            <div className="flex gap-2">
-              <button
-                onClick={() => setIsEditing(true)}
-                className="px-3 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded"
-              >
-                Edit
-              </button>
-              <button
-                onClick={handleDelete}
-                className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded"
-              >
-                Delete
-              </button>
-            </div>
-          )}
-        </div>
-
-        {isEditing ? (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-              <input
-                type="text"
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-              <textarea
-                value={editDescription}
-                onChange={(e) => setEditDescription(e.target.value)}
-                rows={2}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Optional description"
-              />
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={handleUpdate}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
-              >
-                Save
-              </button>
-              <button
-                onClick={() => {
-                  setIsEditing(false);
-                  setEditName(classroom.name);
-                  setEditDescription(classroom.description || '');
-                }}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md font-medium"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="text-sm text-gray-500">
-            {classroom.description || 'No description'}
-          </div>
-        )}
-      </div>
-
-      {/* Recent Documents */}
       <div className="bg-white rounded-lg shadow">
-        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+        <div className="px-6 py-4 border-b border-gray-200 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <h3 className="text-lg font-medium text-gray-900">Recent Documents</h3>
-            <p className="text-sm text-gray-500">Showing the latest 5 documents.</p>
+            <h3 className="text-lg font-medium text-gray-900">Documents</h3>
+            <p className="text-sm text-gray-500">Search, open, and manage classroom documents.</p>
           </div>
           <div className="flex items-center gap-3">
+            <div className="relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search documents..."
+                className="w-64 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
             <input
               ref={fileInputRef}
               type="file"
@@ -283,7 +178,7 @@ export default function ClassroomDashboard() {
           </div>
         )}
 
-        {recentDocuments.length === 0 ? (
+        {filteredDocuments.length === 0 ? (
           <div className="p-6 text-center text-gray-500">
             <svg
               className="mx-auto h-12 w-12 text-gray-400"
@@ -298,12 +193,18 @@ export default function ClassroomDashboard() {
                 d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
               />
             </svg>
-            <p className="mt-2">No documents yet</p>
-            <p className="text-sm">Upload documents from the Documents tab to get started</p>
+            <p className="mt-2">
+              {documents.length === 0
+                ? 'No documents yet'
+                : 'No documents match your search'}
+            </p>
+            {documents.length === 0 && (
+              <p className="text-sm">Upload PDF, DOCX, or TXT files to start studying with AI</p>
+            )}
           </div>
         ) : (
           <ul className="divide-y divide-gray-200">
-            {recentDocuments.map((doc) => (
+            {filteredDocuments.map((doc) => (
               <li key={doc.id} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50">
                 <Link
                   to={doc.status === 'READY' ? `/classrooms/${id}/documents/${doc.id}` : '#'}

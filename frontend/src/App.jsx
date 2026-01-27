@@ -8,6 +8,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ClassroomsPage from './pages/ClassroomsPage';
 import ClassroomDashboard from './pages/ClassroomDashboard';
+import ClassroomDocumentsPage from './pages/ClassroomDocumentsPage';
 import DocumentViewerPage from './pages/DocumentViewerPage';
 import ChatPage from './pages/ChatPage';
 import FlashcardsPage from './pages/FlashcardsPage';
@@ -53,6 +54,7 @@ function App() {
             }
           >
             <Route index element={<ClassroomDashboard />} />
+            <Route path="documents" element={<ClassroomDocumentsPage />} />
             <Route path="documents/:docId" element={<DocumentViewerPage />} />
             <Route path="chat" element={<ChatPage />} />
             <Route path="flashcards" element={<FlashcardsPage />} />
