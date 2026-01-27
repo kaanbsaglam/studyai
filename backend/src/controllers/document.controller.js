@@ -6,6 +6,7 @@
 
 const prisma = require('../lib/prisma');
 const { uploadFile, deleteFile, getPresignedUrl } = require('../services/s3.service');
+const { deleteVectorsByDocument } = require('../services/embedding.service');
 const { validateFile, isAudioFile } = require('../validators/document.validator');
 const { addDocumentProcessingJob } = require('../lib/queue');
 const { NotFoundError, AuthorizationError, ValidationError } = require('../middleware/errorHandler');
@@ -221,12 +222,18 @@ const deleteDocument = asyncHandler(async (req, res) => {
     // Continue with database deletion even if S3 fails
   }
 
+  // Delete vectors from Pinecone
+  try {
+    await deleteVectorsByDocument(id);
+  } catch (error) {
+    logger.error('Failed to delete vectors from Pinecone', { error: error.message, documentId: id });
+    // Continue with database deletion even if Pinecone fails
+  }
+
   // Delete from database (cascades to chunks)
   await prisma.document.delete({
     where: { id },
   });
-
-  // TODO: Delete vectors from Pinecone
 
   logger.info(`Document deleted: ${id}`);
 

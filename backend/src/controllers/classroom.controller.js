@@ -9,6 +9,9 @@ const { createClassroomSchema, updateClassroomSchema } = require('../validators/
 const { NotFoundError, AuthorizationError, ValidationError } = require('../middleware/errorHandler');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { canCreateClassroom } = require('../services/tier.service');
+const { deleteFile } = require('../services/s3.service');
+const { deleteVectorsByDocument } = require('../services/embedding.service');
+const logger = require('../config/logger');
 
 /**
  * Create a new classroom
@@ -140,9 +143,17 @@ const updateClassroom = asyncHandler(async (req, res) => {
 const deleteClassroom = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  // Check if classroom exists and belongs to user
+  // Check if classroom exists and belongs to user, include documents for cleanup
   const existing = await prisma.classroom.findUnique({
     where: { id },
+    include: {
+      documents: {
+        select: {
+          id: true,
+          s3Key: true,
+        },
+      },
+    },
   });
 
   if (!existing) {
@@ -153,10 +164,39 @@ const deleteClassroom = asyncHandler(async (req, res) => {
     throw new AuthorizationError('You do not have access to this classroom');
   }
 
+  // Clean up S3 files and Pinecone vectors for all documents
+  for (const document of existing.documents) {
+    // Delete from S3
+    try {
+      await deleteFile(document.s3Key);
+    } catch (error) {
+      logger.error('Failed to delete file from S3 during classroom deletion', {
+        error: error.message,
+        key: document.s3Key,
+        classroomId: id,
+      });
+      // Continue with other deletions even if this fails
+    }
+
+    // Delete vectors from Pinecone
+    try {
+      await deleteVectorsByDocument(document.id);
+    } catch (error) {
+      logger.error('Failed to delete vectors from Pinecone during classroom deletion', {
+        error: error.message,
+        documentId: document.id,
+        classroomId: id,
+      });
+      // Continue with other deletions even if this fails
+    }
+  }
+
   // Delete classroom (cascades to documents due to Prisma schema)
   await prisma.classroom.delete({
     where: { id },
   });
+
+  logger.info(`Classroom deleted: ${id}`, { documentCount: existing.documents.length });
 
   res.json({
     success: true,
