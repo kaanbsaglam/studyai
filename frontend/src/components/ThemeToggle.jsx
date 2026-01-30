@@ -35,7 +35,7 @@ export default function ThemeToggle({ className = '' }) {
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="inline-flex items-center rounded-full border border-slate-300/70 bg-white/90 px-3 py-1 text-[11px] font-semibold text-white shadow-sm backdrop-blur"
+        className="inline-flex items-center rounded-full border border-slate-300/70 bg-white/90 px-3 py-1 text-slate-600 font-semibold shadow-sm backdrop-blur"
         aria-expanded={open}
         aria-haspopup="menu"
       >
