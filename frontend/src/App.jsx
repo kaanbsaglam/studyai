@@ -4,6 +4,7 @@ import { TimerProvider } from './context/TimerContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import ClassroomLayout from './components/ClassroomLayout';
+import ThemeToggle from './components/ThemeToggle';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ClassroomsPage from './pages/ClassroomsPage';
@@ -24,6 +25,9 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <TimerProvider>
+          <div className="fixed bottom-4 right-4 z-50">
+            <ThemeToggle />
+          </div>
           <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
