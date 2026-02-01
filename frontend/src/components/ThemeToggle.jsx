@@ -35,7 +35,7 @@ export default function ThemeToggle({ className = '' }) {
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="inline-flex items-center rounded-full border border-slate-300/70 bg-white/90 px-3 py-1 text-slate-600 font-semibold shadow-sm backdrop-blur"
+        className="theme-toggle-button inline-flex items-center rounded-full border px-3 py-1 font-semibold shadow-sm backdrop-blur"
         aria-expanded={open}
         aria-haspopup="menu"
       >
@@ -44,7 +44,7 @@ export default function ThemeToggle({ className = '' }) {
 
       {open && (
         <div
-          className="absolute right-0 bottom-full z-50 mb-2 w-max rounded-full border border-slate-300/70 bg-white/95 p-1 text-xs shadow-sm backdrop-blur"
+          className="theme-toggle-menu absolute right-0 bottom-full z-50 mb-2 w-max rounded-full border p-1 text-xs shadow-sm backdrop-blur"
           role="menu"
         >
           <div className="inline-flex items-center gap-1">
@@ -59,10 +59,8 @@ export default function ThemeToggle({ className = '' }) {
                     setTheme(option.value);
                     setOpen(false);
                   }}
-                  className={`rounded-full px-3 py-1 font-semibold transition-colors ${
-                    isActive
-                      ? 'bg-slate-900 text-white'
-                      : 'bg-transparent text-slate-700 hover:bg-slate-100'
+                  className={`theme-toggle-option rounded-full px-3 py-1 font-semibold transition-colors ${
+                    isActive ? 'theme-toggle-option-active' : 'bg-transparent'
                   }`}
                 >
                   {option.label}
