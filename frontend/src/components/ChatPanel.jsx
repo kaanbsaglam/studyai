@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import api from '../api/axios';
 
 export default function ChatPanel({
@@ -10,6 +11,7 @@ export default function ChatPanel({
   selectedDocuments = [],
   onClearChat,
 }) {
+  const { t } = useTranslation();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -68,7 +70,7 @@ export default function ChatPanel({
         ...prev,
         {
           role: 'assistant',
-          content: err.response?.data?.error?.message || 'Failed to get answer. Please try again.',
+          content: err.response?.data?.error?.message || t('chatPanel.failedToGetAnswer'),
           isError: true,
         },
       ]);
@@ -94,11 +96,11 @@ export default function ChatPanel({
       {!compact && (
         <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
           <div>
-            <h3 className="text-lg font-medium text-gray-900">AI Study Assistant</h3>
+            <h3 className="text-lg font-medium text-gray-900">{t('chatPanel.aiAssistant')}</h3>
             <p className="text-sm text-gray-500">
               {documentIds.length > 0
-                ? `${documentIds.length} document${documentIds.length > 1 ? 's' : ''} selected`
-                : 'Ask questions about your documents'}
+                ? t('chatPanel.docsSelected', { count: documentIds.length })
+                : t('chatPanel.askAboutDocs')}
             </p>
           </div>
           {messages.length > 0 && (
@@ -106,7 +108,7 @@ export default function ChatPanel({
               onClick={handleClearChat}
               className="text-sm text-gray-500 hover:text-gray-700"
             >
-              Clear chat
+              {t('chatPanel.clearChat')}
             </button>
           )}
         </div>
@@ -138,11 +140,11 @@ export default function ChatPanel({
                 d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
               />
             </svg>
-            <p className="mt-2">No messages yet</p>
+            <p className="mt-2">{t('chatPanel.noMessages')}</p>
             <p className="text-sm">
               {hasReadyDocuments
-                ? 'Ask a question to get started'
-                : 'Upload and process documents first'}
+                ? t('chatPanel.askToStart')
+                : t('chatPanel.uploadFirst')}
             </p>
           </div>
         ) : (
@@ -165,7 +167,7 @@ export default function ChatPanel({
                 {/* Sources */}
                 {message.sources?.length > 0 && (
                   <div className="mt-2 pt-2 border-t border-gray-200">
-                    <p className="text-xs text-gray-500 mb-1">Sources:</p>
+                    <p className="text-xs text-gray-500 mb-1">{t('chatPanel.sources')}</p>
                     <div className="flex flex-wrap gap-1">
                       {message.sources.map((source, idx) => (
                         <span
@@ -189,7 +191,7 @@ export default function ChatPanel({
                   !message.isError &&
                   message.hasRelevantContext === false && (
                     <p className="mt-2 text-xs text-gray-500 italic">
-                      (General knowledge - not from your documents)
+                      {t('chatPanel.generalKnowledge')}
                     </p>
                   )}
               </div>
@@ -203,7 +205,7 @@ export default function ChatPanel({
             <div className="bg-gray-100 rounded-lg px-4 py-2">
               <div className="flex items-center gap-2">
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                <span className="text-gray-500">Thinking...</span>
+                <span className="text-gray-500">{t('chatPanel.thinking')}</span>
               </div>
             </div>
           </div>
@@ -221,8 +223,8 @@ export default function ChatPanel({
             onChange={(e) => setInput(e.target.value)}
             placeholder={
               hasReadyDocuments
-                ? 'Ask a question...'
-                : 'Upload documents first...'
+                ? t('chatPanel.askQuestion')
+                : t('chatPanel.uploadDocsFirst')
             }
             disabled={loading}
             className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
@@ -232,7 +234,7 @@ export default function ChatPanel({
             disabled={loading || !input.trim()}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Send
+            {t('common.send')}
           </button>
         </div>
       </form>

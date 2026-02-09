@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import api from '../api/axios';
 import DocumentSelector from './DocumentSelector';
 
@@ -9,6 +10,7 @@ export default function SummaryPanel({
   compact,
   fullHeight,
 }) {
+  const { t } = useTranslation();
   const [summaries, setSummaries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -40,7 +42,7 @@ export default function SummaryPanel({
       setSummaries(response.data.data.summaries);
       setError('');
     } catch {
-      setError('Failed to load summaries');
+      setError(t('summaryPanel.failedToLoad'));
     } finally {
       setLoading(false);
     }
@@ -51,7 +53,7 @@ export default function SummaryPanel({
     if (!formTitle.trim()) return;
 
     if (isGeneralKnowledge && !formFocusTopic.trim()) {
-      setError('Focus topic is required when no documents are selected');
+      setError(t('summaryPanel.focusRequired'));
       return;
     }
 
@@ -75,7 +77,7 @@ export default function SummaryPanel({
       // Show the newly created summary
       setActiveSummary(response.data.data.summary);
     } catch (err) {
-      setError(err.response?.data?.error?.message || 'Failed to generate summary');
+      setError(err.response?.data?.error?.message || t('summaryPanel.failedToGenerate'));
     } finally {
       setGenerating(false);
     }
@@ -86,12 +88,12 @@ export default function SummaryPanel({
       const response = await api.get(`/summaries/${summaryId}`);
       setActiveSummary(response.data.data.summary);
     } catch {
-      setError('Failed to load summary');
+      setError(t('summaryPanel.failedToLoadSummary'));
     }
   };
 
   const handleDeleteSummary = async (summaryId) => {
-    if (!confirm('Are you sure you want to delete this summary?')) return;
+    if (!confirm(t('summaryPanel.deleteConfirm'))) return;
 
     try {
       await api.delete(`/summaries/${summaryId}`);
@@ -100,15 +102,15 @@ export default function SummaryPanel({
         setActiveSummary(null);
       }
     } catch {
-      setError('Failed to delete summary');
+      setError(t('summaryPanel.failedToDelete'));
     }
   };
 
   const getLengthLabel = (length) => {
     switch (length) {
-      case 'short': return 'Brief';
-      case 'medium': return 'Standard';
-      case 'long': return 'Detailed';
+      case 'short': return t('summaryPanel.brief');
+      case 'medium': return t('summaryPanel.standard');
+      case 'long': return t('summaryPanel.detailed');
       default: return length;
     }
   };
@@ -128,7 +130,7 @@ export default function SummaryPanel({
       // Reset after 3 seconds
       setTimeout(() => setSavedAsNote(false), 3000);
     } catch (err) {
-      setError(err.response?.data?.error?.message || 'Failed to save as note');
+      setError(err.response?.data?.error?.message || t('summaryPanel.failedToSaveNote'));
     } finally {
       setSavingAsNote(false);
     }
@@ -142,7 +144,7 @@ export default function SummaryPanel({
           <div>
             <h3 className="text-lg font-medium text-gray-900">{activeSummary.title}</h3>
             <p className="text-sm text-gray-500">
-              {getLengthLabel(activeSummary.length)} summary
+              {getLengthLabel(activeSummary.length)} {t('summaryPanel.summary')}
               {activeSummary.focusTopic && ` - Focus: ${activeSummary.focusTopic}`}
             </p>
           </div>
@@ -167,14 +169,14 @@ export default function SummaryPanel({
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  Saved!
+                  {t('summaryPanel.saved')}
                 </>
               ) : (
                 <>
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
-                  Save as Note
+                  {t('summaryPanel.saveAsNote')}
                 </>
               )}
             </button>
@@ -216,7 +218,7 @@ export default function SummaryPanel({
     return (
       <div className={compact ? 'flex flex-col h-full' : 'bg-white rounded-lg shadow'}>
         <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-          <h3 className="text-lg font-medium text-gray-900">Generate Summary</h3>
+          <h3 className="text-lg font-medium text-gray-900">{t('summaryPanel.generateSummary')}</h3>
           <button
             onClick={() => setShowGenerateForm(false)}
             className="text-gray-500 hover:text-gray-700"
@@ -235,7 +237,7 @@ export default function SummaryPanel({
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('summaryPanel.titleLabel')}</label>
             <input
               type="text"
               value={formTitle}
@@ -248,7 +250,7 @@ export default function SummaryPanel({
 
           {!compact && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Source Documents</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('summaryPanel.sourceDocuments')}</label>
               <DocumentSelector
                 documents={documents}
                 selectedIds={selectedDocIds}
@@ -259,7 +261,7 @@ export default function SummaryPanel({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Focus Topic {isGeneralKnowledge ? '*' : '(optional)'}
+              {isGeneralKnowledge ? `${t('summaryPanel.focusTopic')} *` : t('summaryPanel.focusTopicOptional')}
             </label>
             <input
               type="text"
@@ -271,18 +273,18 @@ export default function SummaryPanel({
             />
             <p className="text-xs text-gray-500 mt-1">
               {isGeneralKnowledge
-                ? 'Required - summary will be generated from general knowledge'
-                : 'Leave empty to summarize all content from selected documents'}
+                ? t('summaryPanel.generalKnowledgeHint')
+                : t('summaryPanel.documentHint')}
             </p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Summary Length</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('summaryPanel.summaryLength')}</label>
             <div className="grid grid-cols-3 gap-2">
               {[
-                { value: 'short', label: 'Brief', desc: '150-250 words' },
-                { value: 'medium', label: 'Standard', desc: '400-600 words' },
-                { value: 'long', label: 'Detailed', desc: '800-1200 words' },
+                { value: 'short', label: t('summaryPanel.brief'), desc: t('summaryPanel.briefWords') },
+                { value: 'medium', label: t('summaryPanel.standard'), desc: t('summaryPanel.standardWords') },
+                { value: 'long', label: t('summaryPanel.detailed'), desc: t('summaryPanel.detailedWords') },
               ].map((option) => (
                 <button
                   key={option.value}
@@ -313,15 +315,15 @@ export default function SummaryPanel({
                   Generating...
                 </span>
               ) : (
-                'Generate Summary'
+                t('summaryPanel.generateSummary')
               )}
             </button>
           </div>
 
           <p className="text-xs text-gray-500 text-center">
             {isGeneralKnowledge
-              ? 'Summary will be generated from AI general knowledge'
-              : `Summary will be generated from ${selectedDocIds.length} selected document${selectedDocIds.length !== 1 ? 's' : ''}`}
+              ? t('summaryPanel.fromGeneral')
+              : t('summaryPanel.fromDocs', { count: selectedDocIds.length })}
           </p>
         </form>
       </div>
@@ -340,14 +342,14 @@ export default function SummaryPanel({
       {!compact && (
         <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
           <div>
-            <h3 className="text-lg font-medium text-gray-900">Summaries</h3>
-            <p className="text-sm text-gray-500">AI-generated summaries of your study materials</p>
+            <h3 className="text-lg font-medium text-gray-900">{t('summaryPanel.title')}</h3>
+            <p className="text-sm text-gray-500">{t('summaryPanel.subtitle')}</p>
           </div>
           <button
             onClick={() => setShowGenerateForm(true)}
             className="px-4 py-2 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700"
           >
-            + Generate
+            {t('summaryPanel.generate')}
           </button>
         </div>
       )}
@@ -358,7 +360,7 @@ export default function SummaryPanel({
             onClick={() => setShowGenerateForm(true)}
             className="w-full px-4 py-2 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 text-sm"
           >
-            + Generate Summary
+            {t('summaryPanel.generateBtn')}
           </button>
         </div>
       )}
@@ -384,8 +386,8 @@ export default function SummaryPanel({
               d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
             />
           </svg>
-          <p className="mt-2">No summaries yet</p>
-          <p className="text-sm">Generate summaries from documents or general knowledge</p>
+          <p className="mt-2">{t('summaryPanel.noSummariesYet')}</p>
+          <p className="text-sm">{t('summaryPanel.generateHint')}</p>
         </div>
       ) : (
         <ul className="divide-y divide-gray-200 flex-1 overflow-auto">

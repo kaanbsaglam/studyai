@@ -290,7 +290,8 @@
     "fromDocs": "Bilgi kartları {{count}} seçili dökümandan oluşturulacak",
     "fromDocs_plural": "Bilgi kartları {{count}} seçili dökümandan oluşturulacak",
     "returnToOrder": "Orijinal sıraya dön",
-    "shuffleCards": "Kartları karıştır"
+    "shuffleCards": "Kartları karıştır",
+    "study": "Çalış"
   },
   "quizPanel": {
     "generateQuiz": "Test Oluştur",
@@ -399,7 +400,9 @@
     "documentsSelected_plural": "{{count}} doküman seçildi",
     "selectedOf": "{{selected}} / {{total}} seçildi",
     "selectAll": "Tümünü seç",
-    "clear": "Temizle"
+    "clear": "Temizle",
+    "noDocsSelectedHint": "Dosyalar seçilmedi - Yapay Zeka RAG kullanarak alakalı içeriği bulacak",
+    "docsSelectedHint": "Seçilen belgeler bütün içerik olarak gönderilecek"
   },
   "themeToggle": {
     "theme": "Tema",
@@ -421,7 +424,10 @@
     "daysStreak": "Gün Serisi",
     "daysStreak_plural": "Gün Serisi",
     "mostStudied": "En Çok Çalışılan",
-    "startStudying": "İstatistikleri görmek için çalışmaya başlayın"
+    "startStudying": "İstatistikleri görmek için çalışmaya başlayın",
+    "mon": "Pzt",
+    "wed": "Çar",
+    "fri": "Cum"
   },
   "timer": {
     "start": "Başla",

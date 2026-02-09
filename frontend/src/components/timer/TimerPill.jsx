@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useTimer } from '../../hooks/useTimer';
 import TimerPopover from './TimerPopover';
 
@@ -12,6 +13,7 @@ function formatTime(seconds) {
 }
 
 export default function TimerPill() {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
 
@@ -70,7 +72,7 @@ export default function TimerPill() {
         <span className="text-base">🍅</span>
 
         {isIdle ? (
-          <span>Start</span>
+          <span>{t('timer.start')}</span>
         ) : (
           <>
             <span className="font-mono">{formatTime(timeRemaining)}</span>

@@ -6,6 +6,7 @@
  */
 
 import { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 // Helper to format date as YYYY-MM-DD in local timezone (not UTC)
 const toLocalDateStr = (d) => {
@@ -21,6 +22,7 @@ export default function ActivityHeatmap({
   onDayClick,
   compact = false,
 }) {
+  const { t, i18n } = useTranslation();
   const [hoveredDay, setHoveredDay] = useState(null);
 
   // Generate grid of days (7 rows x N weeks)
@@ -56,7 +58,7 @@ export default function ActivityHeatmap({
       // Track month changes for labels
       if (date.getMonth() !== lastMonth && date.getDay() === 0) {
         monthLabels.push({
-          name: date.toLocaleDateString('en-US', { month: 'short' }),
+          name: date.toLocaleDateString(i18n.language, { month: 'short' }),
           week: Math.floor(i / 7),
         });
         lastMonth = date.getMonth();
@@ -72,7 +74,7 @@ export default function ActivityHeatmap({
     }
 
     return { grid: days, months: monthLabels };
-  }, [dailyData, weeks]);
+  }, [dailyData, weeks, i18n.language]);
 
   const getIntensity = (seconds) => {
     if (seconds === 0) return 'bg-gray-100';
@@ -87,7 +89,7 @@ export default function ActivityHeatmap({
     const hours = Math.floor(day.seconds / 3600);
     const minutes = Math.floor((day.seconds % 3600) / 60);
     const timeStr = day.seconds === 0
-      ? 'No activity'
+      ? t('studyStats.noActivity')
       : hours > 0
         ? `${hours}h ${minutes}m`
         : `${minutes}m`;
@@ -117,9 +119,9 @@ export default function ActivityHeatmap({
         {/* Day labels */}
         {!compact && (
           <div className="flex flex-col justify-around mr-1 text-xs text-gray-400">
-            <span>Mon</span>
-            <span>Wed</span>
-            <span>Fri</span>
+            <span>{t('studyStats.mon')}</span>
+            <span>{t('studyStats.wed')}</span>
+            <span>{t('studyStats.fri')}</span>
           </div>
         )}
 
@@ -149,13 +151,13 @@ export default function ActivityHeatmap({
       {/* Legend */}
       {!compact && (
         <div className="flex items-center justify-end gap-1 mt-2 text-xs text-gray-500">
-          <span>Less</span>
+          <span>{t('studyStats.less')}</span>
           <div className="w-3 h-3 bg-gray-100 rounded-sm" />
           <div className="w-3 h-3 bg-green-200 rounded-sm" />
           <div className="w-3 h-3 bg-green-300 rounded-sm" />
           <div className="w-3 h-3 bg-green-400 rounded-sm" />
           <div className="w-3 h-3 bg-green-600 rounded-sm" />
-          <span>More</span>
+          <span>{t('studyStats.more')}</span>
         </div>
       )}
     </div>

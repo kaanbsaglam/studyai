@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useTimer } from '../../hooks/useTimer';
 
 /**
@@ -13,20 +14,21 @@ function formatTime(seconds) {
 /**
  * Get phase display label
  */
-function getPhaseLabel(phase) {
+function getPhaseLabel(phase, t) {
   switch (phase) {
     case 'FOCUS':
-      return 'Focus Session';
+      return t('timer.focusSession');
     case 'SHORT_BREAK':
-      return 'Short Break';
+      return t('timer.shortBreak');
     case 'LONG_BREAK':
-      return 'Long Break';
+      return t('timer.longBreak');
     default:
-      return 'Ready to Focus';
+      return t('timer.readyToFocus');
   }
 }
 
 export default function TimerPopover({ onClose }) {
+  const { t } = useTranslation();
   const {
     phase,
     timeRemaining,
@@ -56,7 +58,7 @@ export default function TimerPopover({ onClose }) {
       <div className="px-4 py-3 border-b border-gray-100">
         <div className="flex items-center justify-between">
           <span className={`text-sm font-medium ${isIdle ? 'text-gray-600' : phaseColor}`}>
-            {getPhaseLabel(phase)}
+            {getPhaseLabel(phase, t)}
           </span>
           <button
             onClick={onClose}
@@ -88,7 +90,7 @@ export default function TimerPopover({ onClose }) {
         {/* Session Counter */}
         {!isIdle && (
           <div className="mt-2 text-sm text-gray-500">
-            Session {sessionCount} of {settings.sessionsBeforeLong}
+            {t('timer.sessionOf', { current: sessionCount, total: settings.sessionsBeforeLong })}
           </div>
         )}
       </div>
@@ -100,7 +102,7 @@ export default function TimerPopover({ onClose }) {
             onClick={start}
             className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
           >
-            Start Focus
+            {t('timer.startFocus')}
           </button>
         ) : (
           <>
@@ -108,7 +110,7 @@ export default function TimerPopover({ onClose }) {
               <button
                 onClick={pause}
                 className="p-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-                title="Pause"
+                title={t('timer.pause')}
               >
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6" />
@@ -118,7 +120,7 @@ export default function TimerPopover({ onClose }) {
               <button
                 onClick={resume}
                 className="p-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-                title="Resume"
+                title={t('timer.resume')}
               >
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
@@ -129,7 +131,7 @@ export default function TimerPopover({ onClose }) {
             <button
               onClick={stop}
               className="p-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-              title="Stop"
+              title={t('timer.stop')}
             >
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -140,7 +142,7 @@ export default function TimerPopover({ onClose }) {
             <button
               onClick={skip}
               className="p-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-              title="Skip to next phase"
+              title={t('timer.skipToNext')}
             >
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
@@ -161,7 +163,7 @@ export default function TimerPopover({ onClose }) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
-          Timer Settings
+          {t('timer.timerSettings')}
         </Link>
       </div>
     </div>

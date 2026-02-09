@@ -290,7 +290,8 @@
     "fromDocs": "Flashcards will be generated from {{count}} selected document",
     "fromDocs_plural": "Flashcards will be generated from {{count}} selected documents",
     "returnToOrder": "Return to original order",
-    "shuffleCards": "Shuffle cards"
+    "shuffleCards": "Shuffle cards",
+    "study": "Study"
   },
   "quizPanel": {
     "generateQuiz": "Generate Quiz",
@@ -399,7 +400,10 @@
     "documentsSelected_plural": "{{count}} documents selected",
     "selectedOf": "{{selected}} of {{total}} selected",
     "selectAll": "Select all",
-    "clear": "Clear"
+    "clear": "Clear",
+    "done": "Done",
+    "noDocsSelectedHint": "No documents selected - AI will use RAG to find relevant content",
+    "docsSelectedHint": "Selected documents will be sent as full context"
   },
   "themeToggle": {
     "theme": "Theme",
@@ -421,7 +425,17 @@
     "daysStreak": "Day Streak",
     "daysStreak_plural": "Days Streak",
     "mostStudied": "Most Studied",
-    "startStudying": "Start studying to see your stats"
+    "startStudying": "Start studying to see your stats",
+    "noSessions": "No study sessions on this day",
+    "failedToLoad": "Failed to load study data",
+    "total": "total",
+    "deleted": "Deleted",
+    "noActivity": "No activity",
+    "less": "Less",
+    "more": "More",
+    "mon": "Mon",
+    "wed": "Wed",
+    "fri": "Fri"
   },
   "timer": {
     "start": "Start",

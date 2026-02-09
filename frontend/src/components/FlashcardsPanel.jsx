@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import api from '../api/axios';
 import DocumentSelector from './DocumentSelector';
 
@@ -19,6 +20,7 @@ export default function FlashcardsPanel({
   compact,
   fullHeight,
 }) {
+  const { t } = useTranslation();
   const [flashcardSets, setFlashcardSets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -53,7 +55,7 @@ export default function FlashcardsPanel({
       setFlashcardSets(response.data.data.flashcardSets);
       setError('');
     } catch {
-      setError('Failed to load flashcard sets');
+      setError(t('flashcardsPanel.failedToLoad'));
     } finally {
       setLoading(false);
     }
@@ -65,7 +67,7 @@ export default function FlashcardsPanel({
 
     // For general knowledge, focus topic is required
     if (isGeneralKnowledge && !formFocusTopic.trim()) {
-      setError('Focus topic is required when no documents are selected');
+      setError(t('flashcardsPanel.focusRequired'));
       return;
     }
 
@@ -91,7 +93,7 @@ export default function FlashcardsPanel({
       setCurrentCardIndex(0);
       setIsFlipped(false);
     } catch (err) {
-      setError(err.response?.data?.error?.message || 'Failed to generate flashcards');
+      setError(err.response?.data?.error?.message || t('flashcardsPanel.failedToGenerate'));
     } finally {
       setGenerating(false);
     }
@@ -107,7 +109,7 @@ export default function FlashcardsPanel({
       setIsShuffled(false);
       setShuffledCards([]);
     } catch {
-      setError('Failed to load flashcard set');
+      setError(t('flashcardsPanel.failedToLoadSet'));
     }
   };
 
@@ -129,7 +131,7 @@ export default function FlashcardsPanel({
   const displayCards = isShuffled ? shuffledCards : (activeSet?.cards || []);
 
   const handleDeleteSet = async (setId) => {
-    if (!confirm('Are you sure you want to delete this flashcard set?')) return;
+    if (!confirm(t('flashcardsPanel.deleteConfirm'))) return;
 
     try {
       await api.delete(`/flashcard-sets/${setId}`);
@@ -138,7 +140,7 @@ export default function FlashcardsPanel({
         setActiveSet(null);
       }
     } catch {
-      setError('Failed to delete flashcard set');
+      setError(t('flashcardsPanel.failedToDelete'));
     }
   };
 
@@ -226,9 +228,9 @@ export default function FlashcardsPanel({
           <div>
             <h3 className="text-lg font-medium text-gray-900">{activeSet.title}</h3>
             <p className="text-sm text-gray-500">
-              Card {currentCardIndex + 1} of {displayCards.length}
-              {isShuffled && ' (shuffled)'}
-              {activeSet.focusTopic && ` - Focus: ${activeSet.focusTopic}`}
+              {t('flashcardsPanel.cardOf', { current: currentCardIndex + 1, total: displayCards.length })}
+              {isShuffled && ` ${t('flashcardsPanel.shuffled')}`}
+              {activeSet.focusTopic && ` - ${t('flashcardsPanel.focus', { topic: activeSet.focusTopic })}`}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -239,7 +241,7 @@ export default function FlashcardsPanel({
                   ? 'bg-blue-100 text-blue-600'
                   : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
               }`}
-              title={isShuffled ? 'Return to original order' : 'Shuffle cards'}
+              title={isShuffled ? t('flashcardsPanel.returnToOrder') : t('flashcardsPanel.shuffleCards')}
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -264,7 +266,7 @@ export default function FlashcardsPanel({
           >
             <div className="text-center">
               <p className="text-xs uppercase tracking-wide text-blue-500 mb-4">
-                {isFlipped ? 'Answer' : 'Question'} - Click to flip
+                {isFlipped ? t('flashcardsPanel.answer') : t('flashcardsPanel.question')} - {t('flashcardsPanel.clickToFlip')}
               </p>
               <p className="text-xl text-gray-800">
                 {isFlipped ? currentCard.back : currentCard.front}
@@ -282,7 +284,7 @@ export default function FlashcardsPanel({
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
-              Previous
+              {t('common.previous')}
             </button>
 
             <div className="flex gap-1">
@@ -305,7 +307,7 @@ export default function FlashcardsPanel({
               disabled={currentCardIndex === displayCards.length - 1}
               className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              Next
+              {t('common.next')}
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
@@ -314,7 +316,7 @@ export default function FlashcardsPanel({
 
           {/* Keyboard hint */}
           <p className="text-center text-xs text-gray-400 mt-4">
-            Tip: Space to flip, Arrows to navigate, S to shuffle
+            {t('flashcardsPanel.tip')}
           </p>
         </div>
       </div>
@@ -326,7 +328,7 @@ export default function FlashcardsPanel({
     return (
       <div className={compact ? 'flex flex-col h-full' : 'bg-white rounded-lg shadow'}>
         <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-          <h3 className="text-lg font-medium text-gray-900">Generate Flashcards</h3>
+          <h3 className="text-lg font-medium text-gray-900">{t('flashcardsPanel.generateFlashcards')}</h3>
           <button
             onClick={() => setShowGenerateForm(false)}
             className="text-gray-500 hover:text-gray-700"
@@ -346,7 +348,7 @@ export default function FlashcardsPanel({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Title *
+              {t('flashcardsPanel.titleLabel')}
             </label>
             <input
               type="text"
@@ -362,7 +364,7 @@ export default function FlashcardsPanel({
           {!compact && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Source Documents
+                {t('flashcardsPanel.sourceDocuments')}
               </label>
               <DocumentSelector
                 documents={documents}
@@ -374,7 +376,7 @@ export default function FlashcardsPanel({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Focus Topic {isGeneralKnowledge ? '*' : '(optional)'}
+              {isGeneralKnowledge ? t('flashcardsPanel.focusTopic') + ' *' : t('flashcardsPanel.focusTopicOptional')}
             </label>
             <input
               type="text"
@@ -386,26 +388,26 @@ export default function FlashcardsPanel({
             />
             <p className="text-xs text-gray-500 mt-1">
               {isGeneralKnowledge
-                ? 'Required - flashcards will be generated from general knowledge'
-                : 'Leave empty to cover all topics from selected documents'}
+                ? t('flashcardsPanel.generalKnowledgeHint')
+                : t('flashcardsPanel.documentHint')}
             </p>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Number of Cards
+              {t('flashcardsPanel.numberOfCards')}
             </label>
             <select
               value={formCount}
               onChange={(e) => setFormCount(Number(e.target.value))}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             >
-              <option value={5}>5 cards</option>
-              <option value={10}>10 cards</option>
-              <option value={15}>15 cards</option>
-              <option value={20}>20 cards</option>
-              <option value={30}>30 cards</option>
-              <option value={50}>50 cards</option>
+              <option value={5}>{`5 ${t('flashcardsPanel.cards')}`}</option>
+              <option value={10}>{`10 ${t('flashcardsPanel.cards')}`}</option>
+              <option value={15}>{`15 ${t('flashcardsPanel.cards')}`}</option>
+              <option value={20}>{`20 ${t('flashcardsPanel.cards')}`}</option>
+              <option value={30}>{`30 ${t('flashcardsPanel.cards')}`}</option>
+              <option value={50}>{`50 ${t('flashcardsPanel.cards')}`}</option>
             </select>
           </div>
 
@@ -418,18 +420,18 @@ export default function FlashcardsPanel({
               {generating ? (
                 <span className="flex items-center justify-center gap-2">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  Generating...
+                  {t('common.generating')}
                 </span>
               ) : (
-                'Generate Flashcards'
+                t('flashcardsPanel.generateFlashcards')
               )}
             </button>
           </div>
 
           <p className="text-xs text-gray-500 text-center">
             {isGeneralKnowledge
-              ? 'Flashcards will be generated from AI general knowledge'
-              : `Flashcards will be generated from ${selectedDocIds.length} selected document${selectedDocIds.length !== 1 ? 's' : ''}`}
+              ? t('flashcardsPanel.fromGeneral')
+              : t('flashcardsPanel.fromDocs', { count: selectedDocIds.length })}
           </p>
         </form>
       </div>
@@ -448,14 +450,14 @@ export default function FlashcardsPanel({
       {!compact && (
         <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
           <div>
-            <h3 className="text-lg font-medium text-gray-900">Flashcards</h3>
-            <p className="text-sm text-gray-500">Study with AI-generated flashcards</p>
+            <h3 className="text-lg font-medium text-gray-900">{t('flashcardsPanel.title')}</h3>
+            <p className="text-sm text-gray-500">{t('flashcardsPanel.subtitle')}</p>
           </div>
           <button
             onClick={() => setShowGenerateForm(true)}
             className="px-4 py-2 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700"
           >
-            + Generate
+            {t('flashcardsPanel.generate')}
           </button>
         </div>
       )}
@@ -466,7 +468,7 @@ export default function FlashcardsPanel({
             onClick={() => setShowGenerateForm(true)}
             className="w-full px-4 py-2 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 text-sm"
           >
-            + Generate Flashcards
+            {t('flashcardsPanel.generateBtn')}
           </button>
         </div>
       )}
@@ -480,7 +482,7 @@ export default function FlashcardsPanel({
       {loading ? (
         <div className="p-6 text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-2 text-gray-500">Loading...</p>
+          <p className="mt-2 text-gray-500">{t('common.loading')}</p>
         </div>
       ) : flashcardSets.length === 0 ? (
         <div className="p-6 text-center text-gray-500">
@@ -497,9 +499,9 @@ export default function FlashcardsPanel({
               d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
             />
           </svg>
-          <p className="mt-2">No flashcard sets yet</p>
+          <p className="mt-2">{t('flashcardsPanel.noSetsYet')}</p>
           <p className="text-sm">
-            Generate flashcards from documents or general knowledge
+            {t('flashcardsPanel.generateToStart')}
           </p>
         </div>
       ) : (
@@ -512,7 +514,7 @@ export default function FlashcardsPanel({
               >
                 <p className="font-medium text-gray-900">{set.title}</p>
                 <p className="text-sm text-gray-500">
-                  {set._count?.cards || set.cards?.length || 0} cards
+                  {set._count?.cards || set.cards?.length || 0} {t('flashcardsPanel.cards')}
                   {set.focusTopic && ` - ${set.focusTopic}`}
                 </p>
               </div>
@@ -521,13 +523,13 @@ export default function FlashcardsPanel({
                   onClick={() => handleViewSet(set.id)}
                   className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded"
                 >
-                  Study
+                  {t('flashcardsPanel.study')}
                 </button>
                 <button
                   onClick={() => handleDeleteSet(set.id)}
                   className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded"
                 >
-                  Delete
+                  {t('common.delete')}
                 </button>
               </div>
             </li>

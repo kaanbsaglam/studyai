@@ -1,14 +1,16 @@
 import { useContext, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ThemeContext } from '../context/ThemeContext';
 
 const options = [
-  { value: 'light', label: 'Light' },
-  { value: 'dark', label: 'Dark' },
-  { value: 'system', label: 'System' },
-  { value: 'earth', label: 'Earth' },
+  { value: 'light', labelKey: 'themeToggle.light' },
+  { value: 'dark', labelKey: 'themeToggle.dark' },
+  { value: 'system', labelKey: 'themeToggle.system' },
+  { value: 'earth', labelKey: 'themeToggle.earth' },
 ];
 
 export default function ThemeToggle({ className = '' }) {
+  const { t } = useTranslation();
   const { theme, setTheme } = useContext(ThemeContext);
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
@@ -39,7 +41,7 @@ export default function ThemeToggle({ className = '' }) {
         aria-expanded={open}
         aria-haspopup="menu"
       >
-        Theme
+        {t('themeToggle.theme')}
       </button>
 
       {open && (
@@ -63,7 +65,7 @@ export default function ThemeToggle({ className = '' }) {
                     isActive ? 'theme-toggle-option-active' : 'bg-transparent'
                   }`}
                 >
-                  {option.label}
+                  {t(option.labelKey)}
                 </button>
               );
             })}

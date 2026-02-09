@@ -6,10 +6,12 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import api from '../../api/axios';
 import ActivityHeatmap from './ActivityHeatmap';
 
 export default function ClassroomStudyStats({ classroomId }) {
+  const { t } = useTranslation();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -55,7 +57,7 @@ export default function ClassroomStudyStats({ classroomId }) {
 
   return (
     <div className="bg-white rounded-lg shadow p-4">
-      <div className="text-sm text-gray-500">Study Time</div>
+      <div className="text-sm text-gray-500">{t('studyStats.studyTime')}</div>
       <div className="text-2xl font-bold text-gray-900">
         {formatTime(stats?.totalSeconds || 0)}
       </div>
@@ -74,7 +76,7 @@ export default function ClassroomStudyStats({ classroomId }) {
       {/* Top documents by time */}
       {hasData && stats.documents?.length > 0 && (
         <div className="mt-3 pt-3 border-t">
-          <div className="text-xs text-gray-500 mb-2">Most Studied</div>
+          <div className="text-xs text-gray-500 mb-2">{t('studyStats.mostStudied')}</div>
           <div className="space-y-1">
             {stats.documents.slice(0, 3).map((doc) => (
               <div
@@ -100,7 +102,7 @@ export default function ClassroomStudyStats({ classroomId }) {
       {/* Empty state */}
       {!hasData && (
         <p className="text-xs text-gray-400 mt-2">
-          Start studying to see your stats
+          {t('studyStats.startStudying')}
         </p>
       )}
     </div>

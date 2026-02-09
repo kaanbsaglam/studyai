@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
+import { useTranslation } from 'react-i18next';
 import api from '../api/axios';
 
 export default function NotesPanel({
@@ -7,6 +8,7 @@ export default function NotesPanel({
   documentId = null,
   compact = false,
 }) {
+  const { t } = useTranslation();
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -30,7 +32,7 @@ export default function NotesPanel({
       setNotes(response.data.data.notes);
       setError('');
     } catch {
-      setError('Failed to load notes');
+      setError(t('notesPanel.failedToLoad'));
     } finally {
       setLoading(false);
     }
@@ -54,7 +56,7 @@ export default function NotesPanel({
       setIsCreating(false);
       setIsEditing(false);
     } catch (err) {
-      setError(err.response?.data?.error?.message || 'Failed to create note');
+      setError(err.response?.data?.error?.message || t('notesPanel.failedToCreate'));
     } finally {
       setSaving(false);
     }
@@ -79,14 +81,14 @@ export default function NotesPanel({
       setActiveNote(updatedNote);
       setIsEditing(false);
     } catch (err) {
-      setError(err.response?.data?.error?.message || 'Failed to update note');
+      setError(err.response?.data?.error?.message || t('notesPanel.failedToUpdate'));
     } finally {
       setSaving(false);
     }
   };
 
   const handleDeleteNote = async (noteId) => {
-    if (!confirm('Are you sure you want to delete this note?')) return;
+    if (!confirm(t('notesPanel.deleteConfirm'))) return;
 
     try {
       await api.delete(`/notes/${noteId}`);
@@ -96,7 +98,7 @@ export default function NotesPanel({
         setIsEditing(false);
       }
     } catch {
-      setError('Failed to delete note');
+      setError(t('notesPanel.failedToDelete'));
     }
   };
 
@@ -107,7 +109,7 @@ export default function NotesPanel({
       setIsEditing(false);
       setIsCreating(false);
     } catch {
-      setError('Failed to load note');
+      setError(t('notesPanel.failedToLoadNote'));
     }
   };
 
@@ -153,7 +155,7 @@ export default function NotesPanel({
             type="text"
             value={editTitle}
             onChange={(e) => setEditTitle(e.target.value)}
-            placeholder="Note title..."
+            placeholder={t('notesPanel.noteTitlePlaceholder')}
             className="w-full text-base font-medium bg-transparent border-none focus:outline-none focus:ring-0 px-0"
             autoFocus
           />
@@ -171,21 +173,21 @@ export default function NotesPanel({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
             </svg>
-            Preview
+            {t('notesPanel.preview')}
           </button>
           <div className="flex items-center gap-1">
             <button
               onClick={cancelEdit}
               className="px-2 py-1 text-xs text-gray-600 hover:bg-gray-200 rounded"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               onClick={isCreating ? handleCreateNote : handleUpdateNote}
               disabled={saving || !editTitle.trim()}
               className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
             >
-              {saving ? 'Saving...' : 'Save'}
+              {saving ? t('common.saving') : t('common.save')}
             </button>
           </div>
         </div>
@@ -204,7 +206,7 @@ export default function NotesPanel({
               {editContent ? (
                 <ReactMarkdown>{editContent}</ReactMarkdown>
               ) : (
-                <p className="text-gray-400 italic text-sm">Nothing to preview yet...</p>
+                <p className="text-gray-400 italic text-sm">{t('notesPanel.nothingToPreview')}</p>
               )}
             </div>
           ) : (
@@ -212,7 +214,7 @@ export default function NotesPanel({
             <textarea
               value={editContent}
               onChange={(e) => setEditContent(e.target.value)}
-              placeholder="Write your notes here... (supports markdown)"
+              placeholder={t('notesPanel.writePlaceholder')}
               className="flex-1 p-3 resize-none border-none focus:outline-none focus:ring-0 text-sm"
             />
           )}
@@ -229,10 +231,10 @@ export default function NotesPanel({
           <div className="flex-1 min-w-0">
             <h3 className="text-lg font-medium text-gray-900 truncate">{activeNote.title}</h3>
             <p className="text-xs text-gray-500">
-              Updated {formatDate(activeNote.updatedAt)}
+              {t('notesPanel.updated', { date: formatDate(activeNote.updatedAt) })}
               {activeNote.document && (
                 <span className="ml-2">
-                  - Linked to {activeNote.document.originalName}
+                  - {t('notesPanel.linkedTo', { name: activeNote.document.originalName })}
                 </span>
               )}
             </p>
@@ -241,7 +243,7 @@ export default function NotesPanel({
             <button
               onClick={() => setActiveNote(null)}
               className="p-1 text-gray-500 hover:text-gray-700"
-              title="Back to list"
+              title={t('notesPanel.backToList')}
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -251,13 +253,13 @@ export default function NotesPanel({
               onClick={startEditing}
               className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded"
             >
-              Edit
+              {t('common.edit')}
             </button>
             <button
               onClick={() => handleDeleteNote(activeNote.id)}
               className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded"
             >
-              Delete
+              {t('common.delete')}
             </button>
           </div>
         </div>
@@ -266,7 +268,7 @@ export default function NotesPanel({
           {activeNote.content ? (
             <ReactMarkdown>{activeNote.content}</ReactMarkdown>
           ) : (
-            <p className="text-gray-400 italic">This note is empty.</p>
+            <p className="text-gray-400 italic">{t('notesPanel.emptyNote')}</p>
           )}
         </div>
       </div>
@@ -282,14 +284,14 @@ export default function NotesPanel({
     <div className={containerClass}>
       <div className="px-4 py-3 border-b border-gray-200 flex justify-between items-center">
         <div>
-          <h3 className="text-lg font-medium text-gray-900">Notes</h3>
-          <p className="text-xs text-gray-500">{notes.length} note{notes.length !== 1 ? 's' : ''}</p>
+          <h3 className="text-lg font-medium text-gray-900">{t('notesPanel.title')}</h3>
+          <p className="text-xs text-gray-500">{t('notesPanel.noteCount', { count: notes.length })}</p>
         </div>
         <button
           onClick={startCreating}
           className="px-3 py-1.5 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700"
         >
-          + New Note
+          {t('notesPanel.newNote')}
         </button>
       </div>
 
@@ -302,7 +304,7 @@ export default function NotesPanel({
       {loading ? (
         <div className="p-6 text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-2 text-gray-500">Loading...</p>
+          <p className="mt-2 text-gray-500">{t('common.loading')}</p>
         </div>
       ) : notes.length === 0 ? (
         <div className="p-6 text-center text-gray-500">
@@ -314,8 +316,8 @@ export default function NotesPanel({
               d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
             />
           </svg>
-          <p className="mt-2">No notes yet</p>
-          <p className="text-sm">Click &quot;+ New Note&quot; to create one</p>
+          <p className="mt-2">{t('notesPanel.noNotesYet')}</p>
+          <p className="text-sm">{t('notesPanel.createHint')}</p>
         </div>
       ) : (
         <ul className="divide-y divide-gray-200 flex-1 overflow-auto">

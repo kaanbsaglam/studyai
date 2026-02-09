@@ -6,9 +6,11 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import api from '../../api/axios';
 
 export default function DayBreakdownModal({ date, onClose }) {
+  const { t } = useTranslation();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -23,7 +25,7 @@ export default function DayBreakdownModal({ date, onClose }) {
         setData(response.data.data);
       } catch (err) {
         console.error('Failed to load day stats:', err);
-        setError('Failed to load study data');
+        setError(t('studyStats.failedToLoad'));
       } finally {
         setLoading(false);
       }
@@ -69,7 +71,7 @@ export default function DayBreakdownModal({ date, onClose }) {
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">Study Time</h3>
+            <h3 className="text-lg font-semibold text-gray-900">{t('studyStats.studyTime')}</h3>
             <p className="text-sm text-gray-500">{formatDate(date)}</p>
           </div>
           <button
@@ -91,7 +93,7 @@ export default function DayBreakdownModal({ date, onClose }) {
           ) : error ? (
             <p className="text-red-500 text-center py-4">{error}</p>
           ) : !data?.classrooms?.length ? (
-            <p className="text-gray-500 text-center py-8">No study sessions on this day</p>
+            <p className="text-gray-500 text-center py-8">{t('studyStats.noSessions')}</p>
           ) : (
             <div className="space-y-3">
               {/* Total time */}
@@ -99,7 +101,7 @@ export default function DayBreakdownModal({ date, onClose }) {
                 <span className="text-2xl font-bold text-gray-900">
                   {formatTime(data.totalSeconds)}
                 </span>
-                <span className="text-gray-500 ml-2">total</span>
+                <span className="text-gray-500 ml-2">{t('studyStats.total')}</span>
               </div>
 
               {/* Classroom breakdown */}
@@ -116,7 +118,7 @@ export default function DayBreakdownModal({ date, onClose }) {
                     >
                       {classroom.name}
                       {classroom.isDeleted && (
-                        <span className="ml-1 text-xs text-gray-400">(Deleted)</span>
+                        <span className="ml-1 text-xs text-gray-400">({t('studyStats.deleted')})</span>
                       )}
                     </span>
                     <span className="text-blue-600 font-medium">
@@ -138,7 +140,7 @@ export default function DayBreakdownModal({ date, onClose }) {
                             }`}
                           >
                             {doc.name}
-                            {doc.isDeleted && ' (Deleted)'}
+                            {doc.isDeleted && ` (${t('studyStats.deleted')})`}
                           </span>
                           <span className="text-gray-500 flex-shrink-0">
                             {formatTime(doc.seconds)}
