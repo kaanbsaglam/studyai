@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function RegisterPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { register } = useAuth();
 
@@ -26,22 +28,22 @@ export default function RegisterPage() {
     const trimmedEmail = email.trim();
 
     if (!trimmedEmail || !password || !confirmPassword) {
-      setError('All fields are required.');
+      setError(t('register.allFieldsRequired'));
       return;
     }
 
     if (!isValidEmail(trimmedEmail)) {
-      setError('Please enter a valid email address.');
+      setError(t('register.invalidEmail'));
       return;
     }
 
     if (!isValidPassword(password)) {
-      setError('Password must be 8-64 characters.');
+      setError(t('register.passwordLength'));
       return;
     }
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match.');
+      setError(t('register.passwordsNoMatch'));
       return;
     }
 
@@ -50,7 +52,7 @@ export default function RegisterPage() {
       await register(trimmedEmail, password, name);
       navigate('/login');
     } catch (err) {
-      setError(err.response?.data?.error?.message || 'Registration failed');
+      setError(err.response?.data?.error?.message || t('register.registrationFailed'));
     } finally {
       setLoading(false);
     }
@@ -97,7 +99,7 @@ export default function RegisterPage() {
                   letterSpacing: '-0.015em',
                 }}
               >
-                Join StudyAI
+                {t('register.joinStudyAI')}
               </h2>
             </div>
             <h1
@@ -107,7 +109,7 @@ export default function RegisterPage() {
                 fontWeight: 700,
               }}
             >
-              Create your account
+              {t('register.createAccount')}
             </h1>
           </div>
 
@@ -131,7 +133,7 @@ export default function RegisterPage() {
 
               <div className="flex flex-col" style={{ gap: '6px' }}>
                 <label style={{ color: 'var(--text-primary)', fontSize: '14px', fontWeight: 500 }}>
-                  Name <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>(optional)</span>
+                  {t('common.name')} <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{t('register.optional')}</span>
                 </label>
                 <input
                   className="w-full"
@@ -154,7 +156,7 @@ export default function RegisterPage() {
 
               <div className="flex flex-col" style={{ gap: '6px' }}>
                 <label style={{ color: 'var(--text-primary)', fontSize: '14px', fontWeight: 500 }}>
-                  Email
+                  {t('common.email')}
                 </label>
                 <input
                   className="w-full"
@@ -177,7 +179,7 @@ export default function RegisterPage() {
 
               <div className="flex flex-col" style={{ gap: '6px' }}>
                 <label style={{ color: 'var(--text-primary)', fontSize: '14px', fontWeight: 500 }}>
-                  Password
+                  {t('common.password')}
                 </label>
                 <div className="relative">
                   <input
@@ -209,13 +211,13 @@ export default function RegisterPage() {
                   </button>
                 </div>
                 <p style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
-                  8–64 characters.
+                  {t('register.passwordHint')}
                 </p>
               </div>
 
               <div className="flex flex-col" style={{ gap: '6px' }}>
                 <label style={{ color: 'var(--text-primary)', fontSize: '14px', fontWeight: 500 }}>
-                  Confirm password
+                  {t('register.confirmPassword')}
                 </label>
                 <div className="relative">
                   <input
@@ -247,7 +249,7 @@ export default function RegisterPage() {
                   </button>
                 </div>
                 <p style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
-                  Passwords must match.
+                  {t('register.passwordsMustMatch')}
                 </p>
               </div>
 
@@ -267,7 +269,7 @@ export default function RegisterPage() {
                     cursor: loading ? 'not-allowed' : 'pointer',
                   }}
                 >
-                  {loading ? 'Creating account...' : 'Sign up'}
+                  {loading ? t('register.creatingAccount') : t('register.signUp')}
                 </button>
               </div>
             </form>
@@ -280,9 +282,9 @@ export default function RegisterPage() {
                 marginTop: '24px',
               }}
             >
-              Already have an account?{' '}
+              {t('register.haveAccount')}{' '}
               <Link to="/login" style={{ color: 'var(--accent)', fontWeight: 700, textDecoration: 'none' }}>
-                Sign in
+                {t('register.signIn')}
               </Link>
             </p>
           </div>

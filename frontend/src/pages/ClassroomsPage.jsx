@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import StudyStatsCard from '../components/stats/StudyStatsCard';
 import ActivityHeatmap from '../components/stats/ActivityHeatmap';
 import DayBreakdownModal from '../components/stats/DayBreakdownModal';
 import TimerPill from '../components/timer/TimerPill';
+import LanguageToggle from '../components/LanguageToggle';
 
 export default function ClassroomsPage() {
   const [classrooms, setClassrooms] = useState([]);
@@ -15,6 +17,7 @@ export default function ClassroomsPage() {
   const [studyStats, setStudyStats] = useState(null);
   const [selectedDay, setSelectedDay] = useState(null);
   const { user, logout } = useAuth();
+  const { t } = useTranslation();
 
   useEffect(() => {
     fetchClassrooms();
@@ -37,7 +40,7 @@ export default function ClassroomsPage() {
       const response = await api.get('/classrooms');
       setClassrooms(response.data.data.classrooms);
     } catch (err) {
-      setError('Failed to load classrooms');
+      setError(t('classrooms.failedToLoad'));
     } finally {
       setLoading(false);
     }
@@ -54,7 +57,7 @@ export default function ClassroomsPage() {
   };
 
   const handleDeleteClassroom = async (id) => {
-    if (!confirm('Are you sure you want to delete this classroom? All documents will be deleted.')) {
+    if (!confirm(t('classrooms.deleteConfirm'))) {
       return;
     }
 
@@ -62,7 +65,7 @@ export default function ClassroomsPage() {
       await api.delete(`/classrooms/${id}`);
       setClassrooms(classrooms.filter((c) => c.id !== id));
     } catch (err) {
-      setError('Failed to delete classroom');
+      setError(t('classrooms.failedToDelete'));
     }
   };
 
@@ -73,7 +76,7 @@ export default function ClassroomsPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
-              <h1 className="text-xl font-bold text-gray-900">StudyAI</h1>
+              <h1 className="text-xl font-bold text-gray-900">{t('common.studyai')}</h1>
             </div>
             <div className="flex items-center gap-4">
               {user?.role === 'ADMIN' && (
@@ -81,12 +84,12 @@ export default function ClassroomsPage() {
                   to="/admin"
                   className="text-sm bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200"
                 >
-                  Admin
+                  {t('common.admin')}
                 </Link>
               )}
               <TimerPill />
+              <LanguageToggle />
               <Link
-                to="/account"
                 className={`text-sm px-3 py-1 rounded ${
                   user?.tier === 'PREMIUM'
                     ? 'bg-purple-100 text-purple-700 hover:bg-purple-200'
@@ -98,7 +101,7 @@ export default function ClassroomsPage() {
               <Link
                 to="/settings"
                 className="text-gray-500 hover:text-gray-700"
-                title="Settings"
+                title={t('common.settings')}
               >
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -110,7 +113,7 @@ export default function ClassroomsPage() {
                 onClick={logout}
                 className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md"
               >
-                Logout
+                {t('common.logout')}
               </button>
             </div>
           </div>
@@ -121,12 +124,12 @@ export default function ClassroomsPage() {
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-semibold text-gray-900">My Classrooms</h2>
+          <h2 className="text-2xl font-semibold text-gray-900">{t('classrooms.myClassrooms')}</h2>
           <button
             onClick={() => setShowCreateModal(true)}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
           >
-            + New Classroom
+            {t('classrooms.newClassroom')}
           </button>
         </div>
 
@@ -143,7 +146,7 @@ export default function ClassroomsPage() {
             <StudyStatsCard stats={studyStats} />
             {studyStats.dailyData?.length > 0 && (
               <div className="bg-white rounded-lg shadow p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Activity</h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">{t('classrooms.activity')}</h3>
                 <ActivityHeatmap
                   dailyData={studyStats.dailyData}
                   weeks={12}
@@ -158,7 +161,7 @@ export default function ClassroomsPage() {
         {loading ? (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading classrooms...</p>
+            <p className="mt-4 text-gray-600">{t('classrooms.loadingClassrooms')}</p>
           </div>
         ) : classrooms.length === 0 ? (
           /* Empty state */
@@ -176,13 +179,13 @@ export default function ClassroomsPage() {
                 d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
               />
             </svg>
-            <h3 className="mt-2 text-lg font-medium text-gray-900">No classrooms yet</h3>
-            <p className="mt-1 text-gray-500">Create your first classroom to get started.</p>
+            <h3 className="mt-2 text-lg font-medium text-gray-900">{t('classrooms.noClassroomsYet')}</h3>
+            <p className="mt-1 text-gray-500">{t('classrooms.createFirst')}</p>
             <button
               onClick={() => setShowCreateModal(true)}
               className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
             >
-              + New Classroom
+              {t('classrooms.newClassroom')}
             </button>
           </div>
         ) : (
@@ -216,7 +219,7 @@ export default function ClassroomsPage() {
                         d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                       />
                     </svg>
-                    {classroom._count?.documents || 0} documents
+                    {`${classroom._count?.documents || 0} ${t('common.documents')}`}
                   </div>
                 </Link>
                 <div className="px-6 pb-4">
@@ -224,7 +227,7 @@ export default function ClassroomsPage() {
                     onClick={() => handleDeleteClassroom(classroom.id)}
                     className="text-sm text-red-600 hover:text-red-800"
                   >
-                    Delete
+                    {t('common.delete')}
                   </button>
                 </div>
               </div>
@@ -253,6 +256,7 @@ export default function ClassroomsPage() {
 }
 
 function CreateClassroomModal({ onClose, onCreate }) {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
@@ -261,7 +265,7 @@ function CreateClassroomModal({ onClose, onCreate }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!name.trim()) {
-      setError('Name is required');
+      setError(t('classrooms.nameRequired'));
       return;
     }
 
@@ -271,7 +275,7 @@ function CreateClassroomModal({ onClose, onCreate }) {
     try {
       await onCreate(name, description);
     } catch (err) {
-      setError(err.response?.data?.error?.message || 'Failed to create classroom');
+      setError(err.response?.data?.error?.message || t('classrooms.failedToCreate'));
       setLoading(false);
     }
   };
@@ -279,7 +283,7 @@ function CreateClassroomModal({ onClose, onCreate }) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg max-w-md w-full p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Create New Classroom</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('classrooms.createNewClassroom')}</h3>
 
         <form onSubmit={handleSubmit}>
           {error && (
@@ -290,7 +294,7 @@ function CreateClassroomModal({ onClose, onCreate }) {
 
           <div className="mb-4">
             <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-              Name *
+              {t('classrooms.nameStar')}
             </label>
             <input
               id="name"
@@ -305,7 +309,7 @@ function CreateClassroomModal({ onClose, onCreate }) {
 
           <div className="mb-6">
             <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-              Description
+              {t('common.description')}
             </label>
             <textarea
               id="description"
@@ -313,7 +317,7 @@ function CreateClassroomModal({ onClose, onCreate }) {
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Optional description..."
+              placeholder={t('classrooms.optionalDescription')}
             />
           </div>
 
@@ -323,14 +327,14 @@ function CreateClassroomModal({ onClose, onCreate }) {
               onClick={onClose}
               className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md font-medium"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               disabled={loading}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium disabled:opacity-50"
             >
-              {loading ? 'Creating...' : 'Create'}
+              {loading ? t('common.creating') : t('common.create')}
             </button>
           </div>
         </form>

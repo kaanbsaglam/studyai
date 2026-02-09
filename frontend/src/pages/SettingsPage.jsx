@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useTimer } from '../hooks/useTimer';
 import TimerPill from '../components/timer/TimerPill';
+import LanguageToggle from '../components/LanguageToggle';
 
 export default function SettingsPage() {
+  const { t } = useTranslation();
   const { user, logout } = useAuth();
   const { settings, settingsLoading, updateSettings } = useTimer();
 
@@ -35,9 +38,9 @@ export default function SettingsPage() {
 
     try {
       await updateSettings(localSettings);
-      setSuccess('Settings saved successfully');
+      setSuccess(t('settings.settingsSaved'));
     } catch (err) {
-      setError(err.response?.data?.error?.message || 'Failed to save settings');
+      setError(err.response?.data?.error?.message || t('settings.failedToSave'));
     } finally {
       setSaving(false);
     }
@@ -63,7 +66,7 @@ export default function SettingsPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </Link>
-              <h1 className="text-xl font-bold text-gray-900">StudyAI</h1>
+              <h1 className="text-xl font-bold text-gray-900">{t('common.studyai')}</h1>
             </div>
             <div className="flex items-center gap-4">
               {user?.role === 'ADMIN' && (
@@ -71,7 +74,7 @@ export default function SettingsPage() {
                   to="/admin"
                   className="text-sm bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200"
                 >
-                  Admin
+                  {t('common.admin')}
                 </Link>
               )}
               <TimerPill />
@@ -90,7 +93,7 @@ export default function SettingsPage() {
                 onClick={logout}
                 className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md"
               >
-                Logout
+                {t('common.logout')}
               </button>
             </div>
           </div>
@@ -99,7 +102,7 @@ export default function SettingsPage() {
 
       {/* Main content */}
       <main className="max-w-3xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-        <h2 className="text-2xl font-semibold text-gray-900 mb-6">Settings</h2>
+        <h2 className="text-2xl font-semibold text-gray-900 mb-6">{t('settings.title')}</h2>
 
         {error && (
           <div className="mb-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
@@ -123,14 +126,14 @@ export default function SettingsPage() {
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex items-center gap-2 mb-6">
                 <span className="text-2xl">🍅</span>
-                <h3 className="text-lg font-semibold text-gray-900">Pomodoro Timer</h3>
+                <h3 className="text-lg font-semibold text-gray-900">{t('settings.pomodoroTimer')}</h3>
               </div>
 
               <div className="space-y-6">
                 {/* Focus Duration */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Focus Duration
+                    {t('settings.focusDuration')}
                   </label>
                   <div className="flex items-center gap-4">
                     <input
@@ -142,7 +145,7 @@ export default function SettingsPage() {
                       className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-red-600"
                     />
                     <span className="w-20 text-sm text-gray-600 text-right">
-                      {localSettings.focusDuration} min
+                      {localSettings.focusDuration} {t('common.min')}
                     </span>
                   </div>
                 </div>
@@ -150,7 +153,7 @@ export default function SettingsPage() {
                 {/* Short Break Duration */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Short Break
+                    {t('settings.shortBreak')}
                   </label>
                   <div className="flex items-center gap-4">
                     <input
@@ -162,7 +165,7 @@ export default function SettingsPage() {
                       className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-green-600"
                     />
                     <span className="w-20 text-sm text-gray-600 text-right">
-                      {localSettings.shortBreakDuration} min
+                      {localSettings.shortBreakDuration} {t('common.min')}
                     </span>
                   </div>
                 </div>
@@ -170,7 +173,7 @@ export default function SettingsPage() {
                 {/* Long Break Duration */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Long Break
+                    {t('settings.longBreak')}
                   </label>
                   <div className="flex items-center gap-4">
                     <input
@@ -182,7 +185,7 @@ export default function SettingsPage() {
                       className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-green-600"
                     />
                     <span className="w-20 text-sm text-gray-600 text-right">
-                      {localSettings.longBreakDuration} min
+                      {localSettings.longBreakDuration} {t('common.min')}
                     </span>
                   </div>
                 </div>
@@ -190,7 +193,7 @@ export default function SettingsPage() {
                 {/* Sessions Before Long Break */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Sessions before long break
+                    {t('settings.sessionsBeforeLong')}
                   </label>
                   <div className="flex items-center gap-4">
                     <input
@@ -202,7 +205,7 @@ export default function SettingsPage() {
                       className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
                     />
                     <span className="w-20 text-sm text-gray-600 text-right">
-                      {localSettings.sessionsBeforeLong} sessions
+                      {localSettings.sessionsBeforeLong} {t('common.sessions')}
                     </span>
                   </div>
                 </div>
@@ -214,10 +217,10 @@ export default function SettingsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <label className="text-sm font-medium text-gray-700">
-                      Sound Notifications
+                      {t('settings.soundNotifications')}
                     </label>
                     <p className="text-sm text-gray-500">
-                      Play a sound when a session ends
+                      {t('settings.soundDescription')}
                     </p>
                   </div>
                   <button
@@ -238,10 +241,10 @@ export default function SettingsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <label className="text-sm font-medium text-gray-700">
-                      Auto-start Breaks
+                      {t('settings.autoStartBreaks')}
                     </label>
                     <p className="text-sm text-gray-500">
-                      Automatically start break timer after focus session
+                      {t('settings.autoStartDescription')}
                     </p>
                   </div>
                   <button
@@ -266,21 +269,33 @@ export default function SettingsPage() {
                   disabled={!hasChanges}
                   className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Reset
+                  {t('common.reset')}
                 </button>
                 <button
                   onClick={handleSave}
                   disabled={!hasChanges || saving}
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {saving ? 'Saving...' : 'Save Changes'}
+                  {saving ? t('common.saving') : t('settings.saveChanges')}
                 </button>
               </div>
             </div>
 
             {/* Future settings placeholder */}
             <div className="mt-6 bg-gray-100 rounded-lg p-6 text-center text-gray-500">
-              <p className="text-sm">More settings coming soon...</p>
+              <p className="text-sm">{t('settings.moreSettingsSoon')}</p>
+            </div>
+
+            {/* Language Settings */}
+            <div className="mt-6 bg-white rounded-lg shadow-md p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('language.title')}</h3>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">{t('language.selectLanguage')}</p>
+                  <p className="text-sm text-gray-500">{t('language.description')}</p>
+                </div>
+                <LanguageToggle />
+              </div>
             </div>
           </>
         )}

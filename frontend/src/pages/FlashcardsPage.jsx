@@ -1,8 +1,10 @@
 import { useParams, useOutletContext } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import FlashcardsPanel from '../components/FlashcardsPanel';
 import { useStudyTracker } from '../hooks/useStudyTracker';
 
 export default function FlashcardsPage() {
+  const { t } = useTranslation();
   const { id: classroomId } = useParams();
   const { classroom } = useOutletContext();
 
@@ -14,9 +16,9 @@ export default function FlashcardsPage() {
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-4">
-        <h2 className="text-xl font-semibold text-gray-900">Flashcards</h2>
+        <h2 className="text-xl font-semibold text-gray-900">{t('flashcardsPage.title')}</h2>
         <p className="text-gray-500">
-          Generate and study flashcards from your documents or any topic.
+          {t('flashcardsPage.subtitle')}
         </p>
       </div>
 

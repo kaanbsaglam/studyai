@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useParams, useOutletContext } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import ChatPanel from '../components/ChatPanel';
 import DocumentSelector from '../components/DocumentSelector';
 import { useStudyTracker } from '../hooks/useStudyTracker';
@@ -8,6 +9,7 @@ export default function ChatPage() {
   const { id: classroomId } = useParams();
   const { classroom } = useOutletContext();
   const [selectedDocIds, setSelectedDocIds] = useState([]);
+  const { t } = useTranslation();
 
   // Track study time for chat activity
   useStudyTracker(classroomId, 'CHAT');
@@ -19,9 +21,9 @@ export default function ChatPage() {
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-4">
-        <h2 className="text-xl font-semibold text-gray-900">AI Study Assistant</h2>
+        <h2 className="text-xl font-semibold text-gray-900">{t('chatPage.title')}</h2>
         <p className="text-gray-500 mb-4">
-          Ask questions about your study materials. Select specific documents for context or let the AI search all documents.
+          {t('chatPage.subtitle')}
         </p>
 
         {/* Document selector */}

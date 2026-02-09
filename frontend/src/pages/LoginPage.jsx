@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 
 export default function LoginPage() {
+  const { t } = useTranslation();
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -22,17 +24,17 @@ export default function LoginPage() {
 
     const trimmedEmail = email.trim();
     if (!trimmedEmail || !password) {
-      setError('Email and password are required.');
+      setError(t('login.emailRequired'));
       return;
     }
 
     if (!isValidEmail(trimmedEmail)) {
-      setError('Please enter a valid email address.');
+      setError(t('login.invalidEmail'));
       return;
     }
 
     if (!isValidPassword(password)) {
-      setError('Password must be 8-64 characters.');
+      setError(t('login.passwordLength'));
       return;
     }
 
@@ -41,7 +43,7 @@ export default function LoginPage() {
       await login(trimmedEmail, password);
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.error?.message || 'Invalid credentials');
+      setError(err.response?.data?.error?.message || t('login.invalidCredentials'));
     } finally {
       setLoading(false);
     }
@@ -88,7 +90,7 @@ export default function LoginPage() {
                   letterSpacing: '-0.015em',
                 }}
               >
-                StudyAI
+                {t('common.studyai')}
               </h2>
             </div>
             <h1
@@ -99,10 +101,10 @@ export default function LoginPage() {
                 marginBottom: '8px',
               }}
             >
-              Welcome back
+              {t('login.welcomeBack')}
             </h1>
             <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
-              Please enter your details to access your workspace.
+              {t('login.enterDetails')}
             </p>
           </div>
 
@@ -126,7 +128,7 @@ export default function LoginPage() {
 
               <div className="flex flex-col" style={{ gap: '8px' }}>
                 <label style={{ color: 'var(--text-primary)', fontSize: '14px', fontWeight: 500 }}>
-                  Email
+                  {t('common.email')}
                 </label>
                 <input
                   className="w-full"
@@ -150,10 +152,10 @@ export default function LoginPage() {
               <div className="flex flex-col" style={{ gap: '8px' }}>
                 <div className="flex justify-between items-center">
                   <p style={{ color: 'var(--text-primary)', fontSize: '14px', fontWeight: 500 }}>
-                    Password
+                    {t('common.password')}
                   </p>
                   <div className="text-sm cursor-pointer p-2" style={{ color: 'var(--accent)', fontWeight: 500 }}>
-                    Forgot password ?
+                    {t('login.forgotPassword')}
                   </div>
                 </div>
                 <div className="relative">
@@ -203,7 +205,7 @@ export default function LoginPage() {
                     cursor: loading ? 'not-allowed' : 'pointer',
                   }}
                 >
-                  {loading ? 'Signing in...' : 'Sign in'}
+                  {loading ? t('login.signingIn') : t('login.signIn')}
                 </button>
               </div>
             </form>
@@ -216,9 +218,9 @@ export default function LoginPage() {
                 marginTop: '24px',
               }}
             >
-              Don&apos;t have an account?{' '}
+              {t('login.noAccount')}{' '}
               <Link to="/register" style={{ color: 'var(--accent)', fontWeight: 700, textDecoration: 'none' }}>
-                Sign up
+                {t('login.signUp')}
               </Link>
             </p>
           </div>

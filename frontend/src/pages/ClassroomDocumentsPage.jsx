@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useOutletContext, useParams } from 'react-router-dom';
 import api from '../api/axios';
 
 export default function ClassroomDocumentsPage() {
+  const { t } = useTranslation();
   const { id } = useParams();
   const { classroom, refreshClassroom } = useOutletContext();
   const fileInputRef = useRef(null);
@@ -40,12 +42,12 @@ export default function ClassroomDocumentsPage() {
     ];
 
     if (!allowedTypes.includes(file.type)) {
-      setError('Invalid file type. Allowed: PDF, DOCX, TXT, MP3, WAV, M4A');
+      setError(t('classroomDocuments.invalidFileType'));
       return;
     }
 
     if (file.size > 10 * 1024 * 1024) {
-      setError('File too large. Maximum size is 10MB');
+      setError(t('classroomDocuments.fileTooLarge'));
       return;
     }
 
@@ -67,7 +69,7 @@ export default function ClassroomDocumentsPage() {
 
       await refreshClassroom();
     } catch (err) {
-      setError(err.response?.data?.error?.message || 'Failed to upload document');
+      setError(err.response?.data?.error?.message || t('classroomDocuments.failedToUpload'));
     } finally {
       setUploading(false);
       setUploadProgress(0);
@@ -78,7 +80,7 @@ export default function ClassroomDocumentsPage() {
   };
 
   const handleDeleteDocument = async (docId) => {
-    if (!confirm('Are you sure you want to delete this document?')) {
+    if (!confirm(t('classroomDocuments.deleteConfirm'))) {
       return;
     }
 
@@ -86,7 +88,7 @@ export default function ClassroomDocumentsPage() {
       await api.delete(`/documents/${docId}`);
       await refreshClassroom();
     } catch (err) {
-      setError('Failed to delete document');
+      setError(t('classroomDocuments.failedToDelete'));
     }
   };
 
@@ -104,10 +106,10 @@ export default function ClassroomDocumentsPage() {
       FAILED: 'bg-red-100 text-red-800',
     };
     const labels = {
-      PENDING: 'Pending',
-      PROCESSING: 'Processing...',
-      READY: 'Ready',
-      FAILED: 'Failed',
+      PENDING: t('statusBadge.pending'),
+      PROCESSING: t('statusBadge.processing'),
+      READY: t('statusBadge.ready'),
+      FAILED: t('statusBadge.failed'),
     };
     return (
       <span className={`px-2 py-1 text-xs font-medium rounded-full ${styles[status]}`}>
@@ -135,8 +137,8 @@ export default function ClassroomDocumentsPage() {
       <div className="bg-white rounded-lg shadow">
         <div className="px-6 py-4 border-b border-gray-200 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <h3 className="text-lg font-medium text-gray-900">Documents</h3>
-            <p className="text-sm text-gray-500">Search, open, and manage classroom documents.</p>
+            <h3 className="text-lg font-medium text-gray-900">{t('classroomDocuments.title')}</h3>
+            <p className="text-sm text-gray-500">{t('classroomDocuments.subtitle')}</p>
           </div>
           <div className="flex items-center gap-3">
             <div className="relative">
@@ -144,7 +146,7 @@ export default function ClassroomDocumentsPage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search documents..."
+                placeholder={t('classroomDocuments.searchDocuments')}
                 className="w-64 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
@@ -162,7 +164,7 @@ export default function ClassroomDocumentsPage() {
                 uploading ? 'opacity-50 cursor-not-allowed' : ''
               }`}
             >
-              {uploading ? `Uploading... ${uploadProgress}%` : '+ Upload Document'}
+              {uploading ? t('classroomDocuments.uploading', { progress: uploadProgress }) : t('classroomDocuments.uploadDocument')}
             </label>
           </div>
         </div>
@@ -195,11 +197,11 @@ export default function ClassroomDocumentsPage() {
             </svg>
             <p className="mt-2">
               {documents.length === 0
-                ? 'No documents yet'
-                : 'No documents match your search'}
+                ? t('classroomDocuments.noDocumentsYet')
+                : t('classroomDocuments.noDocumentsMatch')}
             </p>
             {documents.length === 0 && (
-              <p className="text-sm">Upload PDF, DOCX, or TXT files to start studying with AI</p>
+              <p className="text-sm">{t('classroomDocuments.uploadHint')}</p>
             )}
           </div>
         ) : (
@@ -238,14 +240,14 @@ export default function ClassroomDocumentsPage() {
                       to={`/classrooms/${id}/documents/${doc.id}`}
                       className="text-sm text-blue-600 hover:text-blue-800"
                     >
-                      Open
+                      {t('common.open')}
                     </Link>
                   )}
                   <button
                     onClick={() => handleDeleteDocument(doc.id)}
                     className="text-sm text-red-600 hover:text-red-800"
                   >
-                    Delete
+                    {t('common.delete')}
                   </button>
                 </div>
               </li>

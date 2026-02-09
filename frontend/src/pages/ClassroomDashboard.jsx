@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useOutletContext, useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import api from '../api/axios';
 import ClassroomStudyStats from '../components/stats/ClassroomStudyStats';
 
 export default function ClassroomDashboard() {
+  const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
   const { classroom, refreshClassroom } = useOutletContext();
@@ -43,12 +45,12 @@ export default function ClassroomDashboard() {
       setIsEditing(false);
       setError('');
     } catch (err) {
-      setError(err.response?.data?.error?.message || 'Failed to update classroom');
+      setError(err.response?.data?.error?.message || t('classroomDashboard.failedToUpdate'));
     }
   };
 
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this classroom? All documents will be deleted.')) {
+    if (!confirm(t('classroomDashboard.deleteConfirm'))) {
       return;
     }
 
@@ -56,7 +58,7 @@ export default function ClassroomDashboard() {
       await api.delete(`/classrooms/${id}`);
       navigate('/classrooms');
     } catch (err) {
-      setError('Failed to delete classroom');
+      setError(t('classroomDashboard.failedToDelete'));
     }
   };
 
@@ -82,12 +84,12 @@ export default function ClassroomDashboard() {
     ];
 
     if (!allowedTypes.includes(file.type)) {
-      setError('Invalid file type. Allowed: PDF, DOCX, TXT, MP3, WAV, M4A');
+      setError(t('classroomDashboard.invalidFileType'));
       return;
     }
 
     if (file.size > 10 * 1024 * 1024) {
-      setError('File too large. Maximum size is 10MB');
+      setError(t('classroomDashboard.fileTooLarge'));
       return;
     }
 
@@ -109,7 +111,7 @@ export default function ClassroomDashboard() {
 
       await refreshClassroom();
     } catch (err) {
-      setError(err.response?.data?.error?.message || 'Failed to upload document');
+      setError(err.response?.data?.error?.message || t('classroomDashboard.failedToUpload'));
     } finally {
       setUploading(false);
       setUploadProgress(0);
@@ -120,7 +122,7 @@ export default function ClassroomDashboard() {
   };
 
   const handleDeleteDocument = async (docId) => {
-    if (!confirm('Are you sure you want to delete this document?')) {
+    if (!confirm(t('classroomDashboard.deleteDocConfirm'))) {
       return;
     }
 
@@ -128,7 +130,7 @@ export default function ClassroomDashboard() {
       await api.delete(`/documents/${docId}`);
       await refreshClassroom();
     } catch (err) {
-      setError('Failed to delete document');
+      setError(t('classroomDashboard.failedToDeleteDoc'));
     }
   };
 
@@ -140,10 +142,10 @@ export default function ClassroomDashboard() {
       FAILED: 'bg-red-100 text-red-800',
     };
     const labels = {
-      PENDING: 'Pending',
-      PROCESSING: 'Processing...',
-      READY: 'Ready',
-      FAILED: 'Failed',
+      PENDING: t('statusBadge.pending'),
+      PROCESSING: t('statusBadge.processing'),
+      READY: t('statusBadge.ready'),
+      FAILED: t('statusBadge.failed'),
     };
     return (
       <span className={`px-2 py-1 text-xs font-medium rounded-full ${styles[status]}`}>
@@ -179,20 +181,20 @@ export default function ClassroomDashboard() {
       {/* Classroom Settings */}
       <div className="bg-white rounded-lg shadow p-6">
         <div className="flex justify-between items-start mb-4">
-          <h3 className="text-lg font-medium text-gray-900">Classroom Settings</h3>
+          <h3 className="text-lg font-medium text-gray-900">{t('classroomDashboard.classroomSettings')}</h3>
           {!isEditing && (
             <div className="flex gap-2">
               <button
                 onClick={() => setIsEditing(true)}
                 className="px-3 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded"
               >
-                Edit
+                {t('common.edit')}
               </button>
               <button
                 onClick={handleDelete}
                 className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded"
               >
-                Delete
+                {t('common.delete')}
               </button>
             </div>
           )}
@@ -201,7 +203,7 @@ export default function ClassroomDashboard() {
         {isEditing ? (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('common.name')}</label>
               <input
                 type="text"
                 value={editName}
@@ -210,13 +212,13 @@ export default function ClassroomDashboard() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('common.description')}</label>
               <textarea
                 value={editDescription}
                 onChange={(e) => setEditDescription(e.target.value)}
                 rows={2}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Optional description"
+                placeholder={t('classroomDashboard.optionalDescription')}
               />
             </div>
             <div className="flex gap-2">
@@ -224,7 +226,7 @@ export default function ClassroomDashboard() {
                 onClick={handleUpdate}
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
               >
-                Save
+                {t('common.save')}
               </button>
               <button
                 onClick={() => {
@@ -234,13 +236,13 @@ export default function ClassroomDashboard() {
                 }}
                 className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md font-medium"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
             </div>
           </div>
         ) : (
           <div className="text-sm text-gray-500">
-            {classroom.description || 'No description'}
+            {classroom.description || t('classroomDashboard.noDescription')}
           </div>
         )}
       </div>
@@ -249,8 +251,8 @@ export default function ClassroomDashboard() {
       <div className="bg-white rounded-lg shadow">
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-medium text-gray-900">Recent Documents</h3>
-            <p className="text-sm text-gray-500">Showing the latest 5 documents.</p>
+            <h3 className="text-lg font-medium text-gray-900">{t('classroomDashboard.recentDocuments')}</h3>
+            <p className="text-sm text-gray-500">{t('classroomDashboard.showingLatest')}</p>
           </div>
           <div className="flex items-center gap-3">
             <input
@@ -267,7 +269,7 @@ export default function ClassroomDashboard() {
                 uploading ? 'opacity-50 cursor-not-allowed' : ''
               }`}
             >
-              {uploading ? `Uploading... ${uploadProgress}%` : '+ Upload Document'}
+              {uploading ? t('classroomDashboard.uploading', { progress: uploadProgress }) : t('classroomDashboard.uploadDocument')}
             </label>
           </div>
         </div>
@@ -298,8 +300,8 @@ export default function ClassroomDashboard() {
                 d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
               />
             </svg>
-            <p className="mt-2">No documents yet</p>
-            <p className="text-sm">Upload documents from the Documents tab to get started</p>
+            <p className="mt-2">{t('classroomDashboard.noDocumentsYet')}</p>
+            <p className="text-sm">{t('classroomDashboard.uploadFromDocuments')}</p>
           </div>
         ) : (
           <ul className="divide-y divide-gray-200">
@@ -337,14 +339,14 @@ export default function ClassroomDashboard() {
                       to={`/classrooms/${id}/documents/${doc.id}`}
                       className="text-sm text-blue-600 hover:text-blue-800"
                     >
-                      Open
+                      {t('common.open')}
                     </Link>
                   )}
                   <button
                     onClick={() => handleDeleteDocument(doc.id)}
                     className="text-sm text-red-600 hover:text-red-800"
                   >
-                    Delete
+                    {t('common.delete')}
                   </button>
                 </div>
               </li>

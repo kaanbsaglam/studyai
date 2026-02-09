@@ -8,6 +8,7 @@ import QuizPanel from '../components/QuizPanel';
 import SummaryPanel from '../components/SummaryPanel';
 import NotesPanel from '../components/NotesPanel';
 import { useStudyTracker } from '../hooks/useStudyTracker';
+import { useTranslation } from 'react-i18next';
 
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -18,6 +19,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/b
 export default function DocumentViewerPage() {
   const { id: classroomId, docId } = useParams();
   const { classroom } = useOutletContext();
+  const { t } = useTranslation();
 
   // Track study time for this document
   useStudyTracker(classroomId, 'DOCUMENT', docId);
@@ -116,10 +118,10 @@ export default function DocumentViewerPage() {
   };
 
   const tabs = [
-    { id: 'chat', label: 'Chat' },
-    { id: 'flashcards', label: 'Cards' },
-    { id: 'quizzes', label: 'Quiz' },
-    { id: 'summaries', label: 'Summary' },
+    { id: 'chat', label: t('documentViewer.chat') },
+    { id: 'flashcards', label: t('documentViewer.cards') },
+    { id: 'quizzes', label: t('documentViewer.quiz') },
+    { id: 'summaries', label: t('documentViewer.summary') },
   ];
 
   if (loading) {
@@ -127,7 +129,7 @@ export default function DocumentViewerPage() {
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading document...</p>
+          <p className="mt-4 text-gray-600">{t('documentViewer.loadingDocument')}</p>
         </div>
       </div>
     );
@@ -139,7 +141,7 @@ export default function DocumentViewerPage() {
         <div className="text-center">
           <p className="text-red-600 mb-4">{error}</p>
           <Link to={`/classrooms/${classroomId}`} className="text-blue-600 hover:text-blue-800">
-            Back to Classroom
+            {t('documentViewer.backToClassroom')}
           </Link>
         </div>
       </div>
@@ -168,7 +170,7 @@ export default function DocumentViewerPage() {
               to={`/classrooms/${classroomId}/documents`}
               className="px-2 py-1 rounded text-xs font-medium text-gray-600 bg-gray-200 hover:bg-gray-300"
             >
-              Back
+              {t('common.back')}
             </Link>
             {/* Notes toggle - with label */}
             <button
@@ -182,7 +184,7 @@ export default function DocumentViewerPage() {
               <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg>
-              Notes
+              {t('documentViewer.notes')}
             </button>
             <span className="text-gray-300">|</span>
             <h2 className="font-medium text-gray-900 truncate max-w-sm text-sm">{document?.originalName}</h2>
@@ -193,7 +195,7 @@ export default function DocumentViewerPage() {
                 <button
                   onClick={() => setScale((s) => Math.max(s - 0.25, 0.5))}
                   className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded"
-                  title="Zoom out"
+                  title={t('documentViewer.zoomOut')}
                 >
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
@@ -203,7 +205,7 @@ export default function DocumentViewerPage() {
                 <button
                   onClick={() => setScale((s) => Math.min(s + 0.25, 2.5))}
                   className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded"
-                  title="Zoom in"
+                  title={t('documentViewer.zoomIn')}
                 >
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -224,7 +226,7 @@ export default function DocumentViewerPage() {
               <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
               </svg>
-              Tools
+              {t('documentViewer.tools')}
             </button>
           </div>
         </div>
@@ -243,7 +245,7 @@ export default function DocumentViewerPage() {
                 }
                 error={
                   <div className="text-red-600 text-center p-4">
-                    Failed to load PDF. <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Open in new tab</a>
+                    {t('documentViewer.failedToLoadPdf')} <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{t('documentViewer.openInNewTab')}</a>
                   </div>
                 }
               >
@@ -269,7 +271,7 @@ export default function DocumentViewerPage() {
                     </svg>
                   </button>
                   <span className="text-sm text-gray-600">
-                    Page {pageNumber} of {numPages}
+                    {t('documentViewer.pageOf', { current: pageNumber, total: numPages })}
                   </span>
                   <button
                     onClick={goToNextPage}
@@ -315,14 +317,14 @@ export default function DocumentViewerPage() {
           <div className="px-3 py-2 bg-gray-50 border-b border-gray-200">
             <div className="flex justify-between items-center">
               <span className="text-xs text-gray-600">
-                {selectedDocIds.length} doc{selectedDocIds.length !== 1 ? 's' : ''} as context
+                {t('documentViewer.docsAsContext', { count: selectedDocIds.length })}
               </span>
               {allDocuments.length > 1 && (
                 <button
                   onClick={() => setShowDocSelector(!showDocSelector)}
                   className="text-xs text-blue-600 hover:text-blue-800"
                 >
-                  {showDocSelector ? 'Hide' : 'Add more'}
+                  {showDocSelector ? t('documentViewer.hide') : t('documentViewer.addMore')}
                 </button>
               )}
             </div>
@@ -346,7 +348,7 @@ export default function DocumentViewerPage() {
                     />
                     <span className="truncate text-gray-700" title={doc.originalName}>
                       {doc.originalName}
-                      {doc.id === docId && ' (current)'}
+                      {doc.id === docId && ` ${t('documentViewer.current')}`}
                     </span>
                   </label>
                 ))}

@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import TimerPill from '../components/timer/TimerPill';
 
 export default function AccountPage() {
+  const { t } = useTranslation();
   const [usage, setUsage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [upgrading, setUpgrading] = useState(false);
@@ -21,14 +23,14 @@ export default function AccountPage() {
       const response = await api.get('/account/usage');
       setUsage(response.data.data);
     } catch (err) {
-      setError('Failed to load usage data');
+      setError(t('account.failedToLoad'));
     } finally {
       setLoading(false);
     }
   };
 
   const handleUpgrade = async () => {
-    if (!confirm('Upgrade to Premium? (This is a mock payment - no actual charge)')) {
+    if (!confirm(t('account.upgradeConfirm'))) {
       return;
     }
 
@@ -44,14 +46,14 @@ export default function AccountPage() {
       // Reload page to update user context
       window.location.reload();
     } catch (err) {
-      setError(err.response?.data?.error?.message || 'Failed to upgrade');
+      setError(err.response?.data?.error?.message || t('account.failedToUpgrade'));
     } finally {
       setUpgrading(false);
     }
   };
 
   const handleDowngrade = async () => {
-    if (!confirm('Downgrade to Free plan? You will lose Premium benefits.')) {
+    if (!confirm(t('account.downgradeConfirm'))) {
       return;
     }
 
@@ -59,7 +61,7 @@ export default function AccountPage() {
       await api.post('/account/downgrade');
       window.location.reload();
     } catch (err) {
-      setError(err.response?.data?.error?.message || 'Failed to downgrade');
+      setError(err.response?.data?.error?.message || t('account.failedToDowngrade'));
     }
   };
 
@@ -79,7 +81,7 @@ export default function AccountPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </Link>
-              <h1 className="text-xl font-bold text-gray-900">StudyAI</h1>
+              <h1 className="text-xl font-bold text-gray-900">{t('common.studyai')}</h1>
             </div>
             <div className="flex items-center gap-4">
               {user?.role === 'ADMIN' && (
@@ -87,14 +89,14 @@ export default function AccountPage() {
                   to="/admin"
                   className="text-sm bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200"
                 >
-                  Admin
+                  {t('common.admin')}
                 </Link>
               )}
               <TimerPill />
               <Link
                 to="/settings"
                 className="text-gray-500 hover:text-gray-700"
-                title="Settings"
+                title={t('common.settings')}
               >
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -106,7 +108,7 @@ export default function AccountPage() {
                 onClick={logout}
                 className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md"
               >
-                Logout
+                {t('common.logout')}
               </button>
             </div>
           </div>
@@ -115,7 +117,7 @@ export default function AccountPage() {
 
       {/* Main content */}
       <main className="max-w-3xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-        <h2 className="text-2xl font-semibold text-gray-900 mb-6">Account & Usage</h2>
+        <h2 className="text-2xl font-semibold text-gray-900 mb-6">{t('account.title')}</h2>
 
         {error && (
           <div className="mb-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
@@ -139,7 +141,7 @@ export default function AccountPage() {
             <div className="bg-white rounded-lg shadow p-6 mb-6">
               <div className="flex justify-between items-start">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Current Plan</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">{t('account.currentPlan')}</h3>
                   <div className="mt-2 flex items-center gap-2">
                     <span
                       className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
@@ -158,14 +160,14 @@ export default function AccountPage() {
                     disabled={upgrading}
                     className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 font-medium disabled:opacity-50"
                   >
-                    {upgrading ? 'Upgrading...' : 'Upgrade to Premium'}
+                    {upgrading ? t('account.upgrading') : t('account.upgradeToPremium')}
                   </button>
                 ) : (
                   <button
                     onClick={handleDowngrade}
                     className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
                   >
-                    Downgrade to Free
+                    {t('account.downgradeToFree')}
                   </button>
                 )}
               </div>
@@ -173,12 +175,12 @@ export default function AccountPage() {
 
             {/* Usage Stats */}
             <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Usage</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('account.usage')}</h3>
 
               <div className="space-y-6">
                 {/* Classrooms */}
                 <UsageBar
-                  label="Classrooms"
+                  label={t('account.classrooms')}
                   used={usage.usage.classrooms}
                   max={usage.usage.maxClassrooms}
                   format={(v) => v}
@@ -186,7 +188,7 @@ export default function AccountPage() {
 
                 {/* Storage */}
                 <UsageBar
-                  label="Storage"
+                  label={t('account.storage')}
                   used={usage.usage.storageBytes}
                   max={usage.usage.maxStorageBytes}
                   format={(v, isMax) =>
@@ -196,7 +198,7 @@ export default function AccountPage() {
 
                 {/* Tokens Today */}
                 <UsageBar
-                  label="Tokens Today"
+                  label={t('account.tokensToday')}
                   used={usage.usage.tokensToday}
                   max={usage.usage.maxTokensPerDay}
                   format={(v) => v.toLocaleString()}
@@ -208,23 +210,23 @@ export default function AccountPage() {
             {usage.tier === 'FREE' && (
               <div className="mt-6 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg shadow p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Upgrade to Premium
+                  {t('account.upgradeToPremium')}
                 </h3>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <h4 className="font-medium text-gray-700 mb-2">Free Plan</h4>
+                    <h4 className="font-medium text-gray-700 mb-2">{t('account.freePlan')}</h4>
                     <ul className="space-y-1 text-gray-600">
-                      <li>5 classrooms</li>
-                      <li>100 MB storage</li>
-                      <li>50,000 tokens/day</li>
+                      <li>{t('account.freeClassrooms')}</li>
+                      <li>{t('account.freeStorage')}</li>
+                      <li>{t('account.freeTokens')}</li>
                     </ul>
                   </div>
                   <div>
-                    <h4 className="font-medium text-purple-700 mb-2">Premium Plan</h4>
+                    <h4 className="font-medium text-purple-700 mb-2">{t('account.premiumPlan')}</h4>
                     <ul className="space-y-1 text-purple-600">
-                      <li>50 classrooms</li>
-                      <li>2 GB storage</li>
-                      <li>1,000,000 tokens/day</li>
+                      <li>{t('account.premiumClassrooms')}</li>
+                      <li>{t('account.premiumStorage')}</li>
+                      <li>{t('account.premiumTokens')}</li>
                     </ul>
                   </div>
                 </div>
@@ -233,7 +235,7 @@ export default function AccountPage() {
                   disabled={upgrading}
                   className="mt-4 w-full px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 font-medium disabled:opacity-50"
                 >
-                  {upgrading ? 'Upgrading...' : 'Upgrade Now'}
+                  {upgrading ? t('account.upgrading') : t('account.upgradeNow')}
                 </button>
               </div>
             )}
