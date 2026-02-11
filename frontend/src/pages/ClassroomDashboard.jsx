@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link, useOutletContext, useParams, useNavigate } from 'react-router-dom';
+import { Link, useOutletContext, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../api/axios';
 import ClassroomStudyStats from '../components/stats/ClassroomStudyStats';
@@ -8,21 +8,12 @@ import ClassroomStats from '../components/ClassroomMaterialsSummary';
 export default function ClassroomDashboard() {
   const { t } = useTranslation();
   const { id } = useParams();
-  const navigate = useNavigate();
   const { classroom, refreshClassroom } = useOutletContext();
   const fileInputRef = useRef(null);
 
-  const [isEditing, setIsEditing] = useState(false);
-  const [editName, setEditName] = useState(classroom?.name || '');
-  const [editDescription, setEditDescription] = useState(classroom?.description || '');
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    setEditName(classroom?.name || '');
-    setEditDescription(classroom?.description || '');
-  }, [classroom]);
 
   // Auto-refresh when documents are processing
   useEffect(() => {
@@ -35,33 +26,6 @@ export default function ClassroomDashboard() {
       return () => clearInterval(interval);
     }
   }, [classroom?.documents]);
-
-  const handleUpdate = async () => {
-    try {
-      await api.patch(`/classrooms/${id}`, {
-        name: editName,
-        description: editDescription || null,
-      });
-      await refreshClassroom();
-      setIsEditing(false);
-      setError('');
-    } catch (err) {
-      setError(err.response?.data?.error?.message || t('classroomDashboard.failedToUpdate'));
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!confirm(t('classroomDashboard.deleteConfirm'))) {
-      return;
-    }
-
-    try {
-      await api.delete(`/classrooms/${id}`);
-      navigate('/classrooms');
-    } catch (err) {
-      setError(t('classroomDashboard.failedToDelete'));
-    }
-  };
 
   const formatFileSize = (bytes) => {
     if (bytes < 1024) return bytes + ' B';
@@ -180,75 +144,6 @@ export default function ClassroomDashboard() {
       {/* Quick Stats */}
       <div className="grid grid-cols-1 gap-4">
         <ClassroomStudyStats classroomId={id} />
-      </div>
-
-      {/* Classroom Settings */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex justify-between items-start mb-4">
-          <h3 className="text-lg font-medium text-gray-900">{t('classroomDashboard.classroomSettings')}</h3>
-          {!isEditing && (
-            <div className="flex gap-2">
-              <button
-                onClick={() => setIsEditing(true)}
-                className="px-3 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded"
-              >
-                {t('common.edit')}
-              </button>
-              <button
-                onClick={handleDelete}
-                className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded"
-              >
-                {t('common.delete')}
-              </button>
-            </div>
-          )}
-        </div>
-
-        {isEditing ? (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('common.name')}</label>
-              <input
-                type="text"
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('common.description')}</label>
-              <textarea
-                value={editDescription}
-                onChange={(e) => setEditDescription(e.target.value)}
-                rows={2}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder={t('classroomDashboard.optionalDescription')}
-              />
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={handleUpdate}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
-              >
-                {t('common.save')}
-              </button>
-              <button
-                onClick={() => {
-                  setIsEditing(false);
-                  setEditName(classroom.name);
-                  setEditDescription(classroom.description || '');
-                }}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md font-medium"
-              >
-                {t('common.cancel')}
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="text-sm text-gray-500">
-            {classroom.description || t('classroomDashboard.noDescription')}
-          </div>
-        )}
       </div>
 
       {/* Recent Documents */}

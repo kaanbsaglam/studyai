@@ -77,7 +77,9 @@
     "nameRequired": "Name is required",
     "nameStar": "Name *",
     "optionalDescription": "Optional description...",
-    "failedToCreate": "Failed to create classroom"
+    "failedToCreate": "Failed to create classroom",
+    "editClassroom": "Edit Classroom",
+    "failedToUpdate": "Failed to update classroom"
   },
   "settings": {
     "title": "Settings",

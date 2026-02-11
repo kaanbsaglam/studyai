@@ -69,6 +69,18 @@ export default function ClassroomsPage() {
     }
   };
 
+  const [editingClassroom, setEditingClassroom] = useState(null);
+
+  const handleEditClassroom = async (id, name, description) => {
+    try {
+      await api.patch(`/classrooms/${id}`, { name, description: description || null });
+      setClassrooms(classrooms.map((c) => c.id === id ? { ...c, name, description } : c));
+      setEditingClassroom(null);
+    } catch (err) {
+      throw err;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navigation */}
@@ -222,12 +234,25 @@ export default function ClassroomsPage() {
                     {`${classroom._count?.documents || 0} ${t('common.documents')}`}
                   </div>
                 </Link>
-                <div className="px-6 pb-4">
+                <div className="px-6 pb-4 flex items-center gap-2">
+                  <button
+                    onClick={() => setEditingClassroom(classroom)}
+                    className="text-gray-400 hover:text-gray-600 p-1 bg-transparent"
+                    title={t('common.edit')}
+                  >
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </button>
                   <button
                     onClick={() => handleDeleteClassroom(classroom.id)}
-                    className="text-sm text-red-600 hover:text-red-800"
+                    className="text-gray-400 hover:text-red-600 p-1 bg-transparent"
+                    title={t('common.delete')}
                   >
-                    {t('common.delete')}
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
                   </button>
                 </div>
               </div>
@@ -244,6 +269,15 @@ export default function ClassroomsPage() {
         />
       )}
 
+      {/* Edit Classroom Modal */}
+      {editingClassroom && (
+        <EditClassroomModal
+          classroom={editingClassroom}
+          onClose={() => setEditingClassroom(null)}
+          onSave={handleEditClassroom}
+        />
+      )}
+
       {/* Day Breakdown Modal */}
       {selectedDay && (
         <DayBreakdownModal
@@ -251,6 +285,93 @@ export default function ClassroomsPage() {
           onClose={() => setSelectedDay(null)}
         />
       )}
+    </div>
+  );
+}
+
+function EditClassroomModal({ classroom, onClose, onSave }) {
+  const { t } = useTranslation();
+  const [name, setName] = useState(classroom.name);
+  const [description, setDescription] = useState(classroom.description || '');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      setError(t('classrooms.nameRequired'));
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      await onSave(classroom.id, name, description);
+    } catch (err) {
+      setError(err.response?.data?.error?.message || t('classrooms.failedToUpdate'));
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg max-w-md w-full p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('classrooms.editClassroom')}</h3>
+
+        <form onSubmit={handleSubmit}>
+          {error && (
+            <div className="mb-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded text-sm">
+              {error}
+            </div>
+          )}
+
+          <div className="mb-4">
+            <label htmlFor="edit-name" className="block text-sm font-medium text-gray-700 mb-1">
+              {t('classrooms.nameStar')}
+            </label>
+            <input
+              id="edit-name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              autoFocus
+            />
+          </div>
+
+          <div className="mb-6">
+            <label htmlFor="edit-description" className="block text-sm font-medium text-gray-700 mb-1">
+              {t('common.description')}
+            </label>
+            <textarea
+              id="edit-description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              placeholder={t('classrooms.optionalDescription')}
+            />
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md font-medium"
+            >
+              {t('common.cancel')}
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium disabled:opacity-50"
+            >
+              {loading ? t('common.saving') : t('common.save')}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
@@ -281,7 +402,7 @@ function CreateClassroomModal({ onClose, onCreate }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg max-w-md w-full p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('classrooms.createNewClassroom')}</h3>
 
