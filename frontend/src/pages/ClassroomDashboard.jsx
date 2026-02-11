@@ -3,6 +3,7 @@ import { Link, useOutletContext, useParams, useNavigate } from 'react-router-dom
 import { useTranslation } from 'react-i18next';
 import api from '../api/axios';
 import ClassroomStudyStats from '../components/stats/ClassroomStudyStats';
+import ClassroomStats from '../components/ClassroomMaterialsSummary';
 
 export default function ClassroomDashboard() {
   const { t } = useTranslation();
@@ -172,6 +173,9 @@ export default function ClassroomDashboard() {
           {error}
         </div>
       )}
+
+      {/* Material Counts */}
+      <ClassroomStats counts={classroom?._count} />
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 gap-4">

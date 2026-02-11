@@ -83,6 +83,16 @@ const getClassroom = asyncHandler(async (req, res) => {
           createdAt: true,
         },
       },
+      _count: {
+        select: {
+          documents: true,
+          flashcardSets: true,
+          quizSets: true,
+          summaries: true,
+          notes: true,
+          studySessions: false,
+        },
+      },
     },
   });
 
