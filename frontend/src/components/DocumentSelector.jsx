@@ -98,12 +98,14 @@ export default function DocumentSelector({
             </span>
             <div className="flex gap-2">
               <button
+                type="button"
                 onClick={selectAll}
                 className="text-xs text-blue-600 hover:text-blue-800"
               >
                 {t('documentSelector.selectAll')}
               </button>
               <button
+                type="button"
                 onClick={clearAll}
                 className="text-xs text-gray-500 hover:text-gray-700"
               >
