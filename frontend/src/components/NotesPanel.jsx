@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import ReactMarkdown from 'react-markdown';
 import { useTranslation } from 'react-i18next';
+import MarkdownRenderer from './MarkdownRenderer';
 import api from '../api/axios';
 
 export default function NotesPanel({
@@ -202,9 +202,9 @@ export default function NotesPanel({
         <div className="flex-1 flex flex-col overflow-hidden">
           {showPreview ? (
             /* Preview mode */
-            <div className="flex-1 p-3 overflow-auto prose prose-sm max-w-none">
+            <div className="flex-1 p-3 overflow-auto">
               {editContent ? (
-                <ReactMarkdown>{editContent}</ReactMarkdown>
+                <MarkdownRenderer>{editContent}</MarkdownRenderer>
               ) : (
                 <p className="text-gray-400 italic text-sm">{t('notesPanel.nothingToPreview')}</p>
               )}
@@ -264,9 +264,9 @@ export default function NotesPanel({
           </div>
         </div>
 
-        <div className="flex-1 p-4 overflow-auto prose prose-sm max-w-none">
+        <div className="flex-1 p-4 overflow-auto">
           {activeNote.content ? (
-            <ReactMarkdown>{activeNote.content}</ReactMarkdown>
+            <MarkdownRenderer>{activeNote.content}</MarkdownRenderer>
           ) : (
             <p className="text-gray-400 italic">{t('notesPanel.emptyNote')}</p>
           )}
