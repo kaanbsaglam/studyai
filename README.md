@@ -1,120 +1,93 @@
 # StudyAI
 
-An LLM-powered study platform with RAG-based document chat, flashcard/quiz generation, and productivity tools.
+A study platform where you upload your course materials and use AI to chat with them, generate flashcards, quizzes, and summaries.
 
-## Architecture
+## Overview
 
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   React     │────▶│   Express   │────▶│  PostgreSQL │
-│  Frontend   │     │    API      │     │  (Prisma)   │
-└─────────────┘     └──────┬──────┘     └─────────────┘
-                          │
-                    ┌─────┴─────┐
-                    ▼           ▼
-              ┌─────────┐ ┌─────────┐
-              │  Redis  │ │   S3    │
-              │(Cache + │ │ (Files) │
-              │ Queue)  │ └─────────┘
-              └────┬────┘
-                   │
-              ┌────▼────┐     ┌─────────┐
-              │ Worker  │────▶│Pinecone │
-              │(BullMQ) │     │(Vectors)│
-              └─────────┘     └─────────┘
-```
+- **Document chat** — Upload PDFs, DOCX, TXT, or audio files. Ask questions and get answers grounded in your documents.
+- **Flashcards & Quizzes** — Auto-generate study aids from your uploaded materials or from LLM's general knowledge.
+- **Summaries** — Generate condensed versions of your documents at different lengths.
+- **Notes** — Write markdown notes alongside your documents in a side-by-side view.
+- **Study tracking** — Tracks time spent, streaks, and time-per-classroom stats. Displays activity heatmap.
+- **Pomodoro timer** — Adjustable timer thats in the header, works across all pages.
+- **Account tiers** — Free and premium tiers with different limits on storage, classrooms, and token usage.
+- **i18n** — English and Turkish.
+- **Themes** — Light, dark, system, and earth.
 
-## Quick Start
+## Tech stack
 
-### Prerequisites
+**Backend:** Node.js, Express, Prisma (PostgreSQL), Redis + BullMQ for background jobs, Pinecone for vector search
 
-- Node.js 18+
+**Frontend:** React 19, Vite, Tailwind CSS v4, react-pdf, react-markdown
+
+**AI:** Google Gemini (text generation + embeddings), OpenAI Whisper (audio transcription, premium only), Gemini Vision (PDF image extraction, premium only)
+
+**Infrastructure:** Docker Compose, AWS S3 for file storage
+
+## Prerequisites
+
+- Node.js 20+
 - Docker and Docker Compose
-- AWS account (for S3)
+- AWS account (S3)
 - Pinecone account
-- Google AI Studio account (for Gemini API key)
+- Google AI Studio API key (Gemini)
+- OpenAI API key (for Whisper audio transcription)
 
-### Setup
+## Setup
 
-1. **Clone and install dependencies:**
-   ```bash
-   git clone <repo-url>
-   cd studyai
-   cd backend && npm install
-   ```
+```bash
+git clone https://github.com/kaanbsaglam/studyai
+cd studyai
 
-2. **Set up environment:**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your API keys
-   ```
+# Start Postgres and Redis
+docker-compose up -d postgres redis
 
-3. **Start databases:**
-   ```bash
-   docker-compose up -d
-   ```
+# Backend
+cd backend
+npm install
+cp .env.example .env   # fill in your API keys
+npm run db:migrate
+npm run dev
 
-4. **Run database migrations:**
-   ```bash
-   cd backend
-   npm run db:migrate
-   ```
+# Worker 
+npm run worker:dev
 
-5. **Start the development server:**
-   ```bash
-   npm run dev
-   ```
-
-6. **In a separate terminal, start the worker (when implemented):**
-   ```bash
-   npm run dev:worker
-   ```
-
-### Verify Setup
-
-- API: http://localhost:3000/api/v1
-- Health check: http://localhost:3000/health
-
-## Project Structure
-
-```
-studyai/
-├── docker-compose.yml        # Local dev services
-├── backend/
-│   ├── src/
-│   │   ├── index.js          # API server entry
-│   │   ├── worker.js         # Background worker entry
-│   │   ├── config/           # Environment & logger
-│   │   ├── routes/           # Express route definitions
-│   │   ├── controllers/      # Request handlers
-│   │   ├── services/         # Business logic
-│   │   ├── jobs/             # BullMQ job processors
-│   │   ├── queues/           # Queue definitions
-│   │   ├── lib/              # External service clients
-│   │   ├── middleware/       # Express middleware
-│   │   └── utils/            # Helper functions
-│   └── prisma/
-│       └── schema.prisma     # Database schema
-└── frontend/                 # React app (separate)
+# Frontend 
+cd ../frontend
+npm install
+npm run dev
 ```
 
-## Available Scripts
+Or run everything in Docker:
 
-| Command | Description |
+```bash
+docker-compose up -d
+```
+
+The API runs on `http://localhost:3000`, the frontend on `http://localhost:5173`.
+
+## Environment variables
+
+The backend needs these in `backend/.env`:
+
+- `DATABASE_URL` — Postgres connection string
+- `REDIS_URL` — Redis connection string
+- `JWT_SECRET` — Secret for signing JWTs
+- `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `S3_BUCKET_NAME` — S3 config
+- `PINECONE_API_KEY`, `PINECONE_INDEX_NAME` — Pinecone config
+- `GEMINI_API_KEY` — Google Gemini API key
+- `OPENAI_WHISPER_SECRET_KEY` — OpenAI key for Whisper transcription
+
+See `.env.example` for the full list.
+
+
+## Scripts
+
+| Command | What it does |
 |---------|-------------|
-| `npm run dev` | Start API server with hot reload |
-| `npm run dev:worker` | Start background worker with hot reload |
-| `npm run db:migrate` | Create and run migrations |
-| `npm run db:studio` | Open Prisma Studio GUI |
-| `npm run lint` | Run ESLint |
+| `npm run dev` | Start the API server (backend) |
+| `npm run worker:dev` | Start the background worker |
+| `npm run db:migrate` | Run Prisma migrations |
+| `npm run db:studio` | Open Prisma Studio |
+| `npm run lint` | Lint backend code |
 | `npm test` | Run tests |
-
-## Tech Stack
-
-- **Backend:** Node.js, Express, Prisma
-- **Database:** PostgreSQL
-- **Cache/Queue:** Redis, BullMQ
-- **Vector DB:** Pinecone
-- **Storage:** AWS S3
-- **AI:** Google Gemini
-- **Frontend:** React, Vite, TailwindCSS
