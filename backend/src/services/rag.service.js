@@ -12,6 +12,7 @@
 
 const { generateEmbedding, querySimilar } = require('./embedding.service');
 const { generateText } = require('./llm.service');
+const { gatherDocumentsContentStructured } = require('./documentContent.service');
 const prisma = require('../lib/prisma');
 const logger = require('../config/logger');
 
@@ -20,7 +21,6 @@ const SIMILARITY_THRESHOLD = 0.4;
 const RAG_TOP_K = 5;
 
 // Maximum characters for contexts
-const MAX_SELECTED_DOCS_CHARS = 60000;
 const MAX_RAG_CONTEXT_CHARS = 15000;
 const MAX_CONVERSATION_HISTORY = 20;
 
@@ -88,77 +88,34 @@ async function queryAndAnswer({ question, classroomId, documentIds = [], convers
 
 /**
  * Get full content from selected documents
+ * Uses the shared document content service for DB fetching
  */
 async function getSelectedDocumentsContext(documentIds) {
   if (!documentIds || documentIds.length === 0) {
     return { selectedDocsContext: '', selectedDocsSources: [] };
   }
 
-  const chunks = await prisma.documentChunk.findMany({
-    where: {
-      documentId: { in: documentIds },
-      document: { status: 'READY' },
-    },
-    include: {
-      document: {
-        select: { id: true, originalName: true },
-      },
-    },
-    orderBy: [
-      { documentId: 'asc' },
-      { chunkIndex: 'asc' },
-    ],
-  });
+  const documents = await gatherDocumentsContentStructured(documentIds);
 
-  if (chunks.length === 0) {
+  if (documents.length === 0) {
     return { selectedDocsContext: '', selectedDocsSources: [] };
   }
 
-  // Group chunks by document
-  const docChunks = new Map();
-  for (const chunk of chunks) {
-    const docId = chunk.document.id;
-    if (!docChunks.has(docId)) {
-      docChunks.set(docId, {
-        name: chunk.document.originalName,
-        chunks: [],
-      });
-    }
-    docChunks.get(docId).chunks.push(chunk.content);
-  }
-
-  // Build context string
-  let contextParts = [];
-  let totalLength = 0;
-
-  for (const [docId, doc] of docChunks) {
-    const content = doc.chunks.join('\n\n');
-    const docSection = `### Document: ${doc.name}\n\n${content}`;
-
-    if (totalLength + docSection.length > MAX_SELECTED_DOCS_CHARS) {
-      // Truncate this document
-      const remaining = MAX_SELECTED_DOCS_CHARS - totalLength - 100;
-      if (remaining > 500) {
-        contextParts.push(`### Document: ${doc.name}\n\n${content.substring(0, remaining)}...\n[Content truncated]`);
-      }
-      break;
-    }
-
-    contextParts.push(docSection);
-    totalLength += docSection.length;
-  }
-
+  // Format into context string
+  const contextParts = documents.map(
+    (doc) => `### Document: ${doc.name}\n\n${doc.content}`
+  );
   const selectedDocsContext = contextParts.join('\n\n---\n\n');
 
-  // Build sources for selected docs
-  const selectedDocsSources = Array.from(docChunks.entries()).map(([docId, doc]) => ({
-    documentId: docId,
+  // Build sources
+  const selectedDocsSources = documents.map((doc) => ({
+    documentId: doc.id,
     filename: doc.name,
     score: 1.0,
     isSelected: true,
   }));
 
-  logger.info(`Selected documents context: ${documentIds.length} docs, ${chunks.length} chunks`);
+  logger.info(`Selected documents context: ${documents.length} docs, ${selectedDocsContext.length} chars`);
 
   return { selectedDocsContext, selectedDocsSources };
 }

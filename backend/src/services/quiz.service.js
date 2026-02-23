@@ -6,7 +6,7 @@
 
 const prisma = require('../lib/prisma');
 const logger = require('../config/logger');
-const { gatherDocumentsContent, gatherDocumentsContentStructured, MAX_CONTEXT_CHARS } = require('./documentContent.service');
+const { gatherDocumentsContentStructured } = require('./documentContent.service');
 const { generateText } = require('./llm.service');
 const { generateWithGenerator } = require('./pipeline.service');
 
@@ -274,8 +274,7 @@ async function getQuizAttempts(quizSetId, limit = 10) {
 }
 
 module.exports = {
-  gatherDocumentsContent, // Re-export from shared service
-  gatherDocumentsContentStructured, // Re-export for structured document access
+  gatherDocumentsContentStructured,
   generateQuiz,
   createQuizSet,
   getQuizSetById,
@@ -283,5 +282,4 @@ module.exports = {
   deleteQuizSet,
   recordQuizAttempt,
   getQuizAttempts,
-  MAX_CONTEXT_CHARS,
 };
