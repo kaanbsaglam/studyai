@@ -6,20 +6,7 @@
 
 const prisma = require('../lib/prisma');
 const logger = require('../config/logger');
-
-// Tier limits configuration
-const TIER_LIMITS = {
-  FREE: {
-    maxClassrooms: 5,
-    maxStorageBytes: 100 * 1024 * 1024, // 100 MB
-    maxTokensPerDay: 50000,
-  },
-  PREMIUM: {
-    maxClassrooms: 50,
-    maxStorageBytes: 2 * 1024 * 1024 * 1024, // 2 GB
-    maxTokensPerDay: 1000000,
-  },
-};
+const TIER_LIMITS = require('../config/tier.config');
 
 /**
  * Get limits for a tier
@@ -154,13 +141,20 @@ async function canUseChat(userId, tier) {
 }
 
 /**
- * Record token usage for a chat interaction
+ * Record token usage for a user interaction.
+ * Uses weightedTokens (cost-adjusted) for the daily limit budget.
+ * Falls back to raw tokensUsed if weightedTokens is not provided.
+ *
  * @param {string} userId
- * @param {number} tokensUsed - Total tokens (input + output)
+ * @param {number} tokensUsed - Raw tokens (input + output)
+ * @param {number} [weightedTokens] - Cost-weighted tokens (from llm.service). If omitted, uses tokensUsed.
  */
-async function recordTokenUsage(userId, tokensUsed) {
+async function recordTokenUsage(userId, tokensUsed, weightedTokens) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+
+  // Use weighted tokens for the daily budget if available, otherwise fall back to raw
+  const budgetTokens = weightedTokens != null ? weightedTokens : tokensUsed;
 
   await prisma.dailyUsage.upsert({
     where: {
@@ -171,17 +165,17 @@ async function recordTokenUsage(userId, tokensUsed) {
     },
     update: {
       tokensUsed: {
-        increment: tokensUsed,
+        increment: budgetTokens,
       },
     },
     create: {
       userId,
       date: today,
-      tokensUsed,
+      tokensUsed: budgetTokens,
     },
   });
 
-  logger.debug(`Recorded ${tokensUsed} tokens for user ${userId}`);
+  logger.debug(`Recorded ${budgetTokens} weighted tokens (raw: ${tokensUsed}) for user ${userId}`);
 }
 
 /**

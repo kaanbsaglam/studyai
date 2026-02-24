@@ -29,7 +29,7 @@ module.exports = {
     },
     'gemini-vision': {
       tokensUsed: true,
-      model: 'gemini-2.0-flash',
+      // Model is now configured in llm.config.js (tiers.*.extraction.vision)
     },
   },
 

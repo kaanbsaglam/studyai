@@ -86,7 +86,7 @@ const createFlashcardSetHandler = asyncHandler(async (req, res) => {
   }
 
   // Generate flashcards
-  const { cards, tokensUsed, warnings } = await generateFlashcards({
+  const { cards, tokensUsed, weightedTokens, warnings } = await generateFlashcards({
     documents: isGeneralKnowledge ? null : documents,
     focusTopic: data.focusTopic,
     count: data.count,
@@ -94,10 +94,10 @@ const createFlashcardSetHandler = asyncHandler(async (req, res) => {
     tier: req.user.tier,
   });
 
-  // Record token usage
+  // Record token usage (weighted tokens for daily budget)
   if (tokensUsed > 0) {
-    await recordTokenUsage(req.user.id, tokensUsed);
-    logger.info(`Recorded ${tokensUsed} tokens for user ${req.user.id}`);
+    await recordTokenUsage(req.user.id, tokensUsed, weightedTokens);
+    logger.info(`Recorded ${weightedTokens ?? tokensUsed} weighted tokens for user ${req.user.id}`);
   }
 
   // Save to database

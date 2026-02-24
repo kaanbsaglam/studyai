@@ -40,7 +40,8 @@ class GeminiVisionExtractor extends Extractor {
       this.genAI = new GoogleGenerativeAI(apiKey);
     }
 
-    this.model = config.model || 'gemini-2.0-flash';
+    // Model is now passed via options.model from central llm.config.js
+    this.model = null;
 
     // Chunking configuration
     const chunkingConfig = extractorConfig.visionChunking || {};
@@ -54,7 +55,7 @@ class GeminiVisionExtractor extends Extractor {
    * For large PDFs, splits into chunks and processes separately.
    * @param {Buffer} buffer - PDF file content
    * @param {object} options - Extraction options
-   * @param {string} [options.model] - Model to use (defaults to gemini-2.0-flash)
+   * @param {string} options.model - Model to use (from central llm.config.js)
    * @returns {Promise<{text: string, tokensUsed: number}>}
    */
   async extract(buffer, options = {}) {
@@ -62,7 +63,11 @@ class GeminiVisionExtractor extends Extractor {
       throw new Error('Gemini Vision extractor is not configured. GEMINI_API_KEY is missing.');
     }
 
-    const model = options.model || this.model;
+    if (!options.model) {
+      throw new Error('GeminiVisionExtractor requires a model name via options.model');
+    }
+
+    const model = options.model;
 
     // Load PDF to get page count
     const pdfDoc = await PDFDocument.load(buffer);

@@ -8,6 +8,7 @@ const pdfParse = require('pdf-parse');
 const mammoth = require('mammoth');
 const OpenAI = require('openai');
 const { env } = require('../config/env');
+const llmConfig = require('../config/llm.config');
 const logger = require('../config/logger');
 const { extractPdf } = require('./extractor.service');
 
@@ -76,9 +77,10 @@ async function extractFromDocx(buffer) {
  * Transcribe audio file using OpenAI Whisper
  * @param {Buffer} buffer - Audio file buffer
  * @param {string} mimeType - Audio MIME type
+ * @param {string} [tier='PREMIUM'] - User tier (audio is premium-only)
  * @returns {Promise<string>} Transcribed text
  */
-async function transcribeAudio(buffer, mimeType) {
+async function transcribeAudio(buffer, mimeType, tier = 'PREMIUM') {
   if (!openai) {
     throw new Error('Audio transcription is not configured. OPENAI_WHISPER_SECRET_KEY is missing.');
   }
@@ -86,12 +88,13 @@ async function transcribeAudio(buffer, mimeType) {
   try {
     const extension = getAudioExtension(mimeType);
     const file = new File([buffer], `audio.${extension}`, { type: mimeType });
+    const whisperModel = llmConfig.tiers[tier]?.extraction?.whisper?.primary || 'whisper-1';
 
-    logger.info('Starting audio transcription', { mimeType, size: buffer.length });
+    logger.info('Starting audio transcription', { mimeType, size: buffer.length, model: whisperModel });
 
     const transcription = await openai.audio.transcriptions.create({
       file: file,
-      model: 'whisper-1',
+      model: whisperModel,
       response_format: 'text',
     });
 

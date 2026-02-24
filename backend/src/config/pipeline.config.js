@@ -2,14 +2,17 @@
  * Pipeline Configuration
  *
  * Tier-based thresholds and limits for the adaptive content processing pipeline.
- * Controls when map-reduce is triggered, chunk sizes, and model selection.
- *
- * Depth levels:
- * - Depth 0: The actual task (quiz, flashcard, summary generation)
- * - Depth 1: Summarization of oversized documents/chunks before task processing
+ * Controls when map-reduce is triggered and chunk sizes.
+ * Model selection is handled by llm.config.js.
  */
 
 module.exports = {
+  // Embedding chunker settings (used by chunker.service.js for document ingestion)
+  embeddingChunker: {
+    chunkSize: 800,   // target words per chunk
+    overlap: 150,     // words of overlap between chunks
+  },
+
   tiers: {
     FREE: {
       threshold: 25000, // tokens to trigger map-reduce
@@ -17,11 +20,6 @@ module.exports = {
       maxDepth: 1, // 0 = task, 1 = summarization
       maxChunks: 50, // maximum chunks to process at each level
       parallelLimit: 10, // concurrent chunk processing limit
-      // Models by depth - each depth has map (chunk processing) and reduce (combining)
-      models: [
-        { map: 'gemini-2.0-flash', reduce: 'gemini-2.0-flash' }, // depth 0: task
-        { map: 'gemini-2.0-flash', reduce: 'gemini-2.0-flash' }, // depth 1: summarization
-      ],
     },
     PREMIUM: {
       threshold: 10000, // keep it low for easier testing, later change it to 40000 10000 or 60000 15000
@@ -29,10 +27,6 @@ module.exports = {
       maxDepth: 1,
       maxChunks: 50,
       parallelLimit: 10,
-      models: [
-        { map: 'gemini-2.0-flash', reduce: 'gemini-2.0-flash' }, // depth 0: task
-        { map: 'gemini-2.0-flash', reduce: 'gemini-2.0-flash' }, // depth 1: summarization
-      ],
     },
   },
 

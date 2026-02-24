@@ -5,8 +5,9 @@
  * Uses word-count based splitting with overlap.
  */
 
-const CHUNK_SIZE = 800;    // Target words per chunk
-const CHUNK_OVERLAP = 150; // Words of overlap between chunks
+const pipelineConfig = require('../config/pipeline.config');
+
+const { chunkSize: CHUNK_SIZE, overlap: CHUNK_OVERLAP } = pipelineConfig.embeddingChunker;
 
 /**
  * Split text into overlapping chunks

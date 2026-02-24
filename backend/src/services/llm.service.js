@@ -1,8 +1,8 @@
 /**
  * LLM Service
  *
- * High-level service for text generation that abstracts provider details.
- * Services should use this instead of directly using providers.
+ * Simple router layer. Model name is always required — no defaults, no tier logic.
+ * Provider is determined automatically from the model registry in llm.config.js.
  */
 
 const { getProvider } = require('../providers');
@@ -10,87 +10,66 @@ const llmConfig = require('../config/llm.config');
 const logger = require('../config/logger');
 
 /**
- * Get configuration for a user tier
- * @param {string} tier - User tier ('FREE' or 'PREMIUM')
- * @returns {object} Tier configuration
+ * Generate text using a specific model.
+ * Provider is resolved from the model registry.
+ *
+ * @param {string} prompt
+ * @param {{ model: string }} options - model name (must exist in registry)
+ * @returns {Promise<{ text: string, tokensUsed: number, weightedTokens: number }>}
  */
-function getConfigForTier(tier) {
-  const config = llmConfig.tiers[tier];
-  if (!config) {
-    logger.warn(`Unknown tier: ${tier}, falling back to FREE`);
-    return llmConfig.tiers.FREE;
+async function generateText(prompt, { model }) {
+  const modelConfig = llmConfig.models[model];
+  if (!modelConfig) {
+    throw new Error(`Unknown model: ${model}. Register it in llm.config.js models.`);
   }
-  return config;
-}
 
-/**
- * Generate text using the configured LLM provider
- * @param {string} prompt - The input prompt
- * @param {object} options - Options
- * @param {string} [options.tier='FREE'] - User tier for model selection
- * @param {string} [options.model] - Explicit model override (bypasses tier config)
- * @param {boolean} [options.useFallback=false] - Use fallback model instead of primary
- * @returns {Promise<{text: string, tokensUsed: number}>}
- */
-async function generateText(prompt, options = {}) {
-  const { tier = 'FREE', model: explicitModel, useFallback = false } = options;
-
-  const tierConfig = getConfigForTier(tier);
-  const providerName = tierConfig.provider;
-  // Allow explicit model override, otherwise use tier config
-  const model = explicitModel || (useFallback ? tierConfig.fallback : tierConfig.primary);
+  const provider = getProvider(modelConfig.provider);
 
   logger.info('LLM generateText', {
-    tier,
-    provider: providerName,
     model,
+    provider: modelConfig.provider,
     promptLength: prompt.length,
   });
 
-  const provider = getProvider(providerName);
   const result = await provider.generateText(prompt, { model });
 
+  const weightedTokens = Math.ceil(result.tokensUsed * modelConfig.costWeight);
+
   logger.info('LLM generateText completed', {
-    tier,
-    provider: providerName,
     model,
+    provider: modelConfig.provider,
     tokensUsed: result.tokensUsed,
+    weightedTokens,
   });
 
-  return result;
+  return {
+    text: result.text,
+    tokensUsed: result.tokensUsed,
+    weightedTokens,
+  };
 }
 
 /**
- * Generate text with automatic fallback on failure
- * @param {string} prompt - The input prompt
- * @param {object} options - Options (same as generateText)
- * @returns {Promise<{text: string, tokensUsed: number}>}
+ * Generate text with automatic fallback on failure.
+ * Caller passes primary and fallback model names from config.
+ *
+ * @param {string} prompt
+ * @param {{ primary: string, fallback: string|null }} models
+ * @returns {Promise<{ text: string, tokensUsed: number, weightedTokens: number }>}
  */
-async function generateTextWithFallback(prompt, options = {}) {
-  const { tier = 'FREE' } = options;
-
+async function generateWithFallback(prompt, { primary, fallback }) {
   try {
-    return await generateText(prompt, { tier, useFallback: false });
-  } catch (error) {
-    const tierConfig = getConfigForTier(tier);
-
-    // Only try fallback if it's different from primary
-    if (tierConfig.primary !== tierConfig.fallback) {
-      logger.warn('Primary LLM failed, trying fallback', {
-        tier,
-        error: error.message,
-        fallbackModel: tierConfig.fallback,
-      });
-      return await generateText(prompt, { tier, useFallback: true });
-    }
-
-    // No fallback available, re-throw
-    throw error;
+    return await generateText(prompt, { model: primary });
+  } catch (err) {
+    if (!fallback || fallback === primary) throw err;
+    logger.warn(`Primary model ${primary} failed, trying fallback ${fallback}`, {
+      error: err.message,
+    });
+    return await generateText(prompt, { model: fallback });
   }
 }
 
 module.exports = {
   generateText,
-  generateTextWithFallback,
-  getConfigForTier,
+  generateWithFallback,
 };

@@ -7,7 +7,8 @@
 const prisma = require('../lib/prisma');
 const logger = require('../config/logger');
 const { gatherDocumentsContentStructured } = require('./documentContent.service');
-const { generateText } = require('./llm.service');
+const { generateWithFallback } = require('./llm.service');
+const llmConfig = require('../config/llm.config');
 const { generateWithGenerator } = require('./pipeline.service');
 
 // Length configurations
@@ -39,15 +40,16 @@ async function generateSummary({ content, documents, focusTopic, length, isGener
   // General knowledge mode - use direct LLM call (no content to chunk)
   if (isGeneralKnowledge) {
     const prompt = buildSummaryPrompt({ content: null, focusTopic, length, isGeneralKnowledge: true });
-    const { text, tokensUsed } = await generateText(prompt, { tier });
+    const models = llmConfig.tiers[tier]?.studyAid || llmConfig.tiers.FREE.studyAid;
+    const { text, tokensUsed, weightedTokens } = await generateWithFallback(prompt, models);
     const summary = text.trim();
     logger.info(`Generated summary (${summary.length} chars), ${tokensUsed} tokens used`);
-    return { summary, tokensUsed };
+    return { summary, tokensUsed, weightedTokens };
   }
 
   // Document-based mode - use pipeline for adaptive processing
   const contentInput = documents || content;
-  const { result: summary, tokensUsed, warnings } = await generateWithGenerator(
+  const { result: summary, tokensUsed, weightedTokens, warnings } = await generateWithGenerator(
     'summary',
     contentInput,
     { length, focusTopic },
@@ -55,7 +57,7 @@ async function generateSummary({ content, documents, focusTopic, length, isGener
   );
 
   logger.info(`Generated summary (${summary.length} chars), ${tokensUsed} tokens used`);
-  return { summary, tokensUsed, warnings };
+  return { summary, tokensUsed, weightedTokens, warnings };
 }
 
 /**

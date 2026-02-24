@@ -26,7 +26,7 @@ class OpenAIProvider extends LLMProvider {
    * Generate text using OpenAI GPT models
    * @param {string} prompt - The input prompt
    * @param {object} options - Generation options
-   * @param {string} [options.model='gpt-4o-mini'] - Model to use
+   * @param {string} options.model - Model to use (required)
    * @returns {Promise<{text: string, tokensUsed: number}>}
    */
   async generateText(prompt, options = {}) {
@@ -34,7 +34,11 @@ class OpenAIProvider extends LLMProvider {
       throw new Error('OpenAI provider is not configured. OPENAI_LLM_SECRET_KEY is missing.');
     }
 
-    const model = options.model || 'gpt-4o-mini';
+    if (!options.model) {
+      throw new Error('OpenAIProvider requires a model name');
+    }
+
+    const model = options.model;
 
     logger.debug('OpenAI generateText called', { model, promptLength: prompt.length });
 

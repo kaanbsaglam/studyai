@@ -7,7 +7,8 @@
 const prisma = require('../lib/prisma');
 const logger = require('../config/logger');
 const { gatherDocumentsContentStructured } = require('./documentContent.service');
-const { generateText } = require('./llm.service');
+const { generateWithFallback } = require('./llm.service');
+const llmConfig = require('../config/llm.config');
 const { generateWithGenerator } = require('./pipeline.service');
 
 /**
@@ -32,15 +33,16 @@ async function generateQuiz({ content, documents, focusTopic, count, isGeneralKn
   // General knowledge mode - use direct LLM call (no content to chunk)
   if (isGeneralKnowledge) {
     const prompt = buildQuizPrompt({ content: null, focusTopic, count, isGeneralKnowledge: true });
-    const { text: responseText, tokensUsed } = await generateText(prompt, { tier });
+    const models = llmConfig.tiers[tier]?.studyAid || llmConfig.tiers.FREE.studyAid;
+    const { text: responseText, tokensUsed, weightedTokens } = await generateWithFallback(prompt, models);
     const questions = parseQuizResponse(responseText);
     logger.info(`Generated ${questions.length} quiz questions, ${tokensUsed} tokens used`);
-    return { questions, tokensUsed };
+    return { questions, tokensUsed, weightedTokens };
   }
 
   // Document-based mode - use pipeline for adaptive processing
   const contentInput = documents || content;
-  const { result: questions, tokensUsed, warnings } = await generateWithGenerator(
+  const { result: questions, tokensUsed, weightedTokens, warnings } = await generateWithGenerator(
     'quiz',
     contentInput,
     { count, focusTopic },
@@ -48,7 +50,7 @@ async function generateQuiz({ content, documents, focusTopic, count, isGeneralKn
   );
 
   logger.info(`Generated ${questions.length} quiz questions, ${tokensUsed} tokens used`);
-  return { questions, tokensUsed, warnings };
+  return { questions, tokensUsed, weightedTokens, warnings };
 }
 
 /**

@@ -7,7 +7,8 @@
 const prisma = require('../lib/prisma');
 const logger = require('../config/logger');
 const { gatherDocumentsContentStructured } = require('./documentContent.service');
-const { generateText } = require('./llm.service');
+const { generateWithFallback } = require('./llm.service');
+const llmConfig = require('../config/llm.config');
 const { generateWithGenerator } = require('./pipeline.service');
 
 /**
@@ -32,15 +33,16 @@ async function generateFlashcards({ content, documents, focusTopic, count, isGen
   // General knowledge mode - use direct LLM call (no content to chunk)
   if (isGeneralKnowledge) {
     const prompt = buildFlashcardPrompt({ content: null, focusTopic, count, isGeneralKnowledge: true });
-    const { text: responseText, tokensUsed } = await generateText(prompt, { tier });
+    const models = llmConfig.tiers[tier]?.studyAid || llmConfig.tiers.FREE.studyAid;
+    const { text: responseText, tokensUsed, weightedTokens } = await generateWithFallback(prompt, models);
     const cards = parseFlashcardResponse(responseText);
     logger.info(`Generated ${cards.length} flashcards, ${tokensUsed} tokens used`);
-    return { cards, tokensUsed };
+    return { cards, tokensUsed, weightedTokens };
   }
 
   // Document-based mode - use pipeline for adaptive processing
   const contentInput = documents || content;
-  const { result: cards, tokensUsed, warnings } = await generateWithGenerator(
+  const { result: cards, tokensUsed, weightedTokens, warnings } = await generateWithGenerator(
     'flashcard',
     contentInput,
     { count, focusTopic },
@@ -48,7 +50,7 @@ async function generateFlashcards({ content, documents, focusTopic, count, isGen
   );
 
   logger.info(`Generated ${cards.length} flashcards, ${tokensUsed} tokens used`);
-  return { cards, tokensUsed, warnings };
+  return { cards, tokensUsed, weightedTokens, warnings };
 }
 
 /**

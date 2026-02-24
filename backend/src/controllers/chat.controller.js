@@ -64,10 +64,10 @@ const askQuestion = asyncHandler(async (req, res) => {
     tier: req.user.tier,
   });
 
-  // Record token usage
+  // Record token usage (weighted tokens for daily budget)
   if (result.tokensUsed > 0) {
-    await recordTokenUsage(req.user.id, result.tokensUsed);
-    logger.info(`Recorded ${result.tokensUsed} tokens for user ${req.user.id}`);
+    await recordTokenUsage(req.user.id, result.tokensUsed, result.weightedTokens);
+    logger.info(`Recorded ${result.weightedTokens ?? result.tokensUsed} weighted tokens for user ${req.user.id}`);
   }
 
   res.json({

@@ -7,6 +7,7 @@
 
 const { getExtractor } = require('../extractors');
 const extractorConfig = require('../config/extractor.config');
+const llmConfig = require('../config/llm.config');
 const logger = require('../config/logger');
 
 /**
@@ -47,7 +48,13 @@ async function extractPdf(buffer, options = {}) {
   // Try primary extractor
   try {
     const extractor = getExtractor(primaryExtractorName);
-    const result = await extractor.extract(buffer, options);
+    // Pass vision model from central config if using gemini-vision
+    const extractOptions = { ...options };
+    if (primaryExtractorName === 'gemini-vision') {
+      const visionConfig = llmConfig.tiers[tier]?.extraction?.vision || llmConfig.tiers.FREE.extraction.vision;
+      extractOptions.model = visionConfig.primary;
+    }
+    const result = await extractor.extract(buffer, extractOptions);
 
     logger.info('Extractor extractPdf completed', {
       tier,

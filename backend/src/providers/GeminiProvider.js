@@ -26,7 +26,7 @@ class GeminiProvider extends LLMProvider {
    * Generate text using Google Gemini models
    * @param {string} prompt - The input prompt
    * @param {object} options - Generation options
-   * @param {string} [options.model='gemini-2.0-flash'] - Model to use
+   * @param {string} options.model - Model to use (required)
    * @returns {Promise<{text: string, tokensUsed: number}>}
    */
   async generateText(prompt, options = {}) {
@@ -34,7 +34,11 @@ class GeminiProvider extends LLMProvider {
       throw new Error('Gemini provider is not configured. GEMINI_API_KEY is missing.');
     }
 
-    const model = options.model || 'gemini-2.0-flash';
+    if (!options.model) {
+      throw new Error('GeminiProvider requires a model name');
+    }
+
+    const model = options.model;
 
     logger.debug('Gemini generateText called', { model, promptLength: prompt.length });
 

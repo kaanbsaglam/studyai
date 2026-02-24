@@ -11,18 +11,19 @@
  */
 
 const { generateEmbedding, querySimilar } = require('./embedding.service');
-const { generateText } = require('./llm.service');
+const { generateWithFallback } = require('./llm.service');
+const llmConfig = require('../config/llm.config');
 const { gatherDocumentsContentStructured } = require('./documentContent.service');
+const ragConfig = require('../config/rag.config');
 const prisma = require('../lib/prisma');
 const logger = require('../config/logger');
 
-// Similarity threshold - chunks below this score are considered irrelevant
-const SIMILARITY_THRESHOLD = 0.4;
-const RAG_TOP_K = 5;
-
-// Maximum characters for contexts
-const MAX_RAG_CONTEXT_CHARS = 15000;
-const MAX_CONVERSATION_HISTORY = 20;
+const {
+  similarityThreshold: SIMILARITY_THRESHOLD,
+  topK: RAG_TOP_K,
+  maxRagContextChars: MAX_RAG_CONTEXT_CHARS,
+  maxConversationHistory: MAX_CONVERSATION_HISTORY,
+} = ragConfig;
 
 /**
  * Query documents and generate an answer
@@ -56,7 +57,8 @@ async function queryAndAnswer({ question, classroomId, documentIds = [], convers
   });
 
   // Generate answer using LLM abstraction
-  const { text: answer, tokensUsed } = await generateText(prompt, { tier });
+  const models = llmConfig.tiers[tier]?.chat || llmConfig.tiers.FREE.chat;
+  const { text: answer, tokensUsed, weightedTokens } = await generateWithFallback(prompt, models);
 
   // Combine sources (selected docs first, then RAG)
   const allSources = [...selectedDocsSources, ...ragSources];
@@ -73,6 +75,7 @@ async function queryAndAnswer({ question, classroomId, documentIds = [], convers
 
   logger.info(`Generated answer`, {
     tokensUsed,
+    weightedTokens,
     sourcesCount: uniqueSources.length,
     hasSelectedDocs: selectedDocsContext.length > 0,
     hasRAGContext: ragContext.length > 0,
@@ -83,6 +86,7 @@ async function queryAndAnswer({ question, classroomId, documentIds = [], convers
     sources: uniqueSources,
     hasRelevantContext,
     tokensUsed,
+    weightedTokens,
   };
 }
 
