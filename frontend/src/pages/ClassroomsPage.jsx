@@ -94,7 +94,7 @@ export default function ClassroomsPage() {
               {user?.role === 'ADMIN' && (
                 <Link
                   to="/admin"
-                  className="text-sm bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200"
+                  className="link-btn"
                 >
                   {t('common.admin')}
                 </Link>
@@ -102,9 +102,9 @@ export default function ClassroomsPage() {
               <TimerPill />
               <LanguageToggle />
               <Link
-                className={`text-sm px-3 py-1 rounded ${
+                className={`link-btn ${
                   user?.tier === 'PREMIUM'
-                    ? 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                    ? 'bg-purple-700 text-gray-700 hover:bg-purple-500'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >

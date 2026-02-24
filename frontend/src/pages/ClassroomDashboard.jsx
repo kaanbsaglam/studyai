@@ -241,12 +241,12 @@ export default function ClassroomDashboard() {
                       {t('common.open')}
                     </Link>
                   )}
-                  <button
+                  <span
                     onClick={() => handleDeleteDocument(doc.id)}
-                    className="text-sm text-red-600 hover:text-red-800"
+                    className="text-sm text-red-600 hover:text-red-800 cursor-pointer font-semibold"
                   >
                     {t('common.delete')}
-                  </button>
+                  </span>
                 </div>
               </li>
             ))}

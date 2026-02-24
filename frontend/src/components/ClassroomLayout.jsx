@@ -96,10 +96,11 @@ export default function ClassroomLayout() {
               </div>
             </div>
             <div className="flex items-center gap-4">
+              <span className="text-gray-600 border border-gray-300 rounded-full px-3 py-1 ">{user?.name || user?.email}</span>
               {user?.role === 'ADMIN' && (
                 <Link
                   to="/admin"
-                  className="text-sm bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200"
+                  className="link-btn text-gray-700 hover:text-gray-900"
                 >
                   Admin
                 </Link>
@@ -107,9 +108,9 @@ export default function ClassroomLayout() {
               <TimerPill />
               <Link
                 to="/account"
-                className={`text-sm px-3 py-1 rounded ${
+                className={`link-btn ${
                   user?.tier === 'PREMIUM'
-                    ? 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                    ? 'bg-purple-700 text-gray-700 hover:bg-purple-500'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
@@ -125,10 +126,10 @@ export default function ClassroomLayout() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
               </Link>
-              <span className="text-gray-600">{user?.name || user?.email}</span>
+              
               <button
                 onClick={logout}
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md"
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-full"
               >
                 {t('common.logout')}
               </button>
