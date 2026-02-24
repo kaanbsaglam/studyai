@@ -294,7 +294,28 @@
     "fromDocs_plural": "Flashcards will be generated from {{count}} selected documents",
     "returnToOrder": "Return to original order",
     "shuffleCards": "Shuffle cards",
-    "study": "Study"
+    "study": "Study",
+    "createManual": "Create Manual"
+  },
+  "manualFlashcard": {
+    "createTitle": "Create Flashcard Set",
+    "editTitle": "Edit Flashcard Set",
+    "setTitle": "Set Title",
+    "setTitlePlaceholder": "e.g., Biology Chapter 3",
+    "focusTopic": "Focus Topic",
+    "focusTopicPlaceholder": "e.g., Cell Division",
+    "cards": "Cards",
+    "addCard": "Add Card",
+    "cardNumber": "Card #{{number}}",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "front": "Front",
+    "back": "Back",
+    "frontPlaceholder": "Question or term...",
+    "backPlaceholder": "Answer or definition...",
+    "atLeastOneCard": "Add at least one card with front and back filled in.",
+    "failedToSave": "Failed to save flashcard set",
+    "createSet": "Create Set"
   },
   "quizPanel": {
     "generateQuiz": "Generate Quiz",
@@ -337,7 +358,28 @@
     "fromGeneral": "Quiz will be generated from AI general knowledge",
     "fromDocs": "Quiz will be generated from {{count}} selected document",
     "fromDocs_plural": "Quiz will be generated from {{count}} selected documents",
-    "failedToSaveAttempt": "Failed to save quiz result"
+    "failedToSaveAttempt": "Failed to save quiz result",
+    "createManual": "Create Manual"
+  },
+  "manualQuiz": {
+    "createTitle": "Create Quiz",
+    "editTitle": "Edit Quiz",
+    "quizTitle": "Quiz Title",
+    "quizTitlePlaceholder": "e.g., History Midterm Review",
+    "focusTopic": "Focus Topic",
+    "focusTopicPlaceholder": "e.g., World War II",
+    "questions": "Questions",
+    "addQuestion": "Add Question",
+    "questionNumber": "Question #{{number}}",
+    "questionText": "Question",
+    "questionPlaceholder": "Enter the question...",
+    "correctAnswer": "Correct Answer",
+    "correctAnswerPlaceholder": "Enter the correct answer...",
+    "wrongAnswers": "Wrong Answers",
+    "wrongAnswer": "Wrong answer",
+    "atLeastOneQuestion": "Add at least one complete question.",
+    "failedToSave": "Failed to save quiz",
+    "createQuiz": "Create Quiz"
   },
   "summaryPanel": {
     "generateSummary": "Generate Summary",
@@ -372,7 +414,22 @@
     "documentHint": "Leave empty to summarize all content from selected documents",
     "fromGeneral": "Summary will be generated from AI general knowledge",
     "fromDocs": "Summary will be generated from {{count}} selected document",
-    "fromDocs_plural": "Summary will be generated from {{count}} selected documents"
+    "fromDocs_plural": "Summary will be generated from {{count}} selected documents",
+    "createManual": "Create Manual"
+  },
+  "manualSummary": {
+    "createTitle": "Create Summary",
+    "editTitle": "Edit Summary",
+    "summaryTitle": "Summary Title",
+    "summaryTitlePlaceholder": "e.g., Chapter 5 Overview",
+    "focusTopic": "Focus Topic",
+    "focusTopicPlaceholder": "e.g., Key themes",
+    "category": "Length Category",
+    "content": "Content",
+    "contentPlaceholder": "Write your summary here...",
+    "charCount": "{{count}} characters",
+    "failedToSave": "Failed to save summary",
+    "createSummary": "Create Summary"
   },
   "notesPanel": {
     "title": "Notes",

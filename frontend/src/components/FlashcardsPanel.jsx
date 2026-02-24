@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../api/axios';
 import DocumentSelector from './DocumentSelector';
+import ManualFlashcardModal from './ManualFlashcardModal';
 
 // Fisher-Yates shuffle
 function shuffleArray(array) {
@@ -31,6 +32,10 @@ export default function FlashcardsPanel({
   const [isFlipped, setIsFlipped] = useState(false);
   const [isShuffled, setIsShuffled] = useState(false);
   const [shuffledCards, setShuffledCards] = useState([]);
+
+  // Manual create/edit modal state
+  const [showManualModal, setShowManualModal] = useState(false);
+  const [editingSet, setEditingSet] = useState(null);
 
   // Form state
   const [formTitle, setFormTitle] = useState('');
@@ -142,6 +147,34 @@ export default function FlashcardsPanel({
     } catch {
       setError(t('flashcardsPanel.failedToDelete'));
     }
+  };
+
+  const handleEditSet = async (setId) => {
+    try {
+      const response = await api.get(`/flashcard-sets/${setId}`);
+      setEditingSet(response.data.data.flashcardSet);
+      setShowManualModal(true);
+    } catch {
+      setError(t('flashcardsPanel.failedToLoadSet'));
+    }
+  };
+
+  const handleManualSaved = (savedSet) => {
+    if (editingSet) {
+      // Update in list
+      setFlashcardSets((prev) =>
+        prev.map((s) => (s.id === savedSet.id ? { ...savedSet, _count: { cards: savedSet.cards?.length || 0 } } : s))
+      );
+      // If currently viewing this set, refresh it
+      if (activeSet?.id === savedSet.id) {
+        setActiveSet(savedSet);
+      }
+    } else {
+      // Add new to list
+      setFlashcardSets((prev) => [{ ...savedSet, _count: { cards: savedSet.cards?.length || 0 } }, ...prev]);
+    }
+    setShowManualModal(false);
+    setEditingSet(null);
   };
 
   const nextCard = () => {
@@ -438,6 +471,19 @@ export default function FlashcardsPanel({
     );
   }
 
+  // Manual create/edit view
+  if (showManualModal) {
+    return (
+      <ManualFlashcardModal
+        classroomId={classroomId}
+        existingSet={editingSet}
+        compact={compact}
+        onClose={() => { setShowManualModal(false); setEditingSet(null); }}
+        onSaved={handleManualSaved}
+      />
+    );
+  }
+
   // List view
   const containerClass = compact
     ? 'flex flex-col h-full'
@@ -453,20 +499,40 @@ export default function FlashcardsPanel({
             <h3 className="text-lg font-medium text-gray-900">{t('flashcardsPanel.title')}</h3>
             <p className="text-sm text-gray-500">{t('flashcardsPanel.subtitle')}</p>
           </div>
-          <button
-            onClick={() => setShowGenerateForm(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700"
-          >
-            {t('flashcardsPanel.generate')}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                setEditingSet(null);
+                setShowManualModal(true);
+              }}
+              className="px-4 py-2 border border-blue-600 text-blue-600 rounded-md font-medium hover:bg-blue-50"
+            >
+              {t('flashcardsPanel.createManual')}
+            </button>
+            <button
+              onClick={() => setShowGenerateForm(true)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700"
+            >
+              {t('flashcardsPanel.generate')}
+            </button>
+          </div>
         </div>
       )}
 
       {compact && (
-        <div className="p-3 border-b border-gray-200">
+        <div className="p-3 border-b border-gray-200 flex gap-2">
+          <button
+            onClick={() => {
+              setEditingSet(null);
+              setShowManualModal(true);
+            }}
+            className="flex-1 px-4 py-2 border border-blue-600 text-blue-600 rounded-md font-medium hover:bg-blue-50 text-sm"
+          >
+            {t('flashcardsPanel.createManual')}
+          </button>
           <button
             onClick={() => setShowGenerateForm(true)}
-            className="w-full px-4 py-2 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 text-sm"
+            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 text-sm"
           >
             {t('flashcardsPanel.generateBtn')}
           </button>
@@ -524,6 +590,12 @@ export default function FlashcardsPanel({
                   className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded"
                 >
                   {t('flashcardsPanel.study')}
+                </button>
+                <button
+                  onClick={() => handleEditSet(set.id)}
+                  className="px-3 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded"
+                >
+                  {t('common.edit')}
                 </button>
                 <button
                   onClick={() => handleDeleteSet(set.id)}

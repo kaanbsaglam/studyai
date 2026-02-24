@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../api/axios';
 import DocumentSelector from './DocumentSelector';
+import ManualQuizModal from './ManualQuizModal';
 
 export default function QuizPanel({
   classroomId,
@@ -27,6 +28,11 @@ export default function QuizPanel({
   const [shuffledAnswers, setShuffledAnswers] = useState([]);
   const [attempts, setAttempts] = useState([]);
   const [savingAttempt, setSavingAttempt] = useState(false);
+
+  // Manual create/edit modal state
+  const [showManualModal, setShowManualModal] = useState(false);
+  const [editingQuiz, setEditingQuiz] = useState(null);
+
 
   // Form state
   const [formTitle, setFormTitle] = useState('');
@@ -143,6 +149,28 @@ export default function QuizPanel({
     } catch {
       setError(t('quizPanel.failedToDelete'));
     }
+  };
+  
+  const handleEditQuiz = async (quizId) => {
+    try {
+      const response = await api.get(`/quiz-sets/${quizId}`);
+      setEditingQuiz(response.data.data.quizSet);
+      setShowManualModal(true);
+    } catch {
+      setError(t('quizPanel.failedToLoadQuiz'));
+    }
+  };
+
+  const handleManualSaved = (savedQuiz) => {
+    if (editingQuiz) {
+      setQuizSets((prev) =>
+        prev.map((q) => (q.id === savedQuiz.id ? { ...savedQuiz, _count: { questions: savedQuiz.questions?.length || 0 } } : q))
+      );
+    } else {
+      setQuizSets((prev) => [{ ...savedQuiz, _count: { questions: savedQuiz.questions?.length || 0 } }, ...prev]);
+    }
+    setShowManualModal(false);
+    setEditingQuiz(null);
   };
 
   const handleAnswerSelect = (answer) => {
@@ -488,6 +516,19 @@ export default function QuizPanel({
     );
   }
 
+  // Manual create/edit view
+  if (showManualModal) {
+    return (
+      <ManualQuizModal
+        classroomId={classroomId}
+        existingQuiz={editingQuiz}
+        compact={compact}
+        onClose={() => { setShowManualModal(false); setEditingQuiz(null); }}
+        onSaved={handleManualSaved}
+      />
+    );
+  }
+
   // List view
   const containerClass = compact
     ? 'flex flex-col h-full'
@@ -503,20 +544,40 @@ export default function QuizPanel({
             <h3 className="text-lg font-medium text-gray-900">{t('quizPanel.title')}</h3>
             <p className="text-sm text-gray-500">{t('quizPanel.subtitle')}</p>
           </div>
-          <button
-            onClick={() => setShowGenerateForm(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700"
-          >
-            {t('quizPanel.generate')}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                setEditingQuiz(null);
+                setShowManualModal(true);
+              }}
+              className="px-4 py-2 border border-blue-600 text-blue-600 rounded-md font-medium hover:bg-blue-50"
+            >
+              {t('quizPanel.createManual')}
+            </button>
+            <button
+              onClick={() => setShowGenerateForm(true)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700"
+            >
+              {t('quizPanel.generate')}
+            </button>
+          </div>
         </div>
       )}
 
       {compact && (
-        <div className="p-3 border-b border-gray-200">
+        <div className="p-3 border-b border-gray-200 flex gap-2">
+          <button
+            onClick={() => {
+              setEditingQuiz(null);
+              setShowManualModal(true);
+            }}
+            className="flex-1 px-4 py-2 border border-blue-600 text-blue-600 rounded-md font-medium hover:bg-blue-50 text-sm"
+          >
+            {t('quizPanel.createManual')}
+          </button>
           <button
             onClick={() => setShowGenerateForm(true)}
-            className="w-full px-4 py-2 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 text-sm"
+            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 text-sm"
           >
             {t('quizPanel.generateBtn')}
           </button>
@@ -564,6 +625,12 @@ export default function QuizPanel({
                   className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded"
                 >
                   {t('common.start')}
+                </button>
+                <button
+                  onClick={() => handleEditQuiz(quiz.id)}
+                  className="px-3 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded"
+                >
+                  {t('common.edit')}
                 </button>
                 <button
                   onClick={() => handleDeleteQuiz(quiz.id)}

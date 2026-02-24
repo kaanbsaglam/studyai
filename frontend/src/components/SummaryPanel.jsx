@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../api/axios';
 import DocumentSelector from './DocumentSelector';
+import ManualSummaryModal from './ManualSummaryModal';
 
 export default function SummaryPanel({
   classroomId,
@@ -25,6 +26,10 @@ export default function SummaryPanel({
   const [selectedDocIds, setSelectedDocIds] = useState(initialDocumentIds);
   const [savingAsNote, setSavingAsNote] = useState(false);
   const [savedAsNote, setSavedAsNote] = useState(false);
+
+  // manual summary create/edit modal state
+  const [showManualModal, setShowManualModal] = useState(false);
+  const [editingSummary, setEditingSummary] = useState(null);
 
   const isGeneralKnowledge = selectedDocIds.length === 0;
 
@@ -104,6 +109,32 @@ export default function SummaryPanel({
     } catch {
       setError(t('summaryPanel.failedToDelete'));
     }
+  };
+
+  const handleEditSummary = async (summaryId) => {
+    try {
+      const response = await api.get(`/summaries/${summaryId}`);
+      setEditingSummary(response.data.data.summary);
+      setShowManualModal(true);
+    } catch {
+      setError(t('summaryPanel.failedToLoadSummary'));
+    }
+  };
+
+  const handleManualSaved = (savedSummary) => {
+    if (editingSummary) {
+      setSummaries((prev) =>
+        prev.map((s) => (s.id === savedSummary.id ? savedSummary : s))
+      );
+      // If currently viewing this summary, refresh it
+      if (activeSummary?.id === savedSummary.id) {
+        setActiveSummary(savedSummary);
+      }
+    } else {
+      setSummaries((prev) => [savedSummary, ...prev]);
+    }
+    setShowManualModal(false);
+    setEditingSummary(null);
   };
 
   const getLengthLabel = (length) => {
@@ -330,6 +361,20 @@ export default function SummaryPanel({
     );
   }
 
+  // Manual create/edit view
+  if (showManualModal) {
+    return (
+      <ManualSummaryModal
+        classroomId={classroomId}
+        existingSummary={editingSummary}
+        compact={compact}
+        onClose={() => { setShowManualModal(false); setEditingSummary(null); }}
+        onSaved={handleManualSaved}
+      />
+    );
+  }
+
+
   // List view
   const containerClass = compact
     ? 'flex flex-col h-full'
@@ -345,20 +390,34 @@ export default function SummaryPanel({
             <h3 className="text-lg font-medium text-gray-900">{t('summaryPanel.title')}</h3>
             <p className="text-sm text-gray-500">{t('summaryPanel.subtitle')}</p>
           </div>
-          <button
-            onClick={() => setShowGenerateForm(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700"
-          >
-            {t('summaryPanel.generate')}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => { setEditingSummary(null); setShowManualModal(true); }}
+              className="px-4 py-2 border border-blue-600 text-blue-600 rounded-md font-medium hover:bg-blue-50"
+            >
+              {t('summaryPanel.createManual')}
+            </button>
+            <button
+              onClick={() => setShowGenerateForm(true)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700"
+            >
+              {t('summaryPanel.generate')}
+            </button>
+          </div>
         </div>
       )}
 
       {compact && (
-        <div className="p-3 border-b border-gray-200">
+        <div className="p-3 border-b border-gray-200 flex gap-2">
+          <button
+            onClick={() => { setEditingSummary(null); setShowManualModal(true); }}
+            className="flex-1 px-4 py-2 border border-blue-600 text-blue-600 rounded-md font-medium hover:bg-blue-50 text-sm"
+          >
+            {t('summaryPanel.createManual')}
+          </button>
           <button
             onClick={() => setShowGenerateForm(true)}
-            className="w-full px-4 py-2 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 text-sm"
+            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 text-sm"
           >
             {t('summaryPanel.generateBtn')}
           </button>
@@ -405,13 +464,19 @@ export default function SummaryPanel({
                   onClick={() => handleViewSummary(summary.id)}
                   className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded"
                 >
-                  View
+                  {t('common.view')}
+                </button>
+                <button
+                  onClick={() => handleEditSummary(summary.id)}
+                  className="px-3 py-1 text-sm text-yellow-700 hover:bg-yellow-50 rounded"
+                >
+                  {t('common.edit')}
                 </button>
                 <button
                   onClick={() => handleDeleteSummary(summary.id)}
                   className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded"
                 >
-                  Delete
+                  {t('common.delete')}
                 </button>
               </div>
             </li>

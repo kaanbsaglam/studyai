@@ -294,7 +294,28 @@
     "fromDocs_plural": "Bilgi kartları {{count}} seçili dökümandan oluşturulacak",
     "returnToOrder": "Orijinal sıraya dön",
     "shuffleCards": "Kartları karıştır",
-    "study": "Çalış"
+    "study": "Çalış",
+    "createManual": "Manuel Oluştur"
+  },
+  "manualFlashcard": {
+    "createTitle": "Bilgi Kartı Seti Oluştur",
+    "editTitle": "Bilgi Kartı Setini Düzenle",
+    "setTitle": "Set Başlığı",
+    "setTitlePlaceholder": "örn. Biyoloji Bölüm 3",
+    "focusTopic": "Odak Konusu",
+    "focusTopicPlaceholder": "örn. Hücre Bölünmesi",
+    "cards": "Kartlar",
+    "addCard": "Kart Ekle",
+    "cardNumber": "Kart #{{number}}",
+    "moveUp": "Yukarı taşı",
+    "moveDown": "Aşağı taşı",
+    "front": "Ön",
+    "back": "Arka",
+    "frontPlaceholder": "Soru veya terim...",
+    "backPlaceholder": "Cevap veya tanım...",
+    "atLeastOneCard": "Önü ve arkası doldurulmuş en az bir kart ekleyin.",
+    "failedToSave": "Bilgi kartı seti kaydedilemedi",
+    "createSet": "Set Oluştur"
   },
   "quizPanel": {
     "generateQuiz": "Test Oluştur",
@@ -337,7 +358,28 @@
     "fromGeneral": "Test yapay zeka genel bilgisinden oluşturulacak",
     "fromDocs": "Test {{count}} seçili dökümandan oluşturulacak",
     "fromDocs_plural": "Test {{count}} seçili dökümandan oluşturulacak",
-    "failedToSaveAttempt": "Test sonucu kaydedilemedi"
+    "failedToSaveAttempt": "Test sonucu kaydedilemedi",
+    "createManual": "Manuel Oluştur"
+  },
+  "manualQuiz": {
+    "createTitle": "Test Oluştur",
+    "editTitle": "Testi Düzenle",
+    "quizTitle": "Test Başlığı",
+    "quizTitlePlaceholder": "örn. Tarih Ara Sınav Tekrarı",
+    "focusTopic": "Odak Konusu",
+    "focusTopicPlaceholder": "örn. Dünya Savaşı",
+    "questions": "Sorular",
+    "addQuestion": "Soru Ekle",
+    "questionNumber": "Soru #{{number}}",
+    "questionText": "Soru",
+    "questionPlaceholder": "Soruyu girin...",
+    "correctAnswer": "Doğru Cevap",
+    "correctAnswerPlaceholder": "Doğru cevabı girin...",
+    "wrongAnswers": "Yanlış Cevaplar",
+    "wrongAnswer": "Yanlış cevap",
+    "atLeastOneQuestion": "En az bir tamamlanmış soru ekleyin.",
+    "failedToSave": "Test kaydedilemedi",
+    "createQuiz": "Test Oluştur"
   },
   "summaryPanel": {
     "generateSummary": "Özet Oluştur",
@@ -372,7 +414,22 @@
     "documentHint": "Seçili dokümanlardan tüm içeriği özetlemek için boş bırakın",
     "fromGeneral": "Özet yapay zeka genel bilgisinden oluşturulacak",
     "fromDocs": "Özet {{count}} seçili dökümandan oluşturulacak",
-    "fromDocs_plural": "Özet {{count}} seçili dökümandan oluşturulacak"
+    "fromDocs_plural": "Özet {{count}} seçili dökümandan oluşturulacak",
+    "createManual": "Manuel Oluştur"
+  },
+  "manualSummary": {
+    "createTitle": "Özet Oluştur",
+    "editTitle": "Özeti Düzenle",
+    "summaryTitle": "Özet Başlığı",
+    "summaryTitlePlaceholder": "örn. Bölüm 5 Genel Bakış",
+    "focusTopic": "Odak Konusu",
+    "focusTopicPlaceholder": "örn. Ana temalar",
+    "category": "Uzunluk Kategorisi",
+    "content": "İçerik",
+    "contentPlaceholder": "Özetinizi buraya yazın...",
+    "charCount": "{{count}} karakter",
+    "failedToSave": "Özet kaydedilemedi",
+    "createSummary": "Özet Oluştur"
   },
   "notesPanel": {
     "title": "Notlar",
