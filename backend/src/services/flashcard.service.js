@@ -256,6 +256,52 @@ async function deleteFlashcardSet(id) {
   });
 }
 
+/**
+ * Update a flashcard set (title, focusTopic, and/or cards)
+ * @param {string} id
+ * @param {object} data
+ * @param {string} [data.title]
+ * @param {string} [data.focusTopic]
+ * @param {Array<{id?: string, front: string, back: string}>} [data.cards]
+ * @returns {Promise<object>} Updated flashcard set with cards
+ */
+async function updateFlashcardSet(id, data) {
+  return prisma.$transaction(async (tx) => {
+    // Update set metadata if provided
+    const updateData = {};
+    if (data.title !== undefined) updateData.title = data.title;
+    if (data.focusTopic !== undefined) updateData.focusTopic = data.focusTopic;
+
+    if (Object.keys(updateData).length > 0) {
+      await tx.flashcardSet.update({
+        where: { id },
+        data: updateData,
+      });
+    }
+
+    // Replace all cards if provided
+    if (data.cards) {
+      await tx.flashcard.deleteMany({ where: { flashcardSetId: id } });
+      await tx.flashcard.createMany({
+        data: data.cards.map((card, index) => ({
+          front: card.front,
+          back: card.back,
+          position: index,
+          flashcardSetId: id,
+        })),
+      });
+    }
+
+    return tx.flashcardSet.findUnique({
+      where: { id },
+      include: {
+        cards: { orderBy: { position: 'asc' } },
+        classroom: { select: { id: true, name: true } },
+      },
+    });
+  });
+}
+
 module.exports = {
   gatherDocumentsContentStructured,
   generateFlashcards,
@@ -263,4 +309,5 @@ module.exports = {
   getFlashcardSetById,
   getFlashcardSetsByClassroom,
   deleteFlashcardSet,
+  updateFlashcardSet,
 };

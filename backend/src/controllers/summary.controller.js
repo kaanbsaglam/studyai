@@ -5,7 +5,7 @@
  */
 
 const prisma = require('../lib/prisma');
-const { createSummarySchema } = require('../validators/summary.validator');
+const { createSummarySchema, manualSummarySchema, updateSummarySchema } = require('../validators/summary.validator');
 const { NotFoundError, AuthorizationError, ValidationError } = require('../middleware/errorHandler');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { canUseChat, recordTokenUsage } = require('../services/tier.service');
@@ -16,6 +16,7 @@ const {
   getSummaryById,
   getSummariesByClassroom,
   deleteSummary,
+  updateSummary,
 } = require('../services/summary.service');
 const logger = require('../config/logger');
 
@@ -197,9 +198,72 @@ const deleteSummaryHandler = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * Create a manual summary (no AI generation)
+ * POST /api/v1/classrooms/:classroomId/summaries/manual
+ */
+const createManualSummaryHandler = asyncHandler(async (req, res) => {
+  const { classroomId } = req.params;
+  const data = manualSummarySchema.parse(req.body);
+
+  const classroom = await prisma.classroom.findUnique({
+    where: { id: classroomId },
+  });
+
+  if (!classroom) {
+    throw new NotFoundError('Classroom');
+  }
+
+  if (classroom.userId !== req.user.id) {
+    throw new AuthorizationError('You do not have access to this classroom');
+  }
+
+  const summary = await createSummary({
+    title: data.title,
+    focusTopic: data.focusTopic,
+    content: data.content,
+    length: data.length,
+    classroomId,
+    userId: req.user.id,
+  });
+
+  res.status(201).json({
+    success: true,
+    data: { summary },
+  });
+});
+
+/**
+ * Update a summary
+ * PUT /api/v1/summaries/:id
+ */
+const updateSummaryHandler = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const data = updateSummarySchema.parse(req.body);
+
+  const summary = await getSummaryById(id);
+
+  if (!summary) {
+    throw new NotFoundError('Summary');
+  }
+
+  if (summary.userId !== req.user.id) {
+    throw new AuthorizationError('You do not have access to this summary');
+  }
+
+  const updated = await updateSummary(id, data);
+
+  res.json({
+    success: true,
+    data: { summary: updated },
+  });
+});
+
 module.exports = {
   createSummaryHandler,
   getClassroomSummaries,
   getSummaryHandler,
   deleteSummaryHandler,
+  createManualSummaryHandler,
+  updateSummaryHandler,
 };

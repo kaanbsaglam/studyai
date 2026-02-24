@@ -37,7 +37,59 @@ const recordAttemptSchema = z.object({
     .min(1, 'Must have at least 1 question'),
 });
 
+const manualQuizSetSchema = z.object({
+  title: z
+    .string({ required_error: 'Title is required' })
+    .min(1, 'Title cannot be empty')
+    .max(100, 'Title is too long'),
+  focusTopic: z
+    .string()
+    .max(200, 'Focus topic is too long')
+    .optional(),
+  questions: z
+    .array(
+      z.object({
+        question: z.string().min(1, 'Question cannot be empty').max(1000, 'Question is too long'),
+        correctAnswer: z.string().min(1, 'Correct answer cannot be empty').max(500, 'Answer is too long'),
+        wrongAnswers: z
+          .array(z.string().min(1, 'Wrong answer cannot be empty').max(500, 'Answer is too long'))
+          .length(3, 'Exactly 3 wrong answers are required'),
+      })
+    )
+    .min(1, 'At least 1 question is required')
+    .max(50, 'Maximum 50 questions allowed'),
+});
+
+const updateQuizSetSchema = z.object({
+  title: z
+    .string()
+    .min(1, 'Title cannot be empty')
+    .max(100, 'Title is too long')
+    .optional(),
+  focusTopic: z
+    .string()
+    .max(200, 'Focus topic is too long')
+    .optional()
+    .nullable(),
+  questions: z
+    .array(
+      z.object({
+        id: z.string().uuid().optional(),
+        question: z.string().min(1, 'Question cannot be empty').max(1000, 'Question is too long'),
+        correctAnswer: z.string().min(1, 'Correct answer cannot be empty').max(500, 'Answer is too long'),
+        wrongAnswers: z
+          .array(z.string().min(1, 'Wrong answer cannot be empty').max(500, 'Answer is too long'))
+          .length(3, 'Exactly 3 wrong answers are required'),
+      })
+    )
+    .min(1, 'At least 1 question is required')
+    .max(50, 'Maximum 50 questions allowed')
+    .optional(),
+});
+
 module.exports = {
   createQuizSetSchema,
   recordAttemptSchema,
+  manualQuizSetSchema,
+  updateQuizSetSchema,
 };

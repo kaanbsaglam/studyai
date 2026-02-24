@@ -5,7 +5,7 @@
  */
 
 const prisma = require('../lib/prisma');
-const { createFlashcardSetSchema } = require('../validators/flashcard.validator');
+const { createFlashcardSetSchema, manualFlashcardSetSchema, updateFlashcardSetSchema } = require('../validators/flashcard.validator');
 const { NotFoundError, AuthorizationError, ValidationError } = require('../middleware/errorHandler');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { canUseChat, recordTokenUsage } = require('../services/tier.service');
@@ -16,6 +16,7 @@ const {
   getFlashcardSetById,
   getFlashcardSetsByClassroom,
   deleteFlashcardSet,
+  updateFlashcardSet,
 } = require('../services/flashcard.service');
 const logger = require('../config/logger');
 
@@ -198,9 +199,74 @@ const deleteFlashcardSetHandler = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * Create a manual flashcard set (no AI generation)
+ * POST /api/v1/classrooms/:classroomId/flashcard-sets/manual
+ */
+const createManualFlashcardSetHandler = asyncHandler(async (req, res) => {
+  const { classroomId } = req.params;
+  const data = manualFlashcardSetSchema.parse(req.body);
+
+  // Check classroom exists and belongs to user
+  const classroom = await prisma.classroom.findUnique({
+    where: { id: classroomId },
+  });
+
+  if (!classroom) {
+    throw new NotFoundError('Classroom');
+  }
+
+  if (classroom.userId !== req.user.id) {
+    throw new AuthorizationError('You do not have access to this classroom');
+  }
+
+  // Save to database
+  const flashcardSet = await createFlashcardSet({
+    title: data.title,
+    focusTopic: data.focusTopic,
+    classroomId,
+    userId: req.user.id,
+    isGeneralKnowledge: false,
+    cards: data.cards,
+  });
+
+  res.status(201).json({
+    success: true,
+    data: { flashcardSet },
+  });
+});
+
+/**
+ * Update a flashcard set
+ * PUT /api/v1/flashcard-sets/:id
+ */
+const updateFlashcardSetHandler = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const data = updateFlashcardSetSchema.parse(req.body);
+
+  const flashcardSet = await getFlashcardSetById(id);
+
+  if (!flashcardSet) {
+    throw new NotFoundError('Flashcard set');
+  }
+
+  if (flashcardSet.userId !== req.user.id) {
+    throw new AuthorizationError('You do not have access to this flashcard set');
+  }
+
+  const updated = await updateFlashcardSet(id, data);
+
+  res.json({
+    success: true,
+    data: { flashcardSet: updated },
+  });
+});
+
 module.exports = {
   createFlashcardSetHandler,
   getClassroomFlashcardSets,
   getFlashcardSetHandler,
   deleteFlashcardSetHandler,
+  createManualFlashcardSetHandler,
+  updateFlashcardSetHandler,
 };

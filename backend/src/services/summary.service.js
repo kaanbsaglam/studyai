@@ -176,6 +176,28 @@ async function deleteSummary(id) {
   });
 }
 
+/**
+ * Update a summary
+ * @param {string} id
+ * @param {object} data
+ * @returns {Promise<object>} Updated summary
+ */
+async function updateSummary(id, data) {
+  const updateData = {};
+  if (data.title !== undefined) updateData.title = data.title;
+  if (data.focusTopic !== undefined) updateData.focusTopic = data.focusTopic;
+  if (data.content !== undefined) updateData.content = data.content;
+  if (data.length !== undefined) updateData.length = data.length;
+
+  return prisma.summary.update({
+    where: { id },
+    data: updateData,
+    include: {
+      classroom: { select: { id: true, name: true } },
+    },
+  });
+}
+
 module.exports = {
   gatherDocumentsContentStructured,
   generateSummary,
@@ -183,5 +205,6 @@ module.exports = {
   getSummaryById,
   getSummariesByClassroom,
   deleteSummary,
+  updateSummary,
   LENGTH_CONFIG,
 };

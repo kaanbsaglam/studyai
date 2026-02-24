@@ -9,6 +9,8 @@ const {
   getClassroomSummaries,
   getSummaryHandler,
   deleteSummaryHandler,
+  createManualSummaryHandler,
+  updateSummaryHandler,  
 } = require('../controllers/summary.controller');
 
 const router = express.Router();
@@ -18,10 +20,12 @@ router.use(authenticate);
 
 // Classroom-scoped routes
 router.post('/classrooms/:classroomId/summaries', createSummaryHandler);
+router.post('/classrooms/:classroomId/summaries/manual', createManualSummaryHandler);
 router.get('/classrooms/:classroomId/summaries', getClassroomSummaries);
 
 // Summary routes
 router.get('/summaries/:id', getSummaryHandler);
+router.put('/summaries/:id', updateSummaryHandler);
 router.delete('/summaries/:id', deleteSummaryHandler);
 
 module.exports = router;

@@ -13,6 +13,8 @@ const {
   getClassroomFlashcardSets,
   getFlashcardSetHandler,
   deleteFlashcardSetHandler,
+  createManualFlashcardSetHandler,
+  updateFlashcardSetHandler,
 } = require('../controllers/flashcard.controller');
 const { authenticate } = require('../middleware/auth.middleware');
 
@@ -23,10 +25,12 @@ router.use(authenticate);
 
 // Classroom-scoped routes
 router.post('/classrooms/:classroomId/flashcard-sets', createFlashcardSetHandler);
+router.post('/classrooms/:classroomId/flashcard-sets/manual', createManualFlashcardSetHandler);
 router.get('/classrooms/:classroomId/flashcard-sets', getClassroomFlashcardSets);
 
 // Direct flashcard set routes
 router.get('/flashcard-sets/:id', getFlashcardSetHandler);
+router.put('/flashcard-sets/:id', updateFlashcardSetHandler);
 router.delete('/flashcard-sets/:id', deleteFlashcardSetHandler);
 
 module.exports = router;

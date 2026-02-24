@@ -5,7 +5,7 @@
  */
 
 const prisma = require('../lib/prisma');
-const { createQuizSetSchema, recordAttemptSchema } = require('../validators/quiz.validator');
+const { createQuizSetSchema, recordAttemptSchema, manualQuizSetSchema, updateQuizSetSchema } = require('../validators/quiz.validator');
 const { NotFoundError, AuthorizationError, ValidationError } = require('../middleware/errorHandler');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { canUseChat, recordTokenUsage } = require('../services/tier.service');
@@ -18,6 +18,7 @@ const {
   deleteQuizSet,
   recordQuizAttempt,
   getQuizAttempts,
+  updateQuizSet,
 } = require('../services/quiz.service');
 const logger = require('../config/logger');
 
@@ -258,6 +259,66 @@ const getAttemptsHandler = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * Create a manual quiz set (no AI generation)
+ * POST /api/v1/classrooms/:classroomId/quiz-sets/manual
+ */
+const createManualQuizSetHandler = asyncHandler(async (req, res) => {
+  const { classroomId } = req.params;
+  const data = manualQuizSetSchema.parse(req.body);
+
+  const classroom = await prisma.classroom.findUnique({
+    where: { id: classroomId },
+  });
+
+  if (!classroom) {
+    throw new NotFoundError('Classroom');
+  }
+
+  if (classroom.userId !== req.user.id) {
+    throw new AuthorizationError('You do not have access to this classroom');
+  }
+
+  const quizSet = await createQuizSet({
+    title: data.title,
+    focusTopic: data.focusTopic,
+    classroomId,
+    userId: req.user.id,
+    questions: data.questions,
+  });
+
+  res.status(201).json({
+    success: true,
+    data: { quizSet },
+  });
+});
+
+/**
+ * Update a quiz set
+ * PUT /api/v1/quiz-sets/:id
+ */
+const updateQuizSetHandler = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const data = updateQuizSetSchema.parse(req.body);
+
+  const quizSet = await getQuizSetById(id);
+
+  if (!quizSet) {
+    throw new NotFoundError('Quiz set');
+  }
+
+  if (quizSet.userId !== req.user.id) {
+    throw new AuthorizationError('You do not have access to this quiz');
+  }
+
+  const updated = await updateQuizSet(id, data);
+
+  res.json({
+    success: true,
+    data: { quizSet: updated },
+  });
+});
+
 module.exports = {
   createQuizSetHandler,
   getClassroomQuizSets,
@@ -265,4 +326,6 @@ module.exports = {
   deleteQuizSetHandler,
   recordAttemptHandler,
   getAttemptsHandler,
+  createManualQuizSetHandler,
+  updateQuizSetHandler,
 };

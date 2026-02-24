@@ -244,6 +244,48 @@ async function deleteQuizSet(id) {
 }
 
 /**
+ * Update a quiz set (title, focusTopic, and/or questions)
+ * @param {string} id
+ * @param {object} data
+ * @returns {Promise<object>} Updated quiz set with questions
+ */
+async function updateQuizSet(id, data) {
+  return prisma.$transaction(async (tx) => {
+    const updateData = {};
+    if (data.title !== undefined) updateData.title = data.title;
+    if (data.focusTopic !== undefined) updateData.focusTopic = data.focusTopic;
+
+    if (Object.keys(updateData).length > 0) {
+      await tx.quizSet.update({
+        where: { id },
+        data: updateData,
+      });
+    }
+
+    if (data.questions) {
+      await tx.quizQuestion.deleteMany({ where: { quizSetId: id } });
+      await tx.quizQuestion.createMany({
+        data: data.questions.map((q, index) => ({
+          question: q.question,
+          correctAnswer: q.correctAnswer,
+          wrongAnswers: q.wrongAnswers,
+          position: index,
+          quizSetId: id,
+        })),
+      });
+    }
+
+    return tx.quizSet.findUnique({
+      where: { id },
+      include: {
+        questions: { orderBy: { position: 'asc' } },
+        classroom: { select: { id: true, name: true } },
+      },
+    });
+  });
+}
+
+/**
  * Record a quiz attempt
  * @param {object} params
  * @param {string} params.quizSetId
@@ -284,4 +326,5 @@ module.exports = {
   deleteQuizSet,
   recordQuizAttempt,
   getQuizAttempts,
+  updateQuizSet,
 };
