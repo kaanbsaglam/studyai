@@ -11,7 +11,7 @@ const logger = require('../config/logger');
 
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
-const embeddingModel = genAI.getGenerativeModel({ model: 'text-embedding-004' });
+const embeddingModel = genAI.getGenerativeModel({ model: 'gemini-embedding-001' });
 
 // Initialize Pinecone
 const pinecone = new Pinecone({
@@ -26,7 +26,10 @@ const index = pinecone.index(env.PINECONE_INDEX_NAME);
  * @returns {Promise<number[]>} Embedding vector
  */
 async function generateEmbedding(text) {
-  const result = await embeddingModel.embedContent(text);
+  const result = await embeddingModel.embedContent({
+    content: { parts: [{ text }] },
+    outputDimensionality: 768,
+  });
   return result.embedding.values;
 }
 
