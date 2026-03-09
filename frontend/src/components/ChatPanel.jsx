@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import MarkdownRenderer from './MarkdownRenderer';
 import api from '../api/axios';
 
 export default function ChatPanel({
@@ -162,7 +163,13 @@ export default function ChatPanel({
                     : 'bg-gray-100 text-gray-900'
                 }`}
               >
-                <p className="whitespace-pre-wrap">{message.content}</p>
+                {message.role === 'user' || message.isError ? (
+                  <p className="whitespace-pre-wrap">{message.content}</p>
+                ) : (
+                  <MarkdownRenderer className="prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-pre:my-2 prose-code:bg-gray-200 prose-code:px-1 prose-code:rounded prose-pre:bg-gray-800 prose-pre:text-gray-100">
+                    {message.content}
+                  </MarkdownRenderer>
+                )}
 
                 {/* Sources */}
                 {message.sources?.length > 0 && (
