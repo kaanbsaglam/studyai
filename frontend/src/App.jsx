@@ -11,6 +11,7 @@ import ClassroomsPage from './pages/ClassroomsPage';
 import ClassroomDashboard from './pages/ClassroomDashboard';
 import ClassroomDocumentsPage from './pages/ClassroomDocumentsPage';
 import DocumentViewerPage from './pages/DocumentViewerPage';
+import AudioDetailPage from './pages/AudioDetailPage';
 import ChatPage from './pages/ChatPage';
 import FlashcardsPage from './pages/FlashcardsPage';
 import QuizPage from './pages/QuizPage';
@@ -60,6 +61,7 @@ function App() {
             <Route index element={<ClassroomDashboard />} />
             <Route path="documents" element={<ClassroomDocumentsPage />} />
             <Route path="documents/:docId" element={<DocumentViewerPage />} />
+            <Route path="audio/:docId" element={<AudioDetailPage />} />
             <Route path="chat" element={<ChatPage />} />
             <Route path="flashcards" element={<FlashcardsPage />} />
             <Route path="quizzes" element={<QuizPage />} />

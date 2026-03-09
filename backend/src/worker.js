@@ -15,6 +15,7 @@ const prisma = require('./lib/prisma');
 const { connection } = require('./lib/queue');
 const { getFile, deleteFile } = require('./services/s3.service');
 const { extractTextWithTier } = require('./services/textExtractor.service');
+const { isAudioFile } = require('./validators/document.validator');
 const { chunkText } = require('./services/chunker.service');
 const { recordTokenUsage } = require('./services/tier.service');
 const { generateEmbeddings, upsertVectors, deleteVectorsByDocument } = require('./services/embedding.service');
@@ -143,8 +144,17 @@ async function processDocument(job) {
       stack: error.stack,
     });
 
-    // Clean up everything on failure - transactional approach
-    await cleanupFailedDocument(document);
+    // For audio files, keep the S3 file and DB record so users can still listen
+    if (isAudioFile(document.mimeType)) {
+      await prisma.document.update({
+        where: { id: documentId },
+        data: { status: 'FAILED', errorMessage: error.message },
+      });
+      logger.info(`Audio file kept with FAILED status: ${documentId}`);
+    } else {
+      // Clean up everything on failure - transactional approach
+      await cleanupFailedDocument(document);
+    }
 
     throw error;
   }
@@ -191,6 +201,7 @@ const worker = new Worker(
   {
     connection,
     concurrency: 2, // Process 2 jobs at a time
+    lockDuration: 120000, // 2 minutes - audio transcription can be slow
   }
 );
 

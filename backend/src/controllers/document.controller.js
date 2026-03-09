@@ -6,9 +6,9 @@
 
 const prisma = require('../lib/prisma');
 const { uploadFile, deleteFile, getPresignedUrl } = require('../services/s3.service');
-const { deleteVectorsByDocument } = require('../services/embedding.service');
+const { deleteVectorsByDocument, deleteVectorsByIds } = require('../services/embedding.service');
 const { validateFile, isAudioFile } = require('../validators/document.validator');
-const { addDocumentProcessingJob } = require('../lib/queue');
+const { addDocumentProcessingJob, documentQueue } = require('../lib/queue');
 const { NotFoundError, AuthorizationError, ValidationError } = require('../middleware/errorHandler');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { canUploadDocument, canUploadAudio } = require('../services/tier.service');
@@ -243,10 +243,106 @@ const deleteDocument = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * Get a presigned streaming URL for an audio document
+ * GET /api/v1/documents/:id/stream
+ */
+const getStreamUrl = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const document = await prisma.document.findUnique({
+    where: { id },
+  });
+
+  if (!document) {
+    throw new NotFoundError('Document');
+  }
+
+  if (document.userId !== req.user.id) {
+    throw new AuthorizationError('You do not have access to this document');
+  }
+
+  if (!isAudioFile(document.mimeType)) {
+    throw new ValidationError('Only audio documents can be streamed');
+  }
+
+  const url = await getPresignedUrl(document.s3Key);
+
+  res.json({
+    success: true,
+    data: { url },
+  });
+});
+
+/**
+ * Reprocess a failed document (re-queue for processing)
+ * POST /api/v1/documents/:id/reprocess
+ */
+const reprocessDocument = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const document = await prisma.document.findUnique({
+    where: { id },
+  });
+
+  if (!document) {
+    throw new NotFoundError('Document');
+  }
+
+  if (document.userId !== req.user.id) {
+    throw new AuthorizationError('You do not have access to this document');
+  }
+
+  if (document.status !== 'FAILED') {
+    throw new ValidationError('Only failed documents can be reprocessed');
+  }
+
+  // Clean up any partial data from previous attempt
+  const existingChunks = await prisma.documentChunk.findMany({
+    where: { documentId: id },
+    select: { pineconeId: true },
+  });
+  if (existingChunks.length > 0) {
+    const pineconeIds = existingChunks.map((c) => c.pineconeId).filter(Boolean);
+    if (pineconeIds.length > 0) {
+      await deleteVectorsByIds(pineconeIds).catch(() => {});
+    }
+    await prisma.documentChunk.deleteMany({ where: { documentId: id } });
+  }
+
+  // Reset status to PENDING and clear error
+  await prisma.document.update({
+    where: { id },
+    data: { status: 'PENDING', errorMessage: null },
+  });
+
+  // Remove old job from queue (BullMQ prevents duplicate jobIds)
+  try {
+    const existingJob = await documentQueue.getJob(id);
+    if (existingJob) {
+      await existingJob.remove().catch(() => {});
+    }
+  } catch {
+    // Job may already be gone, safe to ignore
+  }
+
+  // Re-queue for processing
+  await addDocumentProcessingJob(id);
+
+  logger.info(`Document ${id} re-queued for processing`);
+
+  res.json({
+    success: true,
+    message: 'Document re-queued for processing',
+  });
+});
+
 module.exports = {
   uploadDocument,
   getDocuments,
   getDocument,
   getDownloadUrl,
   deleteDocument,
+  getStreamUrl,
+  reprocessDocument,
 };

@@ -7,6 +7,7 @@
  * GET    /api/v1/classrooms/:classroomId/documents  - List documents in classroom
  * GET    /api/v1/documents/:id                       - Get single document
  * GET    /api/v1/documents/:id/download              - Get download URL
+ * GET    /api/v1/documents/:id/stream                - Get audio streaming URL
  * DELETE /api/v1/documents/:id                       - Delete document
  */
 
@@ -17,7 +18,9 @@ const {
   getDocuments,
   getDocument,
   getDownloadUrl,
+  getStreamUrl,
   deleteDocument,
+  reprocessDocument,
 } = require('../controllers/document.controller');
 const { authenticate } = require('../middleware/auth.middleware');
 const { MAX_FILE_SIZE } = require('../validators/document.validator');
@@ -42,6 +45,8 @@ router.get('/classrooms/:classroomId/documents', getDocuments);
 // Document routes
 router.get('/documents/:id', getDocument);
 router.get('/documents/:id/download', getDownloadUrl);
+router.get('/documents/:id/stream', getStreamUrl);
+router.post('/documents/:id/reprocess', reprocessDocument);
 router.delete('/documents/:id', deleteDocument);
 
 module.exports = router;

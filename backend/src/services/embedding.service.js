@@ -127,10 +127,26 @@ async function querySimilar(queryVector, options = {}) {
   return result.matches || [];
 }
 
+/**
+ * Delete vectors by their IDs
+ * @param {string[]} ids - Array of Pinecone vector IDs
+ */
+async function deleteVectorsByIds(ids) {
+  try {
+    await index.deleteMany(ids);
+    logger.info(`Deleted ${ids.length} vectors from Pinecone by ID`);
+  } catch (error) {
+    logger.error('Failed to delete vectors from Pinecone by ID', {
+      error: error.message,
+    });
+  }
+}
+
 module.exports = {
   generateEmbedding,
   generateEmbeddings,
   upsertVectors,
   deleteVectorsByDocument,
+  deleteVectorsByIds,
   querySimilar,
 };

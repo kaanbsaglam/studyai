@@ -3,16 +3,34 @@ import { useTranslation } from 'react-i18next';
 import { Link, useOutletContext, useParams } from 'react-router-dom';
 import api from '../api/axios';
 
+function isAudioMime(mimeType) {
+  return mimeType?.startsWith('audio/');
+}
+
 export default function ClassroomDocumentsPage() {
   const { t } = useTranslation();
   const { id } = useParams();
   const { classroom, refreshClassroom } = useOutletContext();
   const fileInputRef = useRef(null);
 
+  const [activeTab, setActiveTab] = useState('documents');
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [tabInitialized, setTabInitialized] = useState(false);
+
+  // Auto-select audio tab on first load when there are only audio files
+  useEffect(() => {
+    if (!tabInitialized && classroom?.documents?.length > 0) {
+      const hasDocFiles = classroom.documents.some((d) => !isAudioMime(d.mimeType));
+      const hasAudioFiles = classroom.documents.some((d) => isAudioMime(d.mimeType));
+      if (!hasDocFiles && hasAudioFiles) {
+        setActiveTab('audio');
+      }
+      setTabInitialized(true);
+    }
+  }, [classroom?.documents, tabInitialized]);
 
   // Auto-refresh when documents are processing
   useEffect(() => {
@@ -34,10 +52,10 @@ export default function ClassroomDocumentsPage() {
       'application/pdf',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'text/plain',
-      'audio/mpeg', // .mp3
+      'audio/mpeg',
       'audio/wav',
       'audio/x-wav',
-      'audio/mp4', // .m4a
+      'audio/mp4',
       'audio/x-m4a',
     ];
 
@@ -68,6 +86,11 @@ export default function ClassroomDocumentsPage() {
       });
 
       await refreshClassroom();
+
+      // Auto-switch to audio tab if an audio file was uploaded
+      if (file.type.startsWith('audio/')) {
+        setActiveTab('audio');
+      }
     } catch (err) {
       setError(err.response?.data?.error?.message || t('classroomDocuments.failedToUpload'));
     } finally {
@@ -118,13 +141,29 @@ export default function ClassroomDocumentsPage() {
     );
   };
 
-  const documents = classroom?.documents || [];
+  const allDocuments = classroom?.documents || [];
 
-  const filteredDocuments = useMemo(() => {
+  const documentFiles = useMemo(
+    () => allDocuments.filter((doc) => !isAudioMime(doc.mimeType)),
+    [allDocuments]
+  );
+  const audioFiles = useMemo(
+    () => allDocuments.filter((doc) => isAudioMime(doc.mimeType)),
+    [allDocuments]
+  );
+
+  const currentList = activeTab === 'documents' ? documentFiles : audioFiles;
+
+  const filteredItems = useMemo(() => {
     const normalized = searchQuery.trim().toLowerCase();
-    if (!normalized) return documents;
-    return documents.filter((doc) => doc.originalName?.toLowerCase().includes(normalized));
-  }, [documents, searchQuery]);
+    if (!normalized) return currentList;
+    return currentList.filter((doc) => doc.originalName?.toLowerCase().includes(normalized));
+  }, [currentList, searchQuery]);
+
+  const acceptTypes =
+    activeTab === 'audio'
+      ? '.mp3,.wav,.m4a,audio/mpeg,audio/wav,audio/mp4'
+      : '.pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain';
 
   return (
     <div className="space-y-6">
@@ -135,6 +174,7 @@ export default function ClassroomDocumentsPage() {
       )}
 
       <div className="bg-white rounded-lg shadow">
+        {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <h3 className="text-lg font-medium text-gray-900">{t('classroomDocuments.title')}</h3>
@@ -153,7 +193,7 @@ export default function ClassroomDocumentsPage() {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".pdf,.docx,.txt,.mp3,.wav,.m4a,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,audio/mpeg,audio/wav,audio/mp4"
+              accept={acceptTypes}
               onChange={handleFileSelect}
               className="hidden"
               id="file-upload"
@@ -164,9 +204,49 @@ export default function ClassroomDocumentsPage() {
                 uploading ? 'opacity-50 cursor-not-allowed' : ''
               }`}
             >
-              {uploading ? t('classroomDocuments.uploading', { progress: uploadProgress }) : t('classroomDocuments.uploadDocument')}
+              {uploading
+                ? t('classroomDocuments.uploading', { progress: uploadProgress })
+                : activeTab === 'audio'
+                ? t('classroomDocuments.uploadAudio')
+                : t('classroomDocuments.uploadDocument')}
             </label>
           </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="border-b border-gray-200 px-6">
+          <nav className="flex gap-4 -mb-px">
+            <button
+              onClick={() => { setActiveTab('documents'); setSearchQuery(''); }}
+              className={`py-3 px-1 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'documents'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                {t('classroomDocuments.documentsTab')} ({documentFiles.length})
+              </span>
+            </button>
+            <button
+              onClick={() => { setActiveTab('audio'); setSearchQuery(''); }}
+              className={`py-3 px-1 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'audio'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072M12 6v12m-3.536-2.464a5 5 0 010-7.072M6.343 5.657a9 9 0 000 12.686M17.657 5.657a9 9 0 010 12.686" />
+                </svg>
+                {t('classroomDocuments.audioTab')} ({audioFiles.length})
+              </span>
+            </button>
+          </nav>
         </div>
 
         {uploading && (
@@ -180,81 +260,167 @@ export default function ClassroomDocumentsPage() {
           </div>
         )}
 
-        {filteredDocuments.length === 0 ? (
-          <div className="p-6 text-center text-gray-500">
-            <svg
-              className="mx-auto h-12 w-12 text-gray-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
-            </svg>
-            <p className="mt-2">
-              {documents.length === 0
-                ? t('classroomDocuments.noDocumentsYet')
-                : t('classroomDocuments.noDocumentsMatch')}
-            </p>
-            {documents.length === 0 && (
-              <p className="text-sm">{t('classroomDocuments.uploadHint')}</p>
-            )}
-          </div>
+        {/* Content */}
+        {activeTab === 'documents' ? (
+          <DocumentList
+            documents={filteredItems}
+            allEmpty={documentFiles.length === 0}
+            id={id}
+            t={t}
+            formatFileSize={formatFileSize}
+            getStatusBadge={getStatusBadge}
+            onDelete={handleDeleteDocument}
+          />
         ) : (
-          <ul className="divide-y divide-gray-200">
-            {filteredDocuments.map((doc) => (
-              <li key={doc.id} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50">
-                <Link
-                  to={doc.status === 'READY' ? `/classrooms/${id}/documents/${doc.id}` : '#'}
-                  className={`flex items-center gap-3 flex-1 ${doc.status !== 'READY' ? 'pointer-events-none' : ''}`}
-                >
-                  <svg
-                    className="h-8 w-8 text-gray-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    />
-                  </svg>
-                  <div>
-                    <p className="font-medium text-gray-900">{doc.originalName}</p>
-                    <p className="text-sm text-gray-500">{formatFileSize(doc.size)}</p>
-                  </div>
-                </Link>
-                <div className="flex items-center gap-4">
-                  {getStatusBadge(doc.status)}
-                  {doc.status === 'PROCESSING' && (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                  )}
-                  {doc.status === 'READY' && (
-                    <Link
-                      to={`/classrooms/${id}/documents/${doc.id}`}
-                      className="text-sm text-blue-600 hover:text-blue-800"
-                    >
-                      {t('common.open')}
-                    </Link>
-                  )}
-                  <button
-                    onClick={() => handleDeleteDocument(doc.id)}
-                    className="text-sm text-red-600 hover:text-red-800"
-                  >
-                    {t('common.delete')}
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <AudioList
+            audioFiles={filteredItems}
+            allEmpty={audioFiles.length === 0}
+            id={id}
+            t={t}
+            formatFileSize={formatFileSize}
+            getStatusBadge={getStatusBadge}
+            onDelete={handleDeleteDocument}
+          />
         )}
       </div>
     </div>
+  );
+}
+
+/* ── Document list (non-audio) ────────────────────────── */
+function DocumentList({ documents, allEmpty, id, t, formatFileSize, getStatusBadge, onDelete }) {
+  if (documents.length === 0) {
+    return (
+      <div className="p-6 text-center text-gray-500">
+        <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        <p className="mt-2">
+          {allEmpty ? t('classroomDocuments.noDocumentsYet') : t('classroomDocuments.noDocumentsMatch')}
+        </p>
+        {allEmpty && <p className="text-sm">{t('classroomDocuments.uploadHint')}</p>}
+      </div>
+    );
+  }
+
+  return (
+    <ul className="divide-y divide-gray-200">
+      {documents.map((doc) => (
+        <li key={doc.id} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50">
+          <Link
+            to={doc.status === 'READY' ? `/classrooms/${id}/documents/${doc.id}` : '#'}
+            className={`flex items-center gap-3 flex-1 ${doc.status !== 'READY' ? 'pointer-events-none' : ''}`}
+          >
+            <svg className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <div>
+              <p className="font-medium text-gray-900">{doc.originalName}</p>
+              <p className="text-sm text-gray-500">{formatFileSize(doc.size)}</p>
+            </div>
+          </Link>
+          <div className="flex items-center gap-4">
+            {getStatusBadge(doc.status)}
+            {doc.status === 'PROCESSING' && (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+            )}
+            {doc.status === 'READY' && (
+              <Link to={`/classrooms/${id}/documents/${doc.id}`} className="text-sm text-blue-600 hover:text-blue-800">
+                {t('common.open')}
+              </Link>
+            )}
+            <button onClick={() => onDelete(doc.id)} className="text-sm text-red-600 hover:text-red-800">
+              {t('common.delete')}
+            </button>
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/* ── Audio list ───────────────────────────────────────── */
+function AudioList({
+  audioFiles,
+  allEmpty,
+  id,
+  t,
+  formatFileSize,
+  getStatusBadge,
+  onDelete,
+}) {
+  if (audioFiles.length === 0) {
+    return (
+      <div className="p-6 text-center text-gray-500">
+        <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072M12 6v12m-3.536-2.464a5 5 0 010-7.072M6.343 5.657a9 9 0 000 12.686M17.657 5.657a9 9 0 010 12.686" />
+        </svg>
+        <p className="mt-2">
+          {allEmpty ? t('classroomDocuments.noAudioYet') : t('classroomDocuments.noDocumentsMatch')}
+        </p>
+        {allEmpty && <p className="text-sm">{t('classroomDocuments.uploadAudioHint')}</p>}
+      </div>
+    );
+  }
+
+  return (
+    <ul className="divide-y divide-gray-200">
+      {audioFiles.map((doc) => (
+        <AudioItem
+          key={doc.id}
+          doc={doc}
+          id={id}
+          t={t}
+          formatFileSize={formatFileSize}
+          getStatusBadge={getStatusBadge}
+          onDelete={onDelete}
+        />
+      ))}
+    </ul>
+  );
+}
+
+function AudioItem({ doc, id, t, formatFileSize, getStatusBadge, onDelete }) {
+  const isProcessing = doc.status === 'PENDING' || doc.status === 'PROCESSING';
+
+  return (
+    <li className="px-6 py-4 hover:bg-gray-50">
+      <div className="flex items-center justify-between">
+        <Link
+          to={isProcessing ? '#' : `/classrooms/${id}/audio/${doc.id}`}
+          className={`flex items-center gap-3 flex-1 min-w-0 ${isProcessing ? 'pointer-events-none' : ''}`}
+        >
+          <svg className="h-8 w-8 text-purple-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.5 14.5v-1M12 15.5v-3M14.5 14.5v-1" />
+          </svg>
+          <div className="min-w-0">
+            <p className="font-medium text-gray-900 truncate">{doc.originalName}</p>
+            <p className="text-sm text-gray-500">{formatFileSize(doc.size)}</p>
+          </div>
+        </Link>
+
+        <div className="flex items-center gap-3 flex-shrink-0">
+          {getStatusBadge(doc.status)}
+
+          {isProcessing && (
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+          )}
+
+          {!isProcessing && (
+            <Link
+              to={`/classrooms/${id}/audio/${doc.id}`}
+              className="text-sm text-purple-600 hover:text-purple-800"
+            >
+              {t('common.open')}
+            </Link>
+          )}
+
+          <button onClick={() => onDelete(doc.id)} className="text-sm text-red-600 hover:text-red-800">
+            {t('common.delete')}
+          </button>
+        </div>
+      </div>
+    </li>
   );
 }
