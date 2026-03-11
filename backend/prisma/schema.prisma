@@ -33,6 +33,11 @@ enum DocumentStatus {
   FAILED     // Processing failed
 }
 
+enum ChatMessageRole {
+  USER
+  ASSISTANT
+}
+
 enum ExtractionMethod {
   TEXT_ONLY  // pdf-parse only
   VISION     // Gemini Vision (multimodal)
@@ -62,6 +67,7 @@ model User {
   studySessions    StudySession[]
   pomodoroSettings   PomodoroSettings?
   flashcardProgress FlashcardProgress[]
+  chatSessions     ChatSession[]
 
   @@map("users")
 }
@@ -103,6 +109,7 @@ model Classroom {
   summaries     Summary[]
   notes         Note[]
   studySessions StudySession[]
+  chatSessions  ChatSession[]
 
   @@map("classrooms")
 }
@@ -132,6 +139,7 @@ model Document {
   flashcardSets FlashcardSet[]
   notes         Note[]
   studySessions StudySession[]
+  chatSessions  ChatSession[] @relation("ChatSessionDocuments")
 
   @@map("documents")
 }
@@ -354,4 +362,40 @@ model PomodoroSettings {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("pomodoro_settings")
+}
+
+// ============================================
+// Chat Sessions & Messages
+// ============================================
+model ChatSession {
+  id          String   @id @default(uuid())
+  title       String?  // null until auto-generated after first exchange
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  classroomId String   @map("classroom_id")
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  messages    ChatMessage[]
+  documents   Document[] @relation("ChatSessionDocuments")
+
+  @@index([classroomId, updatedAt])
+  @@index([userId])
+  @@map("chat_sessions")
+}
+
+model ChatMessage {
+  id                String          @id @default(uuid())
+  role              ChatMessageRole
+  content           String          @db.Text
+  sources           Json?
+  hasRelevantContext Boolean?       @map("has_relevant_context")
+  createdAt         DateTime        @default(now()) @map("created_at")
+
+  sessionId String      @map("session_id")
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+  @@map("chat_messages")
 }
