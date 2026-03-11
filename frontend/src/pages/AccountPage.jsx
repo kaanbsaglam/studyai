@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import TimerPill from '../components/timer/TimerPill';
+import ThemeToggle from '../components/ThemeToggle';
 
 export default function AccountPage() {
   const { t } = useTranslation();
@@ -103,6 +104,7 @@ export default function AccountPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
               </Link>
+              <ThemeToggle />
               <span className="text-gray-600">{user?.name || user?.email}</span>
               <button
                 onClick={logout}
@@ -146,9 +148,10 @@ export default function AccountPage() {
                     <span
                       className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
                         usage.tier === 'PREMIUM'
-                          ? 'bg-purple-100 text-purple-800'
+                          ? 'text-white'
                           : 'bg-gray-100 text-gray-800'
                       }`}
+                      style={usage.tier === 'PREMIUM' ? { backgroundColor: 'var(--accent)', color: '#fff' } : {}}
                     >
                       {usage.tier}
                     </span>
@@ -158,7 +161,8 @@ export default function AccountPage() {
                   <button
                     onClick={handleUpgrade}
                     disabled={upgrading}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 font-medium disabled:opacity-50"
+                    className="px-4 py-2 text-white rounded-md font-medium disabled:opacity-50"
+                    style={{ backgroundColor: 'var(--accent)' }}
                   >
                     {upgrading ? t('account.upgrading') : t('account.upgradeToPremium')}
                   </button>
@@ -208,7 +212,7 @@ export default function AccountPage() {
 
             {/* Plan Comparison */}
             {usage.tier === 'FREE' && (
-              <div className="mt-6 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg shadow p-6">
+              <div className="mt-6 rounded-lg shadow p-6" style={{ backgroundColor: 'var(--accent-soft)' }}>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                   {t('account.upgradeToPremium')}
                 </h3>
@@ -222,8 +226,8 @@ export default function AccountPage() {
                     </ul>
                   </div>
                   <div>
-                    <h4 className="font-medium text-purple-700 mb-2">{t('account.premiumPlan')}</h4>
-                    <ul className="space-y-1 text-purple-600">
+                    <h4 className="font-medium mb-2" style={{ color: 'var(--accent)' }}>{t('account.premiumPlan')}</h4>
+                    <ul className="space-y-1" style={{ color: 'var(--accent)' }}>
                       <li>{t('account.premiumClassrooms')}</li>
                       <li>{t('account.premiumStorage')}</li>
                       <li>{t('account.premiumTokens')}</li>
@@ -233,7 +237,8 @@ export default function AccountPage() {
                 <button
                   onClick={handleUpgrade}
                   disabled={upgrading}
-                  className="mt-4 w-full px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 font-medium disabled:opacity-50"
+                  className="mt-4 w-full px-4 py-2 text-white rounded-md font-medium disabled:opacity-50"
+                  style={{ backgroundColor: 'var(--accent)' }}
                 >
                   {upgrading ? t('account.upgrading') : t('account.upgradeNow')}
                 </button>

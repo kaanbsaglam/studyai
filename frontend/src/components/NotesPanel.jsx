@@ -320,29 +320,31 @@ export default function NotesPanel({
           <p className="text-sm">{t('notesPanel.createHint')}</p>
         </div>
       ) : (
-        <ul className="divide-y divide-gray-200 flex-1 overflow-auto">
+        <ul className="flex-1 overflow-auto">
           {notes.map((note) => (
             <li
               key={note.id}
-              className="px-4 py-3 hover:bg-gray-50 cursor-pointer"
+              className="px-4 py-3 cursor-pointer transition-colors"
+              style={{ borderBottom: '1px solid var(--card-border)' }}
               onClick={() => openNote(note.id)}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--input-bg)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
             >
               <div className="flex justify-between items-start">
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900 truncate">{note.title}</p>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="font-medium truncate" style={{ color: 'var(--text-primary)' }}>{note.title}</p>
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
                     {formatDate(note.updatedAt)}
                     {note.document && (
-                      <span className="ml-2 text-blue-600">
+                      <span className="ml-2" style={{ color: 'var(--accent)' }}>
                         {note.document.originalName}
                       </span>
                     )}
                   </p>
                   {note.content && (
-                    <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-                      {note.content.substring(0, 100)}
-                      {note.content.length > 100 ? '...' : ''}
-                    </p>
+                    <div className="mt-1.5 line-clamp-2 overflow-hidden note-preview-markdown" style={{ color: 'var(--text-secondary)', maxHeight: '2.8em' }}>
+                      <MarkdownRenderer>{note.content.substring(0, 150)}</MarkdownRenderer>
+                    </div>
                   )}
                 </div>
               </div>

@@ -331,35 +331,58 @@ export default function FlashcardStudyMode({
       ? Math.round((stats.sessionCorrect / stats.sessionTotal) * 100)
       : 0;
 
+    // Performance-based emoji and message
+    let emoji, messageKey;
+    if (stats.sessionTotal === 0) {
+      emoji = '🔄';
+      messageKey = 'flashcardStudy.noAnswers';
+    } else if (accuracy >= 90) {
+      emoji = '🎉';
+      messageKey = 'flashcardStudy.excellent';
+    } else if (accuracy >= 70) {
+      emoji = '💪';
+      messageKey = 'flashcardStudy.goodJob';
+    } else if (accuracy >= 50) {
+      emoji = '📖';
+      messageKey = 'flashcardStudy.keepPracticing';
+    } else {
+      emoji = '📚';
+      messageKey = 'flashcardStudy.needsWork';
+    }
+
     return (
-      <div className={compact ? 'flex flex-col h-full' : 'bg-white rounded-xl shadow-lg'}>
-        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-          <h3 className="text-lg font-semibold text-gray-900">{t('flashcardStudy.sessionComplete')}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
+      <div className={compact ? 'flex flex-col h-full' : 'rounded-xl shadow-lg'} style={{ backgroundColor: 'var(--card-bg)' }}>
+        <div className="px-6 py-4 flex justify-between items-center" style={{ borderBottom: '1px solid var(--card-border)' }}>
+          <h3 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>{t('flashcardStudy.sessionComplete')}</h3>
+          <button onClick={onClose} className="transition-colors" style={{ color: 'var(--text-muted)' }}>
             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
         <div className="p-8 flex-1 flex flex-col items-center justify-center gap-6">
-          <div className="text-6xl">{accuracy >= 80 ? '🎉' : accuracy >= 50 ? '💪' : '📚'}</div>
-          <h4 className="text-2xl font-bold text-gray-900">{t('flashcardStudy.greatJob')}</h4>
+          <div className="text-6xl">{emoji}</div>
+          <h4 className="text-2xl font-bold text-gray-900">{t(messageKey)}</h4>
 
-          {/* Stats grid */}
-          <div className="grid grid-cols-3 gap-4 w-full max-w-md">
-            <div className="bg-green-50 rounded-xl p-4 text-center">
-              <div className="text-2xl font-bold text-green-600">{stats.sessionCorrect}</div>
-              <div className="text-xs text-green-700 mt-1">{t('flashcardStudy.correct')}</div>
+          {/* Stats grid - only show if user answered at least one card */}
+          {stats.sessionTotal > 0 ? (
+            <div className="grid grid-cols-3 gap-4 w-full max-w-md">
+              <div className="bg-green-50 rounded-xl p-4 text-center">
+                <div className="text-2xl font-bold text-green-600">{stats.sessionCorrect}</div>
+                <div className="text-xs text-green-700 mt-1">{t('flashcardStudy.correct')}</div>
+              </div>
+              <div className="bg-red-50 rounded-xl p-4 text-center">
+                <div className="text-2xl font-bold text-red-600">{stats.sessionWrong}</div>
+                <div className="text-xs text-red-700 mt-1">{t('flashcardStudy.wrong')}</div>
+              </div>
+              <div className="bg-blue-50 rounded-xl p-4 text-center">
+                <div className="text-2xl font-bold text-blue-600">{accuracy}%</div>
+                <div className="text-xs text-blue-700 mt-1">{t('flashcardStudy.accuracy')}</div>
+              </div>
             </div>
-            <div className="bg-red-50 rounded-xl p-4 text-center">
-              <div className="text-2xl font-bold text-red-600">{stats.sessionWrong}</div>
-              <div className="text-xs text-red-700 mt-1">{t('flashcardStudy.wrong')}</div>
-            </div>
-            <div className="bg-blue-50 rounded-xl p-4 text-center">
-              <div className="text-2xl font-bold text-blue-600">{accuracy}%</div>
-              <div className="text-xs text-blue-700 mt-1">{t('flashcardStudy.accuracy')}</div>
-            </div>
-          </div>
+          ) : (
+            <p className="text-sm text-gray-500">{t('flashcardStudy.noAnswersHint')}</p>
+          )}
 
           {/* Overall progress */}
           <div className="w-full max-w-md bg-gray-50 rounded-xl p-4">
@@ -427,40 +450,35 @@ export default function FlashcardStudyMode({
   const cardProgress = progressMap[currentCard.id];
 
   return (
-    <div className={compact ? 'flex flex-col h-full' : 'bg-white rounded-xl shadow-lg'}>
+    <div className={compact ? 'flex flex-col h-full' : 'rounded-xl shadow-lg'} style={{ backgroundColor: 'var(--card-bg)' }}>
       {/* Header */}
-      <div className="px-6 py-3 border-b border-gray-100 flex justify-between items-center">
+      <div className="px-6 py-3 flex justify-between items-center" style={{ borderBottom: '1px solid var(--card-border)' }}>
         <div className="min-w-0">
-          <h3 className="text-base font-semibold text-gray-900 truncate">{activeSet.title}</h3>
-          <p className="text-xs text-gray-500">
+          <h3 className="text-base font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{activeSet.title}</h3>
+          <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
             {t('flashcardsPanel.cardOf', { current: currentCardIndex + 1, total: displayCards.length })}
             {isShuffled && ` ${t('flashcardsPanel.shuffled')}`}
           </p>
         </div>
         <div className="flex items-center gap-1.5">
-          {/* Mode toggle */}
-          <div className="flex bg-gray-100 rounded-lg p-0.5">
-            <button
-              onClick={() => switchMode('flip')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-                studyMode === 'flip'
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {t('flashcardStudy.flipMode')}
-            </button>
-            <button
-              onClick={() => switchMode('study')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-                studyMode === 'study'
-                  ? 'bg-white text-blue-600 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {t('flashcardStudy.studyMode')}
-            </button>
-          </div>
+          {/* Study mode toggle */}
+          <button
+            onClick={() => switchMode(studyMode === 'flip' ? 'study' : 'flip')}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              studyMode === 'study' ? '' : ''
+            }`}
+            style={
+              studyMode === 'study'
+                ? { backgroundColor: 'var(--accent-soft)', color: 'var(--accent)', border: 'none' }
+                : { backgroundColor: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--card-border)' }
+            }
+            title={studyMode === 'study' ? t('flashcardStudy.studyModeOn') : t('flashcardStudy.studyModeOff')}
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            {t('flashcardStudy.studyMode')}
+          </button>
 
           {studyMode === 'flip' && (
             <button
@@ -548,15 +566,15 @@ export default function FlashcardStudyMode({
             >
               {/* Front face */}
               <div
-                className="absolute inset-0 rounded-2xl shadow-lg border-2 border-blue-100 bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center p-8"
-                style={{ backfaceVisibility: 'hidden' }}
+                className="absolute inset-0 rounded-2xl shadow-lg border-2 flex items-center justify-center p-8"
+                style={{ backfaceVisibility: 'hidden', backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
               >
                 <div className="text-center w-full">
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100 text-blue-600 text-[10px] font-semibold uppercase tracking-wider mb-4">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider mb-4" style={{ backgroundColor: 'var(--accent-soft)', color: 'var(--accent)' }}>
                     <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     {t('flashcardsPanel.question')}
                   </div>
-                  <p className="text-lg text-gray-800 leading-relaxed">{currentCard.front}</p>
+                  <p className="text-lg leading-relaxed" style={{ color: 'var(--text-primary)' }}>{currentCard.front}</p>
                   {cardProgress && studyMode === 'study' && (
                     <div className="mt-4 flex items-center justify-center gap-3 text-xs text-gray-400">
                       <span className="flex items-center gap-1">
@@ -588,15 +606,15 @@ export default function FlashcardStudyMode({
 
               {/* Back face */}
               <div
-                className="absolute inset-0 rounded-2xl shadow-lg border-2 border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex items-center justify-center p-8"
-                style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+                className="absolute inset-0 rounded-2xl shadow-lg border-2 flex items-center justify-center p-8"
+                style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)', backgroundColor: 'var(--card-bg)', borderColor: 'var(--accent)' }}
               >
                 <div className="text-center w-full">
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-600 text-[10px] font-semibold uppercase tracking-wider mb-4">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider mb-4" style={{ backgroundColor: 'var(--accent-soft)', color: 'var(--accent)' }}>
                     <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     {t('flashcardsPanel.answer')}
                   </div>
-                  <p className="text-lg text-gray-800 leading-relaxed">{currentCard.back}</p>
+                  <p className="text-lg leading-relaxed" style={{ color: 'var(--text-primary)' }}>{currentCard.back}</p>
                 </div>
               </div>
             </div>
@@ -642,7 +660,7 @@ export default function FlashcardStudyMode({
                   key={level}
                   onClick={() => handleConfidence(level)}
                   disabled={savingProgress}
-                  className={`w-10 h-10 rounded-full font-medium text-sm transition-all border-2 disabled:opacity-50 ${
+                  className={`w-10 h-10 rounded-full font-medium text-sm transition-all border-2 disabled:opacity-50 flex items-center justify-center ${
                     level <= 2
                       ? 'border-red-200 bg-red-50 text-red-600 hover:bg-red-100 hover:border-red-300'
                       : level === 3
@@ -722,7 +740,7 @@ export default function FlashcardStudyMode({
           </button>
 
           {/* Card indicators */}
-          <div className="flex gap-1 flex-wrap justify-center max-w-xs">
+          <div className="flex gap-2 flex-wrap justify-center max-w-xs">
             {displayCards.map((card, idx) => {
               const result = sessionResults[card.id];
               let dotColor = 'bg-gray-300 hover:bg-gray-400';
@@ -737,7 +755,7 @@ export default function FlashcardStudyMode({
                 <button
                   key={idx}
                   onClick={() => goToCard(idx)}
-                  className={`w-2.5 h-2.5 rounded-full transition-all ${dotColor}`}
+                  className={`w-3 h-3 rounded-full transition-all ${dotColor}`}
                 />
               );
             })}

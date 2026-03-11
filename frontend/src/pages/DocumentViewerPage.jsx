@@ -149,10 +149,10 @@ export default function DocumentViewerPage() {
   }
 
   return (
-    <div className="flex gap-2 h-[calc(100vh-12rem)]">
+    <div className="flex gap-2 h-[calc(100vh-9rem)]">
       {/* Notes Panel (Left) */}
       {notesOpen && (
-        <div className="w-80 flex-shrink-0 flex flex-col bg-white rounded-lg shadow overflow-hidden">
+        <div className="w-80 min-w-48 flex flex-col bg-white rounded-lg shadow overflow-hidden" style={{ resize: 'horizontal' }}>
           <NotesPanel
             classroomId={classroomId}
             documentId={docId}
@@ -295,18 +295,24 @@ export default function DocumentViewerPage() {
 
       {/* Sidebar */}
       {sidebarOpen && (
-        <div className="w-96 flex-shrink-0 flex flex-col bg-white rounded-lg shadow overflow-hidden">
+        <div className="w-96 min-w-48 flex flex-col bg-white rounded-lg shadow overflow-hidden" style={{ resize: 'horizontal', direction: 'rtl' }}>
+         <div className="flex flex-col flex-1 overflow-hidden" style={{ direction: 'ltr' }}>
           {/* Sidebar Tabs */}
-          <div className="flex border-b border-gray-200">
+          <div className="flex p-1 m-1.5 rounded-lg" style={{ backgroundColor: 'var(--input-bg)' }}>
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${
                   activeTab === tab.id
-                    ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                    ? 'shadow-sm'
+                    : 'hover:opacity-80'
                 }`}
+                style={
+                  activeTab === tab.id
+                    ? { backgroundColor: 'var(--card-bg)', color: 'var(--accent)', border: 'none' }
+                    : { color: 'var(--text-secondary)', backgroundColor: 'transparent', border: 'none' }
+                }
               >
                 {tab.label}
               </button>
@@ -410,6 +416,7 @@ export default function DocumentViewerPage() {
               />
             )}
           </div>
+         </div>
         </div>
       )}
     </div>

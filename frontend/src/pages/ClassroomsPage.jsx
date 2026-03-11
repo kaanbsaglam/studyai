@@ -8,6 +8,7 @@ import ActivityHeatmap from '../components/stats/ActivityHeatmap';
 import DayBreakdownModal from '../components/stats/DayBreakdownModal';
 import TimerPill from '../components/timer/TimerPill';
 import LanguageToggle from '../components/LanguageToggle';
+import ThemeToggle from '../components/ThemeToggle';
 
 export default function ClassroomsPage() {
   const [classrooms, setClassrooms] = useState([]);
@@ -102,10 +103,9 @@ export default function ClassroomsPage() {
               <TimerPill />
               <LanguageToggle />
               <Link
+                to="/account"
                 className={`link-btn ${
-                  user?.tier === 'PREMIUM'
-                    ? 'bg-purple-700 text-gray-700 hover:bg-purple-500'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  user?.tier === 'PREMIUM' ? 'link-btn-premium' : ''
                 }`}
               >
                 {user?.tier || 'FREE'}
@@ -120,6 +120,7 @@ export default function ClassroomsPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
               </Link>
+              <ThemeToggle />
               <span className="text-gray-600">{user?.name || user?.email}</span>
               <button
                 onClick={logout}

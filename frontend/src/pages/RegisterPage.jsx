@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import ThemeToggle from '../components/ThemeToggle';
 
 export default function RegisterPage() {
   const { t } = useTranslation();
@@ -63,6 +64,9 @@ export default function RegisterPage() {
       className="p-6 w-full min-h-screen flex flex-col relative overflow-hidden font-display"
       style={{ backgroundColor: 'var(--page-bg)' }}
     >
+      <div className="absolute top-4 right-4 z-20">
+        <ThemeToggle />
+      </div>
       <div
         className="absolute top-0 left-1/2 -translate-x-1/2 pointer-events-none z-0 rounded-full blur-3xl opacity-50"
         style={{
@@ -204,8 +208,8 @@ export default function RegisterPage() {
                     type="button"
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                     onClick={() => setShowPassword((prev) => !prev)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-transparent"
-                    style={{ color: 'var(--text-secondary)' }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-transparent p-0"
+                    style={{ color: 'var(--text-secondary)', border: 'none', outline: 'none' }}
                   >
                     {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
                   </button>
@@ -242,8 +246,8 @@ export default function RegisterPage() {
                     type="button"
                     aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
                     onClick={() => setShowConfirmPassword((prev) => !prev)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-transparent"
-                    style={{ color: 'var(--text-secondary)' }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-transparent p-0"
+                    style={{ color: 'var(--text-secondary)', border: 'none', outline: 'none' }}
                   >
                     {showConfirmPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
                   </button>

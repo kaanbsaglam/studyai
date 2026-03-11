@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
+import ThemeToggle from '../components/ThemeToggle';
 
 export default function AdminPage() {
   const { t } = useTranslation();
@@ -104,6 +105,7 @@ export default function AdminPage() {
               <Link to="/classrooms" className="text-gray-600 hover:text-gray-900">
                 {t('adminPage.myClassrooms')}
               </Link>
+              <ThemeToggle />
               <span className="text-gray-600">{user?.name || user?.email}</span>
               <button
                 onClick={logout}

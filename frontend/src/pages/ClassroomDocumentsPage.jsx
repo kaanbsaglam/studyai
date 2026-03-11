@@ -214,39 +214,39 @@ export default function ClassroomDocumentsPage() {
         </div>
 
         {/* Tabs */}
-        <div className="border-b border-gray-200 px-6">
-          <nav className="flex gap-4 -mb-px">
+        <div className="px-6 py-3">
+          <div className="flex rounded-xl p-1 w-full" style={{ backgroundColor: 'var(--input-bg)', border: '1px solid var(--card-border)' }}>
             <button
               onClick={() => { setActiveTab('documents'); setSearchQuery(''); }}
-              className={`py-3 px-1 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === 'documents'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-all ${
+                activeTab === 'documents' ? 'shadow-md' : ''
               }`}
+              style={activeTab === 'documents'
+                ? { backgroundColor: 'var(--card-bg)', color: 'var(--accent)', border: 'none' }
+                : { color: 'var(--text-secondary)', backgroundColor: 'transparent', border: 'none' }
+              }
             >
-              <span className="flex items-center gap-2">
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                {t('classroomDocuments.documentsTab')} ({documentFiles.length})
-              </span>
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              {t('classroomDocuments.documentsTab')} ({documentFiles.length})
             </button>
             <button
               onClick={() => { setActiveTab('audio'); setSearchQuery(''); }}
-              className={`py-3 px-1 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === 'audio'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-all ${
+                activeTab === 'audio' ? 'shadow-md' : ''
               }`}
+              style={activeTab === 'audio'
+                ? { backgroundColor: 'var(--card-bg)', color: 'var(--accent)', border: 'none' }
+                : { color: 'var(--text-secondary)', backgroundColor: 'transparent', border: 'none' }
+              }
             >
-              <span className="flex items-center gap-2">
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072M12 6v12m-3.536-2.464a5 5 0 010-7.072M6.343 5.657a9 9 0 000 12.686M17.657 5.657a9 9 0 010 12.686" />
-                </svg>
-                {t('classroomDocuments.audioTab')} ({audioFiles.length})
-              </span>
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072M12 6v12m-3.536-2.464a5 5 0 010-7.072M6.343 5.657a9 9 0 000 12.686M17.657 5.657a9 9 0 010 12.686" />
+              </svg>
+              {t('classroomDocuments.audioTab')} ({audioFiles.length})
             </button>
-          </nav>
+          </div>
         </div>
 
         {uploading && (

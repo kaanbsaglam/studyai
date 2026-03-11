@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTimer } from '../hooks/useTimer';
 import TimerPill from '../components/timer/TimerPill';
 import LanguageToggle from '../components/LanguageToggle';
+import ThemeToggle from '../components/ThemeToggle';
 
 export default function SettingsPage() {
   const { t } = useTranslation();
@@ -72,18 +73,17 @@ export default function SettingsPage() {
               {user?.role === 'ADMIN' && (
                 <Link
                   to="/admin"
-                  className="text-sm bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200"
+                  className="link-btn"
                 >
                   {t('common.admin')}
                 </Link>
               )}
               <TimerPill />
+              <ThemeToggle />
               <Link
                 to="/account"
-                className={`text-sm px-3 py-1 rounded ${
-                  user?.tier === 'PREMIUM'
-                    ? 'bg-purple-100 text-purple-700 hover:bg-purple-200'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                className={`link-btn ${
+                  user?.tier === 'PREMIUM' ? 'link-btn-premium' : ''
                 }`}
               >
                 {user?.tier || 'FREE'}

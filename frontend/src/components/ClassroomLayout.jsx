@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 import TimerPill from './timer/TimerPill';
+import ThemeToggle from './ThemeToggle';
 
 export default function ClassroomLayout() {
   const { id } = useParams();
@@ -100,7 +101,7 @@ export default function ClassroomLayout() {
               {user?.role === 'ADMIN' && (
                 <Link
                   to="/admin"
-                  className="link-btn text-gray-700 hover:text-gray-900"
+                  className="link-btn"
                 >
                   Admin
                 </Link>
@@ -109,9 +110,7 @@ export default function ClassroomLayout() {
               <Link
                 to="/account"
                 className={`link-btn ${
-                  user?.tier === 'PREMIUM'
-                    ? 'bg-purple-700 text-gray-700 hover:bg-purple-500'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  user?.tier === 'PREMIUM' ? 'link-btn-premium' : ''
                 }`}
               >
                 {user?.tier || 'FREE'}
@@ -126,6 +125,7 @@ export default function ClassroomLayout() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
               </Link>
+              <ThemeToggle />
               
               <button
                 onClick={logout}
