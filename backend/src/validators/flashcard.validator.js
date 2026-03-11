@@ -70,8 +70,20 @@ const updateFlashcardSetSchema = z.object({
     .optional(),
 });
 
+const saveCardProgressSchema = z.object({
+  flashcardId: z.string().uuid('Invalid flashcard ID'),
+  correct: z.boolean(),
+  confidence: z.number().int().min(1).max(5).optional(),
+});
+
+const resetProgressSchema = z.object({
+  flashcardSetId: z.string().uuid('Invalid flashcard set ID'),
+});
+
 module.exports = {
   createFlashcardSetSchema,
   manualFlashcardSetSchema,
   updateFlashcardSetSchema,
+  saveCardProgressSchema,
+  resetProgressSchema,
 };

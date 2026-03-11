@@ -15,6 +15,9 @@ const {
   deleteFlashcardSetHandler,
   createManualFlashcardSetHandler,
   updateFlashcardSetHandler,
+  getFlashcardSetProgressHandler,
+  saveCardProgressHandler,
+  resetFlashcardSetProgressHandler,
 } = require('../controllers/flashcard.controller');
 const { authenticate } = require('../middleware/auth.middleware');
 
@@ -32,5 +35,10 @@ router.get('/classrooms/:classroomId/flashcard-sets', getClassroomFlashcardSets)
 router.get('/flashcard-sets/:id', getFlashcardSetHandler);
 router.put('/flashcard-sets/:id', updateFlashcardSetHandler);
 router.delete('/flashcard-sets/:id', deleteFlashcardSetHandler);
+
+// Progress routes
+router.get('/flashcard-sets/:id/progress', getFlashcardSetProgressHandler);
+router.post('/flashcard-sets/:id/progress', saveCardProgressHandler);
+router.delete('/flashcard-sets/:id/progress', resetFlashcardSetProgressHandler);
 
 module.exports = router;

@@ -1,18 +1,9 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../api/axios';
 import DocumentSelector from './DocumentSelector';
 import ManualFlashcardModal from './ManualFlashcardModal';
-
-// Fisher-Yates shuffle
-function shuffleArray(array) {
-  const shuffled = [...array];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  return shuffled;
-}
+import FlashcardStudyMode from './FlashcardStudyMode';
 
 export default function FlashcardsPanel({
   classroomId,
@@ -28,10 +19,6 @@ export default function FlashcardsPanel({
   const [error, setError] = useState('');
   const [showGenerateForm, setShowGenerateForm] = useState(false);
   const [activeSet, setActiveSet] = useState(null);
-  const [currentCardIndex, setCurrentCardIndex] = useState(0);
-  const [isFlipped, setIsFlipped] = useState(false);
-  const [isShuffled, setIsShuffled] = useState(false);
-  const [shuffledCards, setShuffledCards] = useState([]);
 
   // Manual create/edit modal state
   const [showManualModal, setShowManualModal] = useState(false);
@@ -95,8 +82,6 @@ export default function FlashcardsPanel({
 
       // Show the newly created set
       setActiveSet(response.data.data.flashcardSet);
-      setCurrentCardIndex(0);
-      setIsFlipped(false);
     } catch (err) {
       setError(err.response?.data?.error?.message || t('flashcardsPanel.failedToGenerate'));
     } finally {
@@ -109,31 +94,10 @@ export default function FlashcardsPanel({
       const response = await api.get(`/flashcard-sets/${setId}`);
       const set = response.data.data.flashcardSet;
       setActiveSet(set);
-      setCurrentCardIndex(0);
-      setIsFlipped(false);
-      setIsShuffled(false);
-      setShuffledCards([]);
     } catch {
       setError(t('flashcardsPanel.failedToLoadSet'));
     }
   };
-
-  const toggleShuffle = () => {
-    if (isShuffled) {
-      // Return to original order
-      setIsShuffled(false);
-      setShuffledCards([]);
-    } else {
-      // Shuffle cards
-      setShuffledCards(shuffleArray(activeSet.cards));
-      setIsShuffled(true);
-    }
-    setCurrentCardIndex(0);
-    setIsFlipped(false);
-  };
-
-  // Get the cards to display (shuffled or original)
-  const displayCards = isShuffled ? shuffledCards : (activeSet?.cards || []);
 
   const handleDeleteSet = async (setId) => {
     if (!confirm(t('flashcardsPanel.deleteConfirm'))) return;
@@ -177,182 +141,14 @@ export default function FlashcardsPanel({
     setEditingSet(null);
   };
 
-  const nextCard = () => {
-    if (currentCardIndex < displayCards.length - 1) {
-      setCurrentCardIndex((prev) => prev + 1);
-      setIsFlipped(false);
-    }
-  };
-
-  const prevCard = () => {
-    if (currentCardIndex > 0) {
-      setCurrentCardIndex((prev) => prev - 1);
-      setIsFlipped(false);
-    }
-  };
-
-  // Keyboard navigation for study mode
-  const handleKeyDown = useCallback(
-    (e) => {
-      if (!activeSet) return;
-
-      const cards = isShuffled ? shuffledCards : activeSet.cards;
-
-      switch (e.key) {
-        case ' ':
-        case 'Enter':
-          e.preventDefault();
-          setIsFlipped((prev) => !prev);
-          break;
-        case 'ArrowRight':
-        case 'ArrowDown':
-          e.preventDefault();
-          if (currentCardIndex < cards.length - 1) {
-            setCurrentCardIndex((prev) => prev + 1);
-            setIsFlipped(false);
-          }
-          break;
-        case 'ArrowLeft':
-        case 'ArrowUp':
-          e.preventDefault();
-          if (currentCardIndex > 0) {
-            setCurrentCardIndex((prev) => prev - 1);
-            setIsFlipped(false);
-          }
-          break;
-        case 'Escape':
-          setActiveSet(null);
-          break;
-        case 's':
-        case 'S':
-          // Toggle shuffle with 's' key
-          if (activeSet) {
-            if (isShuffled) {
-              setIsShuffled(false);
-              setShuffledCards([]);
-            } else {
-              setShuffledCards(shuffleArray(activeSet.cards));
-              setIsShuffled(true);
-            }
-            setCurrentCardIndex(0);
-            setIsFlipped(false);
-          }
-          break;
-      }
-    },
-    [activeSet, currentCardIndex, isShuffled, shuffledCards]
-  );
-
-  useEffect(() => {
-    if (activeSet) {
-      window.addEventListener('keydown', handleKeyDown);
-      return () => window.removeEventListener('keydown', handleKeyDown);
-    }
-  }, [activeSet, handleKeyDown]);
-
-  // Study mode view
+  // Study mode view - delegated to FlashcardStudyMode component
   if (activeSet) {
-    const currentCard = displayCards[currentCardIndex];
-
     return (
-      <div className={compact ? 'flex flex-col h-full' : 'bg-white rounded-lg shadow'}>
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-          <div>
-            <h3 className="text-lg font-medium text-gray-900">{activeSet.title}</h3>
-            <p className="text-sm text-gray-500">
-              {t('flashcardsPanel.cardOf', { current: currentCardIndex + 1, total: displayCards.length })}
-              {isShuffled && ` ${t('flashcardsPanel.shuffled')}`}
-              {activeSet.focusTopic && ` - ${t('flashcardsPanel.focus', { topic: activeSet.focusTopic })}`}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={toggleShuffle}
-              className={`p-2 rounded-lg transition-colors ${
-                isShuffled
-                  ? 'bg-blue-100 text-blue-600'
-                  : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
-              }`}
-              title={isShuffled ? t('flashcardsPanel.returnToOrder') : t('flashcardsPanel.shuffleCards')}
-            >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-            </button>
-            <button
-              onClick={() => setActiveSet(null)}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        {/* Flashcard */}
-        <div className="p-6 flex-1 overflow-auto">
-          <div
-            onClick={() => setIsFlipped(!isFlipped)}
-            className="min-h-[200px] bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-inner cursor-pointer flex items-center justify-center p-8 transition-all hover:shadow-md border border-blue-100"
-          >
-            <div className="text-center">
-              <p className="text-xs uppercase tracking-wide text-blue-500 mb-4">
-                {isFlipped ? t('flashcardsPanel.answer') : t('flashcardsPanel.question')} - {t('flashcardsPanel.clickToFlip')}
-              </p>
-              <p className="text-xl text-gray-800">
-                {isFlipped ? currentCard.back : currentCard.front}
-              </p>
-            </div>
-          </div>
-
-          {/* Navigation */}
-          <div className="flex justify-between items-center mt-6">
-            <button
-              onClick={prevCard}
-              disabled={currentCardIndex === 0}
-              className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              {t('common.previous')}
-            </button>
-
-            <div className="flex gap-1">
-              {displayCards.map((_, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => {
-                    setCurrentCardIndex(idx);
-                    setIsFlipped(false);
-                  }}
-                  className={`w-2 h-2 rounded-full transition-colors ${
-                    idx === currentCardIndex ? 'bg-blue-600' : 'bg-gray-300 hover:bg-gray-400'
-                  }`}
-                />
-              ))}
-            </div>
-
-            <button
-              onClick={nextCard}
-              disabled={currentCardIndex === displayCards.length - 1}
-              className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {t('common.next')}
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          </div>
-
-          {/* Keyboard hint */}
-          <p className="text-center text-xs text-gray-400 mt-4">
-            {t('flashcardsPanel.tip')}
-          </p>
-        </div>
-      </div>
+      <FlashcardStudyMode
+        activeSet={activeSet}
+        compact={compact}
+        onClose={() => setActiveSet(null)}
+      />
     );
   }
 

@@ -302,6 +302,90 @@ async function updateFlashcardSet(id, data) {
   });
 }
 
+/**
+ * Get progress for all cards in a flashcard set for a user
+ */
+async function getFlashcardSetProgress(flashcardSetId, userId) {
+  return prisma.flashcardProgress.findMany({
+    where: { flashcardSetId, userId },
+  });
+}
+
+/**
+ * Save progress for a single card (SM-2 spaced repetition)
+ */
+async function saveCardProgress({ userId, flashcardId, flashcardSetId, correct, confidence }) {
+  const existing = await prisma.flashcardProgress.findUnique({
+    where: { userId_flashcardId: { userId, flashcardId } },
+  });
+
+  const now = new Date();
+  let easeFactor = existing?.easeFactor ?? 2.5;
+  let interval = existing?.interval ?? 0;
+  let repetitions = existing?.repetitions ?? 0;
+  let totalCorrect = existing?.correct ?? 0;
+  let totalWrong = existing?.wrong ?? 0;
+
+  if (correct) {
+    totalCorrect++;
+    repetitions++;
+    if (repetitions === 1) {
+      interval = 1;
+    } else if (repetitions === 2) {
+      interval = 6;
+    } else {
+      interval = Math.round(interval * easeFactor);
+    }
+    // Adjust ease factor based on confidence (SM-2 formula)
+    const q = confidence || 3; // default to 3 if not provided
+    easeFactor = easeFactor + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02));
+    if (easeFactor < 1.3) easeFactor = 1.3;
+  } else {
+    totalWrong++;
+    repetitions = 0;
+    interval = 1;
+    easeFactor = Math.max(1.3, easeFactor - 0.2);
+  }
+
+  const nextReviewAt = new Date(now.getTime() + interval * 24 * 60 * 60 * 1000);
+
+  return prisma.flashcardProgress.upsert({
+    where: { userId_flashcardId: { userId, flashcardId } },
+    create: {
+      userId,
+      flashcardId,
+      flashcardSetId,
+      correct: totalCorrect,
+      wrong: totalWrong,
+      confidence: confidence || 0,
+      easeFactor,
+      interval,
+      repetitions,
+      nextReviewAt,
+      lastReviewedAt: now,
+    },
+    update: {
+      correct: totalCorrect,
+      wrong: totalWrong,
+      confidence: confidence || existing?.confidence || 0,
+      easeFactor,
+      interval,
+      repetitions,
+      nextReviewAt,
+      lastReviewedAt: now,
+    },
+  });
+}
+
+/**
+ * Reset all progress for a flashcard set for a user
+ */
+async function resetFlashcardSetProgress(flashcardSetId, userId) {
+  return prisma.flashcardProgress.deleteMany({
+    where: { flashcardSetId, userId },
+  });
+}
+
 module.exports = {
   gatherDocumentsContentStructured,
   generateFlashcards,
@@ -310,4 +394,7 @@ module.exports = {
   getFlashcardSetsByClassroom,
   deleteFlashcardSet,
   updateFlashcardSet,
+  getFlashcardSetProgress,
+  saveCardProgress,
+  resetFlashcardSetProgress,
 };

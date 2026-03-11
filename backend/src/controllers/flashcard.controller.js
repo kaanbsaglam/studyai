@@ -5,7 +5,7 @@
  */
 
 const prisma = require('../lib/prisma');
-const { createFlashcardSetSchema, manualFlashcardSetSchema, updateFlashcardSetSchema } = require('../validators/flashcard.validator');
+const { createFlashcardSetSchema, manualFlashcardSetSchema, updateFlashcardSetSchema, saveCardProgressSchema } = require('../validators/flashcard.validator');
 const { NotFoundError, AuthorizationError, ValidationError } = require('../middleware/errorHandler');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { canUseChat, recordTokenUsage } = require('../services/tier.service');
@@ -17,6 +17,9 @@ const {
   getFlashcardSetsByClassroom,
   deleteFlashcardSet,
   updateFlashcardSet,
+  getFlashcardSetProgress,
+  saveCardProgress,
+  resetFlashcardSetProgress,
 } = require('../services/flashcard.service');
 const logger = require('../config/logger');
 
@@ -262,6 +265,74 @@ const updateFlashcardSetHandler = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * Get progress for a flashcard set
+ * GET /api/v1/flashcard-sets/:id/progress
+ */
+const getFlashcardSetProgressHandler = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const flashcardSet = await getFlashcardSetById(id);
+  if (!flashcardSet) throw new NotFoundError('Flashcard set');
+  if (flashcardSet.userId !== req.user.id) throw new AuthorizationError('You do not have access to this flashcard set');
+
+  const progress = await getFlashcardSetProgress(id, req.user.id);
+
+  res.json({
+    success: true,
+    data: { progress },
+  });
+});
+
+/**
+ * Save progress for a single card
+ * POST /api/v1/flashcard-sets/:id/progress
+ */
+const saveCardProgressHandler = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const data = saveCardProgressSchema.parse(req.body);
+
+  const flashcardSet = await getFlashcardSetById(id);
+  if (!flashcardSet) throw new NotFoundError('Flashcard set');
+  if (flashcardSet.userId !== req.user.id) throw new AuthorizationError('You do not have access to this flashcard set');
+
+  // Verify the card belongs to this set
+  const cardBelongs = flashcardSet.cards.some((c) => c.id === data.flashcardId);
+  if (!cardBelongs) throw new ValidationError('Card does not belong to this flashcard set');
+
+  const progress = await saveCardProgress({
+    userId: req.user.id,
+    flashcardId: data.flashcardId,
+    flashcardSetId: id,
+    correct: data.correct,
+    confidence: data.confidence,
+  });
+
+  res.json({
+    success: true,
+    data: { progress },
+  });
+});
+
+/**
+ * Reset progress for a flashcard set
+ * DELETE /api/v1/flashcard-sets/:id/progress
+ */
+const resetFlashcardSetProgressHandler = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const flashcardSet = await getFlashcardSetById(id);
+  if (!flashcardSet) throw new NotFoundError('Flashcard set');
+  if (flashcardSet.userId !== req.user.id) throw new AuthorizationError('You do not have access to this flashcard set');
+
+  await resetFlashcardSetProgress(id, req.user.id);
+
+  res.json({
+    success: true,
+    message: 'Progress reset',
+  });
+});
+
 module.exports = {
   createFlashcardSetHandler,
   getClassroomFlashcardSets,
@@ -269,4 +340,7 @@ module.exports = {
   deleteFlashcardSetHandler,
   createManualFlashcardSetHandler,
   updateFlashcardSetHandler,
+  getFlashcardSetProgressHandler,
+  saveCardProgressHandler,
+  resetFlashcardSetProgressHandler,
 };

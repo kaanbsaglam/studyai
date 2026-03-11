@@ -60,7 +60,8 @@ model User {
   summaries        Summary[]
   notes            Note[]
   studySessions    StudySession[]
-  pomodoroSettings PomodoroSettings?
+  pomodoroSettings   PomodoroSettings?
+  flashcardProgress FlashcardProgress[]
 
   @@map("users")
 }
@@ -171,6 +172,7 @@ model FlashcardSet {
   documentId  String?      @map("document_id") // Optional - if set, was generated from this specific document
   document    Document?    @relation(fields: [documentId], references: [id], onDelete: SetNull)
   cards       Flashcard[]
+  progress    FlashcardProgress[]
 
   @@map("flashcard_sets")
 }
@@ -182,10 +184,35 @@ model Flashcard {
   position Int    // Order within the set
 
   // Relations
-  flashcardSetId String       @map("flashcard_set_id")
-  flashcardSet   FlashcardSet @relation(fields: [flashcardSetId], references: [id], onDelete: Cascade)
+  flashcardSetId String              @map("flashcard_set_id")
+  flashcardSet   FlashcardSet        @relation(fields: [flashcardSetId], references: [id], onDelete: Cascade)
+  progress       FlashcardProgress[]
 
   @@map("flashcards")
+}
+
+// Spaced repetition progress per card per user (optional tracking)
+model FlashcardProgress {
+  id             String   @id @default(uuid())
+  correct        Int      @default(0) // Total correct answers
+  wrong          Int      @default(0) // Total wrong answers
+  confidence     Int      @default(0) // User self-rated confidence 1-5 (0 = unrated)
+  easeFactor     Float    @default(2.5) @map("ease_factor")   // SM-2 ease factor
+  interval       Int      @default(0)   // Days until next review
+  repetitions    Int      @default(0)   // Consecutive correct answers
+  nextReviewAt   DateTime? @map("next_review_at") // When this card is due
+  lastReviewedAt DateTime? @map("last_reviewed_at")
+
+  // Relations
+  userId         String           @map("user_id")
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flashcardId    String           @map("flashcard_id")
+  flashcard      Flashcard        @relation(fields: [flashcardId], references: [id], onDelete: Cascade)
+  flashcardSetId String           @map("flashcard_set_id")
+  flashcardSet   FlashcardSet     @relation(fields: [flashcardSetId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, flashcardId])
+  @@map("flashcard_progress")
 }
 
 // ============================================
