@@ -374,7 +374,7 @@
     "backToSets": "Setlere Dön",
     "resetProgress": "İlerlemeyi sıfırla",
     "finish": "Bitir",
-    "studyTip": "Çevirmek için Boşluk, 1 = Yanlış, 2 = Doğru, 1-5 güven puanı"
+    "studyTip": "Çevirmek için Boşluk, 1 = Yanlış, 2 = Doğru, S = Karıştır"
   },
   "quizPanel": {
     "generateQuiz": "Test Oluştur",

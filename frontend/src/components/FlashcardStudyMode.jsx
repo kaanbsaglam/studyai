@@ -43,8 +43,6 @@ export default function FlashcardStudyMode({
 }) {
   const { t } = useTranslation();
 
-  // Mode: 'flip' = simple flip, 'study' = tracked study with SR
-  const [studyMode, setStudyMode] = useState('flip');
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [isShuffled, setIsShuffled] = useState(false);
@@ -53,20 +51,16 @@ export default function FlashcardStudyMode({
 
   // Progress state
   const [progressMap, setProgressMap] = useState({}); // { cardId: progressObj }
-  const [sessionResults, setSessionResults] = useState({}); // { cardId: { correct, confidence } }
+  const [sessionResults, setSessionResults] = useState({}); // { cardId: { correct } }
   const [showSummary, setShowSummary] = useState(false);
   const [savingProgress, setSavingProgress] = useState(false);
 
-  // Confidence picker
-  const [showConfidence, setShowConfidence] = useState(false);
-  const [pendingCorrect, setPendingCorrect] = useState(null);
-
-  // Load progress when entering study mode
+  // Load progress on mount
   useEffect(() => {
-    if (studyMode === 'study' && activeSet) {
+    if (activeSet) {
       loadProgress();
     }
-  }, [studyMode, activeSet?.id]);
+  }, [activeSet?.id]);
 
   const loadProgress = async () => {
     try {
@@ -81,15 +75,23 @@ export default function FlashcardStudyMode({
     }
   };
 
-  // Cards to display based on mode
+  // Initial card order — computed once from the progress at load time, not re-sorted mid-session
+  const [initialOrder, setInitialOrder] = useState([]);
+
+  useEffect(() => {
+    if (activeSet?.cards && Object.keys(progressMap).length > 0) {
+      setInitialOrder(sortCardsForReview(activeSet.cards, progressMap));
+    } else if (activeSet?.cards && initialOrder.length === 0) {
+      setInitialOrder([...activeSet.cards]);
+    }
+  }, [activeSet?.cards, Object.keys(progressMap).length > 0]);
+
+  // Cards to display — use shuffle if active, otherwise the stable initial order
   const displayCards = useMemo(() => {
     if (!activeSet?.cards) return [];
-    if (studyMode === 'study' && !isShuffled) {
-      return sortCardsForReview(activeSet.cards, progressMap);
-    }
     if (isShuffled) return shuffledCards;
-    return activeSet.cards;
-  }, [activeSet, studyMode, isShuffled, shuffledCards, progressMap]);
+    return initialOrder.length > 0 ? initialOrder : activeSet.cards;
+  }, [activeSet, isShuffled, shuffledCards, initialOrder]);
 
   const currentCard = displayCards[currentCardIndex];
 
@@ -104,20 +106,18 @@ export default function FlashcardStudyMode({
     setCurrentCardIndex(0);
     setIsFlipped(false);
     setShowingAnswer(false);
-    setShowConfidence(false);
   };
 
   const goToCard = (idx) => {
     setCurrentCardIndex(idx);
     setIsFlipped(false);
     setShowingAnswer(false);
-    setShowConfidence(false);
   };
 
   const nextCard = () => {
     if (currentCardIndex < displayCards.length - 1) {
       goToCard(currentCardIndex + 1);
-    } else if (studyMode === 'study') {
+    } else {
       setShowSummary(true);
     }
   };
@@ -130,69 +130,33 @@ export default function FlashcardStudyMode({
 
   const flipCard = () => {
     setIsFlipped((prev) => !prev);
-    if (!isFlipped && studyMode === 'study') {
+    if (!isFlipped) {
       setShowingAnswer(true);
     }
   };
 
-  // Handle correct/wrong selection
-  const handleAnswer = (correct) => {
-    setPendingCorrect(correct);
-    setShowConfidence(true);
-  };
-
-  // Handle confidence selection and save
-  const handleConfidence = async (confidence) => {
+  // Handle correct/wrong — save immediately and advance
+  const handleAnswer = async (correct) => {
     if (!currentCard || savingProgress) return;
     setSavingProgress(true);
-    setShowConfidence(false);
 
     const cardId = currentCard.id;
     setSessionResults((prev) => ({
       ...prev,
-      [cardId]: { correct: pendingCorrect, confidence },
+      [cardId]: { correct },
     }));
 
     try {
       const res = await api.post(`/flashcard-sets/${activeSet.id}/progress`, {
         flashcardId: cardId,
-        correct: pendingCorrect,
-        confidence,
+        correct,
+        confidence: correct ? 4 : 1,
       });
       setProgressMap((prev) => ({ ...prev, [cardId]: res.data.data.progress }));
     } catch {
       // Non-critical
     } finally {
       setSavingProgress(false);
-      setPendingCorrect(null);
-      // Auto advance after a short delay
-      setTimeout(() => nextCard(), 300);
-    }
-  };
-
-  // Skip confidence - just save correct/wrong
-  const skipConfidence = async () => {
-    if (!currentCard || savingProgress) return;
-    setSavingProgress(true);
-    setShowConfidence(false);
-
-    const cardId = currentCard.id;
-    setSessionResults((prev) => ({
-      ...prev,
-      [cardId]: { correct: pendingCorrect, confidence: null },
-    }));
-
-    try {
-      const res = await api.post(`/flashcard-sets/${activeSet.id}/progress`, {
-        flashcardId: cardId,
-        correct: pendingCorrect,
-      });
-      setProgressMap((prev) => ({ ...prev, [cardId]: res.data.data.progress }));
-    } catch {
-      // Non-critical
-    } finally {
-      setSavingProgress(false);
-      setPendingCorrect(null);
       setTimeout(() => nextCard(), 300);
     }
   };
@@ -202,10 +166,10 @@ export default function FlashcardStudyMode({
       await api.delete(`/flashcard-sets/${activeSet.id}/progress`);
       setProgressMap({});
       setSessionResults({});
+      setInitialOrder([...activeSet.cards]);
       setCurrentCardIndex(0);
       setIsFlipped(false);
       setShowSummary(false);
-      setShowConfidence(false);
     } catch {
       // Non-critical
     }
@@ -213,56 +177,23 @@ export default function FlashcardStudyMode({
 
   const restartSession = () => {
     setSessionResults({});
+    setInitialOrder(sortCardsForReview(activeSet.cards, progressMap));
     setCurrentCardIndex(0);
     setIsFlipped(false);
     setShowSummary(false);
     setShowingAnswer(false);
-    setShowConfidence(false);
-  };
-
-  // Switch between modes
-  const switchMode = (mode) => {
-    setStudyMode(mode);
-    setCurrentCardIndex(0);
-    setIsFlipped(false);
-    setShowSummary(false);
-    setShowingAnswer(false);
-    setShowConfidence(false);
-    setIsShuffled(false);
-    setShuffledCards([]);
-    if (mode === 'flip') {
-      setSessionResults({});
-    }
   };
 
   // Keyboard navigation
   const handleKeyDown = useCallback(
     (e) => {
       if (showSummary) return;
-      if (showConfidence) {
-        // Number keys 1-5 for confidence
-        const num = parseInt(e.key);
-        if (num >= 1 && num <= 5) {
-          e.preventDefault();
-          handleConfidence(num);
-        }
-        if (e.key === 'Escape') {
-          e.preventDefault();
-          skipConfidence();
-        }
-        return;
-      }
 
       switch (e.key) {
         case ' ':
         case 'Enter':
           e.preventDefault();
           flipCard();
-          break;
-        case 'ArrowRight':
-        case 'ArrowDown':
-          e.preventDefault();
-          if (studyMode === 'flip') nextCard();
           break;
         case 'ArrowLeft':
         case 'ArrowUp':
@@ -274,24 +205,24 @@ export default function FlashcardStudyMode({
           break;
         case 's':
         case 'S':
-          if (studyMode === 'flip') toggleShuffle();
+          toggleShuffle();
           break;
-        // In study mode, after seeing answer: 1=wrong, 2=correct
+        // After seeing answer: 1=wrong, 2=correct
         case '1':
-          if (studyMode === 'study' && showingAnswer && isFlipped) {
+          if (showingAnswer && isFlipped) {
             e.preventDefault();
             handleAnswer(false);
           }
           break;
         case '2':
-          if (studyMode === 'study' && showingAnswer && isFlipped) {
+          if (showingAnswer && isFlipped) {
             e.preventDefault();
             handleAnswer(true);
           }
           break;
       }
     },
-    [currentCardIndex, isFlipped, isShuffled, shuffledCards, studyMode, showingAnswer, showConfidence, showSummary, displayCards, savingProgress]
+    [currentCardIndex, isFlipped, isShuffled, shuffledCards, showingAnswer, showSummary, displayCards, savingProgress]
   );
 
   useEffect(() => {
@@ -461,52 +392,29 @@ export default function FlashcardStudyMode({
           </p>
         </div>
         <div className="flex items-center gap-1.5">
-          {/* Study mode toggle */}
           <button
-            onClick={() => switchMode(studyMode === 'flip' ? 'study' : 'flip')}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              studyMode === 'study' ? '' : ''
+            onClick={toggleShuffle}
+            className={`p-2 rounded-lg transition-colors ${
+              isShuffled
+                ? 'bg-blue-100 text-blue-600'
+                : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600'
             }`}
-            style={
-              studyMode === 'study'
-                ? { backgroundColor: 'var(--accent-soft)', color: 'var(--accent)', border: 'none' }
-                : { backgroundColor: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--card-border)' }
-            }
-            title={studyMode === 'study' ? t('flashcardStudy.studyModeOn') : t('flashcardStudy.studyModeOff')}
+            title={isShuffled ? t('flashcardsPanel.returnToOrder') : t('flashcardsPanel.shuffleCards')}
           >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
-            {t('flashcardStudy.studyMode')}
           </button>
 
-          {studyMode === 'flip' && (
-            <button
-              onClick={toggleShuffle}
-              className={`p-2 rounded-lg transition-colors ${
-                isShuffled
-                  ? 'bg-blue-100 text-blue-600'
-                  : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600'
-              }`}
-              title={isShuffled ? t('flashcardsPanel.returnToOrder') : t('flashcardsPanel.shuffleCards')}
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-            </button>
-          )}
-
-          {studyMode === 'study' && (
-            <button
-              onClick={resetProgress}
-              className="p-2 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
-              title={t('flashcardStudy.resetProgress')}
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-            </button>
-          )}
+          <button
+            onClick={resetProgress}
+            className="p-2 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+            title={t('flashcardStudy.resetProgress')}
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
 
           <button
             onClick={onClose}
@@ -519,9 +427,8 @@ export default function FlashcardStudyMode({
         </div>
       </div>
 
-      {/* Progress bar for study mode */}
-      {studyMode === 'study' && (
-        <div className="px-6 pb-1 pt-2">
+      {/* Progress bar */}
+      <div className="px-6 pb-1 pt-2">
           <div className="flex gap-1 h-2 rounded-full overflow-hidden bg-gray-100">
             {stats.mastered > 0 && (
               <div
@@ -542,7 +449,6 @@ export default function FlashcardStudyMode({
             <span>{stats.newCards} {t('flashcardStudy.new')}</span>
           </div>
         </div>
-      )}
 
       {/* Main flashcard area */}
       <div className="p-6 flex-1 overflow-auto flex flex-col">
@@ -575,7 +481,7 @@ export default function FlashcardStudyMode({
                     {t('flashcardsPanel.question')}
                   </div>
                   <p className="text-lg leading-relaxed" style={{ color: 'var(--text-primary)' }}>{currentCard.front}</p>
-                  {cardProgress && studyMode === 'study' && (
+                  {cardProgress && (
                     <div className="mt-4 flex items-center justify-center gap-3 text-xs text-gray-400">
                       <span className="flex items-center gap-1">
                         <span className="text-green-500">✓</span> {cardProgress.correct}
@@ -583,22 +489,6 @@ export default function FlashcardStudyMode({
                       <span className="flex items-center gap-1">
                         <span className="text-red-500">✗</span> {cardProgress.wrong}
                       </span>
-                      {cardProgress.confidence > 0 && (
-                        <span className="flex items-center gap-0.5">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <svg
-                              key={star}
-                              className={`w-3 h-3 ${
-                                star <= cardProgress.confidence ? 'text-yellow-400' : 'text-gray-300'
-                              }`}
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
-                            >
-                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                            </svg>
-                          ))}
-                        </span>
-                      )}
                     </div>
                   )}
                 </div>
@@ -621,8 +511,8 @@ export default function FlashcardStudyMode({
           </div>
         </div>
 
-        {/* Study mode: correct/wrong + confidence */}
-        {studyMode === 'study' && isFlipped && showingAnswer && !showConfidence && !cardResult && (
+        {/* Correct / Wrong buttons — always shown when answer is visible */}
+        {isFlipped && showingAnswer && (
           <div className="mt-4 flex flex-col items-center gap-3">
             <p className="text-xs text-gray-400">{t('flashcardStudy.howDidYouDo')}</p>
             <div className="flex gap-3">
@@ -646,82 +536,6 @@ export default function FlashcardStudyMode({
                 </svg>
                 {t('flashcardStudy.correct')}
               </button>
-            </div>
-          </div>
-        )}
-
-        {/* Confidence picker */}
-        {showConfidence && (
-          <div className="mt-4 flex flex-col items-center gap-3 animate-fade-in">
-            <p className="text-xs text-gray-400">{t('flashcardStudy.rateConfidence')}</p>
-            <div className="flex gap-2">
-              {[1, 2, 3, 4, 5].map((level) => (
-                <button
-                  key={level}
-                  onClick={() => handleConfidence(level)}
-                  disabled={savingProgress}
-                  className={`w-10 h-10 rounded-full font-medium text-sm transition-all border-2 disabled:opacity-50 flex items-center justify-center ${
-                    level <= 2
-                      ? 'border-red-200 bg-red-50 text-red-600 hover:bg-red-100 hover:border-red-300'
-                      : level === 3
-                      ? 'border-yellow-200 bg-yellow-50 text-yellow-600 hover:bg-yellow-100 hover:border-yellow-300'
-                      : 'border-green-200 bg-green-50 text-green-600 hover:bg-green-100 hover:border-green-300'
-                  }`}
-                  title={t(`flashcardStudy.confidence${level}`)}
-                >
-                  {level}
-                </button>
-              ))}
-            </div>
-            <button
-              onClick={skipConfidence}
-              disabled={savingProgress}
-              className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              {t('flashcardStudy.skipConfidence')}
-            </button>
-          </div>
-        )}
-
-        {/* Card result indicator */}
-        {cardResult && studyMode === 'study' && (
-          <div className="mt-4 flex justify-center">
-            <div
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
-                cardResult.correct
-                  ? 'bg-green-50 text-green-600 border border-green-100'
-                  : 'bg-red-50 text-red-600 border border-red-100'
-              }`}
-            >
-              {cardResult.correct ? (
-                <>
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  {t('flashcardStudy.markedCorrect')}
-                </>
-              ) : (
-                <>
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                  {t('flashcardStudy.markedWrong')}
-                </>
-              )}
-              {cardResult.confidence && (
-                <span className="ml-1 flex items-center gap-0.5">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <svg
-                      key={star}
-                      className={`w-3 h-3 ${star <= cardResult.confidence ? 'text-yellow-400' : 'text-gray-300'}`}
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                  ))}
-                </span>
-              )}
             </div>
           </div>
         )}
@@ -763,10 +577,9 @@ export default function FlashcardStudyMode({
 
           <button
             onClick={nextCard}
-            disabled={currentCardIndex === displayCards.length - 1 && studyMode === 'flip'}
             className="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
           >
-            {studyMode === 'study' && currentCardIndex === displayCards.length - 1
+            {currentCardIndex === displayCards.length - 1
               ? t('flashcardStudy.finish')
               : t('common.next')}
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -777,9 +590,7 @@ export default function FlashcardStudyMode({
 
         {/* Keyboard hints */}
         <p className="text-center text-[10px] text-gray-400 mt-3">
-          {studyMode === 'flip'
-            ? t('flashcardsPanel.tip')
-            : t('flashcardStudy.studyTip')}
+          {t('flashcardStudy.studyTip')}
         </p>
       </div>
     </div>

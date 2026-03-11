@@ -374,7 +374,7 @@
     "backToSets": "Back to Sets",
     "resetProgress": "Reset progress",
     "finish": "Finish",
-    "studyTip": "Space to flip, 1 = Wrong, 2 = Correct, 1-5 for confidence"
+    "studyTip": "Space to flip, 1 = Wrong, 2 = Correct, S = Shuffle"
   },
   "quizPanel": {
     "generateQuiz": "Generate Quiz",
