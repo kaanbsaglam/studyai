@@ -58,7 +58,8 @@ async function verifySessionAccess(sessionId, classroomId, userId) {
 }
 
 /**
- * Generate a short title for a chat session (fire-and-forget)
+ * Generate a short title for a chat session
+ * Returns the generated title (or null on failure)
  */
 async function generateSessionTitle(sessionId, question, answer) {
   try {
@@ -70,8 +71,10 @@ async function generateSessionTitle(sessionId, question, answer) {
       data: { title },
     });
     logger.info(`Generated title for session ${sessionId}: "${title}"`);
+    return title;
   } catch (err) {
     logger.error(`Failed to generate session title: ${err.message}`);
+    return null;
   }
 }
 
@@ -202,15 +205,17 @@ const sendMessage = asyncHandler(async (req, res) => {
     logger.info(`Recorded ${result.weightedTokens ?? result.tokensUsed} weighted tokens for user ${req.user.id}`);
   }
 
-  // Fire-and-forget title generation for new sessions
+  // Generate title for new sessions (awaited so frontend gets it immediately)
+  let sessionTitle = null;
   if (isNewSession) {
-    generateSessionTitle(session.id, data.question, result.answer);
+    sessionTitle = await generateSessionTitle(session.id, data.question, result.answer);
   }
 
   res.json({
     success: true,
     data: {
       sessionId: session.id,
+      sessionTitle,
       question: data.question,
       answer: result.answer,
       sources: result.sources,
