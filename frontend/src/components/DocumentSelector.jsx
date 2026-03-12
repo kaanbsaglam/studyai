@@ -6,6 +6,7 @@ export default function DocumentSelector({
   selectedIds = [],
   onChange,
   disabled = false,
+  lockedIds = [],
 }) {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
@@ -14,6 +15,8 @@ export default function DocumentSelector({
   const selectedDocuments = readyDocuments.filter((d) => selectedIds.includes(d.id));
 
   const toggleDocument = (docId) => {
+    // Don't allow removing locked documents
+    if (lockedIds.includes(docId)) return;
     if (selectedIds.includes(docId)) {
       onChange(selectedIds.filter((id) => id !== docId));
     } else {
@@ -26,7 +29,8 @@ export default function DocumentSelector({
   };
 
   const clearAll = () => {
-    onChange([]);
+    // Keep locked documents selected
+    onChange(lockedIds.length > 0 ? [...lockedIds] : []);
   };
 
   if (readyDocuments.length === 0) {
@@ -72,17 +76,19 @@ export default function DocumentSelector({
               className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded"
             >
               {doc.originalName}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleDocument(doc.id);
-                }}
-                className="hover:text-blue-900"
-              >
-                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+              {!lockedIds.includes(doc.id) && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleDocument(doc.id);
+                  }}
+                  className="hover:text-blue-900"
+                >
+                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
             </span>
           ))}
         </div>
@@ -119,16 +125,22 @@ export default function DocumentSelector({
             {readyDocuments.map((doc) => (
               <label
                 key={doc.id}
-                className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                className={`flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer ${
+                  lockedIds.includes(doc.id) ? 'bg-gray-50' : ''
+                }`}
               >
                 <input
                   type="checkbox"
                   checked={selectedIds.includes(doc.id)}
                   onChange={() => toggleDocument(doc.id)}
-                  className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  disabled={lockedIds.includes(doc.id)}
+                  className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:opacity-50"
                 />
                 <span className="ml-3 text-sm text-gray-700 truncate" title={doc.originalName}>
                   {doc.originalName}
+                  {lockedIds.includes(doc.id) && (
+                    <span className="ml-1 text-xs text-gray-400">({t('chatSessions.docsLocked')})</span>
+                  )}
                 </span>
               </label>
             ))}
