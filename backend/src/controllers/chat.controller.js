@@ -252,7 +252,7 @@ const listSessions = asyncHandler(async (req, res) => {
       skip: 1,
     }),
     include: {
-      _count: { select: { messages: true } },
+      _count: { select: { messages: { where: { role: 'USER' } } } },
       documents: { select: { id: true, originalName: true } },
     },
   });
