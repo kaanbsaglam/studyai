@@ -44,6 +44,12 @@ export default function DocumentViewerPage() {
   const [selectedDocIds, setSelectedDocIds] = useState([docId]);
   const [showDocSelector, setShowDocSelector] = useState(false);
 
+  // Chat session state
+  const [activeSessionId, setActiveSessionId] = useState(null);
+  const [chatSessions, setChatSessions] = useState([]);
+  const [docsLocked, setDocsLocked] = useState(false);
+  const [lockedDocIds, setLockedDocIds] = useState([]);
+
   const allDocuments = classroom?.documents?.filter((d) => d.status === 'READY') || [];
   const selectedDocuments = allDocuments.filter((d) => selectedDocIds.includes(d.id));
 
@@ -51,7 +57,26 @@ export default function DocumentViewerPage() {
     fetchDocument();
     // Pre-select current document when docId changes
     setSelectedDocIds([docId]);
+    setActiveSessionId(null);
+    setDocsLocked(false);
+    setLockedDocIds([]);
   }, [docId]);
+
+  // Fetch chat sessions when chat tab is active
+  const fetchChatSessions = useCallback(async () => {
+    try {
+      const response = await api.get(`/classrooms/${classroomId}/chat/sessions?limit=10`);
+      setChatSessions(response.data.data.sessions);
+    } catch {
+      // Silently fail
+    }
+  }, [classroomId]);
+
+  useEffect(() => {
+    if (activeTab === 'chat') {
+      fetchChatSessions();
+    }
+  }, [activeTab, fetchChatSessions]);
 
   // Track container width for PDF auto-fit
   useEffect(() => {
@@ -107,6 +132,7 @@ export default function DocumentViewerPage() {
   };
 
   const toggleDocSelection = (id) => {
+    if (docsLocked && lockedDocIds.includes(id)) return;
     setSelectedDocIds((prev) => {
       if (prev.includes(id)) {
         // Don't allow deselecting the current document
@@ -115,6 +141,33 @@ export default function DocumentViewerPage() {
       }
       return [...prev, id];
     });
+  };
+
+  const handleSessionChange = (newSessionId) => {
+    setActiveSessionId(newSessionId);
+    if (newSessionId) {
+      fetchChatSessions();
+    }
+    if (!newSessionId) {
+      setDocsLocked(false);
+      setLockedDocIds([]);
+      setSelectedDocIds([docId]);
+    }
+  };
+
+  const handleDocumentsLocked = () => {
+    setDocsLocked(true);
+    setLockedDocIds([...selectedDocIds]);
+  };
+
+  const handleSelectChatSession = (session) => {
+    setActiveSessionId(session.id);
+    const sessionDocIds = session.documents.map((d) => d.id);
+    // Always include current doc
+    const merged = [...new Set([docId, ...sessionDocIds])];
+    setSelectedDocIds(merged);
+    setLockedDocIds(sessionDocIds);
+    setDocsLocked(true);
   };
 
   const tabs = [
@@ -319,6 +372,32 @@ export default function DocumentViewerPage() {
             ))}
           </div>
 
+          {/* Session dropdown for chat tab */}
+          {activeTab === 'chat' && (
+            <div className="px-3 py-1.5 border-b border-gray-200 bg-gray-50">
+              <select
+                value={activeSessionId || ''}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '') {
+                    handleSessionChange(null);
+                  } else {
+                    const session = chatSessions.find((s) => s.id === val);
+                    if (session) handleSelectChatSession(session);
+                  }
+                }}
+                className="w-full text-xs px-2 py-1.5 border border-gray-200 rounded bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="">{t('chatSessions.newChat')}</option>
+                {chatSessions.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.title || t('chatSessions.untitled')}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {/* Document Context Selector */}
           <div className="px-3 py-2 bg-gray-50 border-b border-gray-200">
             <div className="flex justify-between items-center">
@@ -338,26 +417,32 @@ export default function DocumentViewerPage() {
             {/* Document selector dropdown */}
             {showDocSelector && allDocuments.length > 1 && (
               <div className="mt-2 p-2 bg-white border border-gray-200 rounded-md max-h-40 overflow-y-auto">
-                {allDocuments.map((doc) => (
-                  <label
-                    key={doc.id}
-                    className={`flex items-center gap-2 px-2 py-1.5 rounded text-xs cursor-pointer ${
-                      doc.id === docId ? 'bg-blue-50' : 'hover:bg-gray-50'
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedDocIds.includes(doc.id)}
-                      onChange={() => toggleDocSelection(doc.id)}
-                      disabled={doc.id === docId}
-                      className="h-3 w-3 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <span className="truncate text-gray-700" title={doc.originalName}>
-                      {doc.originalName}
-                      {doc.id === docId && ` ${t('documentViewer.current')}`}
-                    </span>
-                  </label>
-                ))}
+                {allDocuments.map((doc) => {
+                  const isLocked = doc.id === docId || (docsLocked && lockedDocIds.includes(doc.id));
+                  return (
+                    <label
+                      key={doc.id}
+                      className={`flex items-center gap-2 px-2 py-1.5 rounded text-xs cursor-pointer ${
+                        isLocked ? 'bg-blue-50' : 'hover:bg-gray-50'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedDocIds.includes(doc.id)}
+                        onChange={() => toggleDocSelection(doc.id)}
+                        disabled={isLocked}
+                        className="h-3 w-3 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:opacity-50"
+                      />
+                      <span className="truncate text-gray-700" title={doc.originalName}>
+                        {doc.originalName}
+                        {doc.id === docId && ` ${t('documentViewer.current')}`}
+                        {docsLocked && lockedDocIds.includes(doc.id) && doc.id !== docId && (
+                          <span className="ml-1 text-gray-400">({t('chatSessions.docsLocked')})</span>
+                        )}
+                      </span>
+                    </label>
+                  );
+                })}
               </div>
             )}
 
@@ -389,6 +474,9 @@ export default function DocumentViewerPage() {
                 selectedDocuments={selectedDocuments}
                 hasReadyDocuments={true}
                 compact
+                sessionId={activeSessionId}
+                onSessionChange={handleSessionChange}
+                onDocumentsLocked={handleDocumentsLocked}
               />
             )}
             {activeTab === 'flashcards' && (

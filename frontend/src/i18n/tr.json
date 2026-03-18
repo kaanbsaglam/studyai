@@ -201,6 +201,18 @@
     "zoomIn": "Yakınlaştır",
     "zoomOut": "Uzaklaştır"
   },
+  "chatSessions": {
+    "newChat": "Yeni Sohbet",
+    "sessions": "Oturumlar",
+    "untitled": "Başlıksız sohbet",
+    "noSessions": "Henüz sohbet oturumu yok",
+    "deleteConfirm": "Bu sohbet oturumunu silmek istediğinizden emin misiniz?",
+    "docsLocked": "kilitli",
+    "loadingSession": "Oturum yükleniyor...",
+    "toggleSidebar": "Kenar çubuğunu aç/kapat",
+    "messageCount": "{{count}} mesaj",
+    "messageCount_plural": "{{count}} mesaj"
+  },
   "chatPage": {
     "title": "Yapay Zeka Çalışma Asistanı",
     "subtitle": "Çalışma materyalleriniz hakkında sorular sorun. Bağlam için belirli dokümanları seçin veya yapay zekanın tüm dokümanları aramasına izin verin."

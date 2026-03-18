@@ -201,6 +201,18 @@
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out"
   },
+  "chatSessions": {
+    "newChat": "New Chat",
+    "sessions": "Sessions",
+    "untitled": "Untitled chat",
+    "noSessions": "No chat sessions yet",
+    "deleteConfirm": "Are you sure you want to delete this chat session?",
+    "docsLocked": "locked",
+    "loadingSession": "Loading session...",
+    "toggleSidebar": "Toggle sidebar",
+    "messageCount": "{{count}} message",
+    "messageCount_plural": "{{count}} messages"
+  },
   "chatPage": {
     "title": "AI Study Assistant",
     "subtitle": "Ask questions about your study materials. Select specific documents for context or let the AI search all documents."

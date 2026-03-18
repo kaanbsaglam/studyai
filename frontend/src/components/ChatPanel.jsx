@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import MarkdownRenderer from './MarkdownRenderer';
 import api from '../api/axios';
@@ -10,13 +10,17 @@ export default function ChatPanel({
   compact,
   fullHeight,
   selectedDocuments = [],
-  onClearChat,
+  sessionId,
+  onSessionChange,
+  onDocumentsLocked,
 }) {
   const { t } = useTranslation();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingSession, setLoadingSession] = useState(false);
   const messagesEndRef = useRef(null);
+  const prevSessionIdRef = useRef(sessionId);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -26,15 +30,37 @@ export default function ChatPanel({
     scrollToBottom();
   }, [messages]);
 
-  // Build conversation history for API
-  const getConversationHistory = () => {
-    return messages
-      .filter((m) => !m.isError)
-      .map((m) => ({
-        role: m.role,
-        content: m.content,
-      }));
-  };
+  // Load session messages when sessionId changes
+  const loadSession = useCallback(async (sid) => {
+    if (!sid) {
+      setMessages([]);
+      return;
+    }
+    try {
+      setLoadingSession(true);
+      const response = await api.get(`/classrooms/${classroomId}/chat/sessions/${sid}`);
+      const { session } = response.data.data;
+      setMessages(
+        session.messages.map((m) => ({
+          role: m.role.toLowerCase(),
+          content: m.content,
+          sources: m.sources,
+          hasRelevantContext: m.hasRelevantContext,
+        }))
+      );
+    } catch {
+      setMessages([]);
+    } finally {
+      setLoadingSession(false);
+    }
+  }, [classroomId]);
+
+  useEffect(() => {
+    if (sessionId !== prevSessionIdRef.current) {
+      prevSessionIdRef.current = sessionId;
+      loadSession(sessionId);
+    }
+  }, [sessionId, loadSession]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -43,18 +69,18 @@ export default function ChatPanel({
     const question = input.trim();
     setInput('');
 
-    // Add user message
+    // Add user message optimistically
     setMessages((prev) => [...prev, { role: 'user', content: question }]);
     setLoading(true);
 
     try {
-      const response = await api.post(`/classrooms/${classroomId}/chat`, {
+      const response = await api.post(`/classrooms/${classroomId}/chat/messages`, {
         question,
-        documentIds: documentIds,
-        conversationHistory: getConversationHistory(),
+        sessionId: sessionId || undefined,
+        documentIds,
       });
 
-      const { answer, sources, hasRelevantContext } = response.data.data;
+      const { sessionId: returnedSessionId, answer, sources, hasRelevantContext } = response.data.data;
 
       // Add assistant message
       setMessages((prev) => [
@@ -66,6 +92,13 @@ export default function ChatPanel({
           hasRelevantContext,
         },
       ]);
+
+      // If this was a new session, notify parent
+      if (!sessionId && returnedSessionId) {
+        prevSessionIdRef.current = returnedSessionId;
+        onSessionChange?.(returnedSessionId);
+        onDocumentsLocked?.();
+      }
     } catch (err) {
       setMessages((prev) => [
         ...prev,
@@ -80,9 +113,10 @@ export default function ChatPanel({
     }
   };
 
-  const handleClearChat = () => {
+  const handleNewChat = () => {
     setMessages([]);
-    onClearChat?.();
+    prevSessionIdRef.current = null;
+    onSessionChange?.(null);
   };
 
   const containerClass = compact
@@ -104,12 +138,12 @@ export default function ChatPanel({
                 : t('chatPanel.askAboutDocs')}
             </p>
           </div>
-          {messages.length > 0 && (
+          {(messages.length > 0 || sessionId) && (
             <button
-              onClick={handleClearChat}
-              className="text-sm text-gray-500 hover:text-gray-700"
+              onClick={handleNewChat}
+              className="text-sm text-blue-600 hover:text-blue-800 font-medium"
             >
-              {t('chatPanel.clearChat')}
+              {t('chatSessions.newChat')}
             </button>
           )}
         </div>
@@ -124,102 +158,112 @@ export default function ChatPanel({
         </div>
       )}
 
+      {/* Loading session indicator */}
+      {loadingSession && (
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+          <span className="ml-2 text-sm text-gray-500">{t('chatSessions.loadingSession')}</span>
+        </div>
+      )}
+
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.length === 0 ? (
-          <div className="text-center text-gray-500 mt-8">
-            <svg
-              className="mx-auto h-12 w-12 text-gray-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
-              />
-            </svg>
-            <p className="mt-2">{t('chatPanel.noMessages')}</p>
-            <p className="text-sm">
-              {hasReadyDocuments
-                ? t('chatPanel.askToStart')
-                : t('chatPanel.uploadFirst')}
-            </p>
-          </div>
-        ) : (
-          messages.map((message, index) => (
-            <div
-              key={index}
-              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              <div
-                className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                  message.role === 'user'
-                    ? 'bg-blue-600 text-white'
-                    : message.isError
-                    ? 'bg-red-50 text-red-600 border border-red-200'
-                    : 'bg-gray-100 text-gray-900'
-                }`}
+      {!loadingSession && (
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {messages.length === 0 ? (
+            <div className="text-center text-gray-500 mt-8">
+              <svg
+                className="mx-auto h-12 w-12 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
               >
-                {message.role === 'user' || message.isError ? (
-                  <p className="whitespace-pre-wrap">{message.content}</p>
-                ) : (
-                  <MarkdownRenderer className="prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-pre:my-2 prose-code:bg-gray-200 prose-code:px-1 prose-code:rounded prose-pre:bg-gray-800 prose-pre:text-gray-100">
-                    {message.content}
-                  </MarkdownRenderer>
-                )}
-
-                {/* Sources */}
-                {message.sources?.length > 0 && (
-                  <div className="mt-2 pt-2 border-t border-gray-200">
-                    <p className="text-xs text-gray-500 mb-1">{t('chatPanel.sources')}</p>
-                    <div className="flex flex-wrap gap-1">
-                      {message.sources.map((source, idx) => (
-                        <span
-                          key={idx}
-                          className={`text-xs px-2 py-0.5 rounded ${
-                            source.isSelected
-                              ? 'bg-blue-100 text-blue-700'
-                              : 'bg-gray-200 text-gray-600'
-                          }`}
-                          title={source.isSelected ? 'Selected document' : 'From RAG search'}
-                        >
-                          {source.filename}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Indicator for general knowledge answers */}
-                {message.role === 'assistant' &&
-                  !message.isError &&
-                  message.hasRelevantContext === false && (
-                    <p className="mt-2 text-xs text-gray-500 italic">
-                      {t('chatPanel.generalKnowledge')}
-                    </p>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+                />
+              </svg>
+              <p className="mt-2">{t('chatPanel.noMessages')}</p>
+              <p className="text-sm">
+                {hasReadyDocuments
+                  ? t('chatPanel.askToStart')
+                  : t('chatPanel.uploadFirst')}
+              </p>
+            </div>
+          ) : (
+            messages.map((message, index) => (
+              <div
+                key={index}
+                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div
+                  className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                    message.role === 'user'
+                      ? 'bg-blue-600 text-white'
+                      : message.isError
+                      ? 'bg-red-50 text-red-600 border border-red-200'
+                      : 'bg-gray-100 text-gray-900'
+                  }`}
+                >
+                  {message.role === 'user' || message.isError ? (
+                    <p className="whitespace-pre-wrap">{message.content}</p>
+                  ) : (
+                    <MarkdownRenderer className="prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-pre:my-2 prose-code:bg-gray-200 prose-code:px-1 prose-code:rounded prose-pre:bg-gray-800 prose-pre:text-gray-100">
+                      {message.content}
+                    </MarkdownRenderer>
                   )}
+
+                  {/* Sources */}
+                  {message.sources?.length > 0 && (
+                    <div className="mt-2 pt-2 border-t border-gray-200">
+                      <p className="text-xs text-gray-500 mb-1">{t('chatPanel.sources')}</p>
+                      <div className="flex flex-wrap gap-1">
+                        {message.sources.map((source, idx) => (
+                          <span
+                            key={idx}
+                            className={`text-xs px-2 py-0.5 rounded ${
+                              source.isSelected
+                                ? 'bg-blue-100 text-blue-700'
+                                : 'bg-gray-200 text-gray-600'
+                            }`}
+                            title={source.isSelected ? 'Selected document' : 'From RAG search'}
+                          >
+                            {source.filename}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Indicator for general knowledge answers */}
+                  {message.role === 'assistant' &&
+                    !message.isError &&
+                    message.hasRelevantContext === false && (
+                      <p className="mt-2 text-xs text-gray-500 italic">
+                        {t('chatPanel.generalKnowledge')}
+                      </p>
+                    )}
+                </div>
+              </div>
+            ))
+          )}
+
+          {/* Loading indicator */}
+          {loading && (
+            <div className="flex justify-start">
+              <div className="bg-gray-100 rounded-lg px-4 py-2">
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  <span className="text-gray-500">{t('chatPanel.thinking')}</span>
+                </div>
               </div>
             </div>
-          ))
-        )}
+          )}
 
-        {/* Loading indicator */}
-        {loading && (
-          <div className="flex justify-start">
-            <div className="bg-gray-100 rounded-lg px-4 py-2">
-              <div className="flex items-center gap-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                <span className="text-gray-500">{t('chatPanel.thinking')}</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div ref={messagesEndRef} />
-      </div>
+          <div ref={messagesEndRef} />
+        </div>
+      )}
 
       {/* Input */}
       <form onSubmit={handleSubmit} className="p-4 border-t border-gray-200">
@@ -233,12 +277,12 @@ export default function ChatPanel({
                 ? t('chatPanel.askQuestion')
                 : t('chatPanel.uploadDocsFirst')
             }
-            disabled={loading}
+            disabled={loading || loadingSession}
             className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
           />
           <button
             type="submit"
-            disabled={loading || !input.trim()}
+            disabled={loading || loadingSession || !input.trim()}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {t('common.send')}

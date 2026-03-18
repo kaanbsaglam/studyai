@@ -25,6 +25,7 @@ module.exports = {
   tiers: {
     FREE: {
       chat:           { primary: 'gemini-2.0-flash', fallback: null },
+      chatTitle:      { primary: 'gemini-2.0-flash', fallback: null },
       studyAid:       { primary: 'gemini-2.0-flash', fallback: null },
       pipeline: {
         map:          { primary: 'gemini-2.0-flash', fallback: null },
@@ -38,6 +39,7 @@ module.exports = {
     },
     PREMIUM: {
       chat:           { primary: 'gemini-2.0-flash', fallback: null },
+      chatTitle:      { primary: 'gemini-2.0-flash', fallback: null },
       studyAid:       { primary: 'gemini-2.0-flash', fallback: null },
       pipeline: {
         map:          { primary: 'gemini-2.0-flash', fallback: null },
