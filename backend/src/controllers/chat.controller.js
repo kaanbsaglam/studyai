@@ -11,6 +11,7 @@ const { NotFoundError, AuthorizationError, ValidationError } = require('../middl
 const { asyncHandler } = require('../middleware/errorHandler');
 const { canUseChat, recordTokenUsage } = require('../services/tier.service');
 const { generateText } = require('../services/llm.service');
+const llmConfig = require('../config/llm.config');
 const logger = require('../config/logger');
 
 /**
@@ -61,10 +62,11 @@ async function verifySessionAccess(sessionId, classroomId, userId) {
  * Generate a short title for a chat session
  * Returns the generated title (or null on failure)
  */
-async function generateSessionTitle(sessionId, question, answer) {
+async function generateSessionTitle(sessionId, question, answer, tier = 'FREE') {
   try {
+    const model = llmConfig.tiers[tier].chatTitle.primary;
     const prompt = `Generate a very short title (max 6 words) for this conversation. Return ONLY the title, nothing else.\n\nUser: ${question}\nAssistant: ${answer.slice(0, 500)}`;
-    const { text } = await generateText(prompt, { model: 'gemini-2.0-flash' });
+    const { text } = await generateText(prompt, { model });
     const title = text.trim().replace(/^["']|["']$/g, '').slice(0, 100);
     await prisma.chatSession.update({
       where: { id: sessionId },
@@ -208,7 +210,7 @@ const sendMessage = asyncHandler(async (req, res) => {
   // Generate title for new sessions (awaited so frontend gets it immediately)
   let sessionTitle = null;
   if (isNewSession) {
-    sessionTitle = await generateSessionTitle(session.id, data.question, result.answer);
+    sessionTitle = await generateSessionTitle(session.id, data.question, result.answer, req.user.tier);
   }
 
   res.json({
