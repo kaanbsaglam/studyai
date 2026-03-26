@@ -60,7 +60,7 @@ export default function ThemeToggle({ className = '' }) {
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="flex items-center p-1 rounded-lg text-gray-500 hover:text-gray-700 transition-colors bg-transparent"
+        className="link-btn"
         style={{ color: 'var(--text-secondary)' }}
         aria-expanded={open}
         aria-haspopup="menu"

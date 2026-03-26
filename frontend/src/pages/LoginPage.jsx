@@ -55,7 +55,7 @@ export default function LoginPage() {
       className="p-6 w-full min-h-screen flex flex-col relative overflow-hidden font-display"
       style={{ backgroundColor: 'var(--page-bg)' }}
     >
-      <div className="absolute top-4 right-4 z-20">
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
         <ThemeToggle />
       </div>
       <div
