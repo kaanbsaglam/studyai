@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import MarkdownRenderer from './MarkdownRenderer';
 import api from '../api/axios';
+import ThreeDotMenu from './ThreeDotMenu';
+import NotesPdfDocument from './pdf/NotesPdfDocument';
+import { downloadPdf, downloadTxt } from '../utils/exportHelpers';
 
 export default function NotesPanel({
   classroomId,
@@ -145,6 +148,17 @@ export default function NotesPanel({
     });
   };
 
+  const handleExportNotePdf = async (note) => {
+    await downloadPdf(
+      <NotesPdfDocument note={note} />,
+      note.title
+    );
+  };
+
+  const handleExportNoteTxt = (note) => {
+    downloadTxt(note.content || '', note.title);
+  };
+
   // Edit/Create view
   if (isEditing) {
     return (
@@ -165,7 +179,7 @@ export default function NotesPanel({
         <div className="px-3 py-1.5 border-b border-gray-200 flex justify-between items-center bg-gray-50">
           <button
             onClick={() => setShowPreview(!showPreview)}
-            className={`px-2 py-1 text-xs rounded flex items-center gap-1 ${
+            className={`px-2 py-1 text-xs rounded-full flex items-center gap-1 ${
               showPreview ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-200'
             }`}
           >
@@ -178,14 +192,14 @@ export default function NotesPanel({
           <div className="flex items-center gap-1">
             <button
               onClick={cancelEdit}
-              className="px-2 py-1 text-xs text-gray-600 hover:bg-gray-200 rounded"
+              className="px-2 py-1 text-xs text-gray-600 hover:bg-gray-200 rounded-full"
             >
               {t('common.cancel')}
             </button>
             <button
               onClick={isCreating ? handleCreateNote : handleUpdateNote}
               disabled={saving || !editTitle.trim()}
-              className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+              className="px-2 py-1 text-xs bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50"
             >
               {saving ? t('common.saving') : t('common.save')}
             </button>
@@ -242,25 +256,54 @@ export default function NotesPanel({
           <div className="flex items-center gap-2">
             <button
               onClick={() => setActiveNote(null)}
-              className="p-1 text-gray-500 hover:text-gray-700"
+              className="p-1 text-gray-500 hover:text-gray-700 rounded-full"
               title={t('notesPanel.backToList')}
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
             </button>
-            <button
-              onClick={startEditing}
-              className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded"
-            >
-              {t('common.edit')}
-            </button>
-            <button
-              onClick={() => handleDeleteNote(activeNote.id)}
-              className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded"
-            >
-              {t('common.delete')}
-            </button>
+            <ThreeDotMenu
+              items={[
+                {
+                  label: t('common.edit'),
+                  icon: (
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  ),
+                  onClick: startEditing,
+                },
+                {
+                  label: t('export.downloadPdf'),
+                  icon: (
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  ),
+                  onClick: () => handleExportNotePdf(activeNote),
+                },
+                {
+                  label: t('export.downloadTxt'),
+                  icon: (
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  ),
+                  onClick: () => handleExportNoteTxt(activeNote),
+                },
+                {
+                  label: t('common.delete'),
+                  icon: (
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  ),
+                  onClick: () => handleDeleteNote(activeNote.id),
+                  danger: true,
+                },
+              ]}
+            />
           </div>
         </div>
 
@@ -289,7 +332,7 @@ export default function NotesPanel({
         </div>
         <button
           onClick={startCreating}
-          className="px-3 py-1.5 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700"
+          className="px-3 py-1.5 bg-blue-600 text-white rounded-full text-sm font-medium hover:bg-blue-700"
         >
           {t('notesPanel.newNote')}
         </button>

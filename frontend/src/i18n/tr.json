@@ -580,5 +580,11 @@
     "description": "Tercih ettiğiniz dili seçin",
     "en": "English",
     "tr": "Türkçe"
+  },
+  "export": {
+    "exportPdf": "PDF Olarak İndir",
+    "downloadPdf": "PDF Olarak İndir",
+    "downloadTxt": "TXT Olarak İndir",
+    "answerKey": "Cevap Anahtarı"
   }
 }

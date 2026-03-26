@@ -588,5 +588,11 @@
     "description": "Select your preferred language",
     "en": "English",
     "tr": "Türkçe"
+  },
+  "export": {
+    "exportPdf": "Export PDF",
+    "downloadPdf": "Download as PDF",
+    "downloadTxt": "Download as TXT",
+    "answerKey": "Answer Key"
   }
 }

@@ -4,6 +4,9 @@ import api from '../api/axios';
 import DocumentSelector from './DocumentSelector';
 import ManualFlashcardModal from './ManualFlashcardModal';
 import FlashcardStudyMode from './FlashcardStudyMode';
+import ThreeDotMenu from './ThreeDotMenu';
+import FlashcardsPdfDocument from './pdf/FlashcardsPdfDocument';
+import { downloadPdf } from '../utils/exportHelpers';
 
 export default function FlashcardsPanel({
   classroomId,
@@ -118,6 +121,23 @@ export default function FlashcardsPanel({
       const response = await api.get(`/flashcard-sets/${setId}`);
       setEditingSet(response.data.data.flashcardSet);
       setShowManualModal(true);
+    } catch {
+      setError(t('flashcardsPanel.failedToLoadSet'));
+    }
+  };
+
+  const handleExportSet = async (setId) => {
+    try {
+      const response = await api.get(`/flashcard-sets/${setId}`);
+      const set = response.data.data.flashcardSet;
+      await downloadPdf(
+        <FlashcardsPdfDocument
+          flashcardSet={set}
+          frontLabel={t('flashcardsPanel.question')}
+          backLabel={t('flashcardsPanel.answer')}
+        />,
+        set.title
+      );
     } catch {
       setError(t('flashcardsPanel.failedToLoadSet'));
     }
@@ -244,7 +264,7 @@ export default function FlashcardsPanel({
             <button
               type="submit"
               disabled={generating || !formTitle.trim() || (isGeneralKnowledge && !formFocusTopic.trim())}
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
               {generating ? (
                 <span className="flex items-center justify-center gap-2">
@@ -301,13 +321,13 @@ export default function FlashcardsPanel({
                 setEditingSet(null);
                 setShowManualModal(true);
               }}
-              className="px-4 py-2 border border-blue-600 text-blue-600 rounded-md font-medium hover:bg-blue-50"
+              className="px-4 py-2 border border-blue-600 text-blue-600 rounded-full font-medium hover:bg-blue-50"
             >
               {t('flashcardsPanel.createManual')}
             </button>
             <button
               onClick={() => setShowGenerateForm(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700"
+              className="px-4 py-2 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700"
             >
               {t('flashcardsPanel.generate')}
             </button>
@@ -322,13 +342,13 @@ export default function FlashcardsPanel({
               setEditingSet(null);
               setShowManualModal(true);
             }}
-            className="flex-1 px-4 py-2 border border-blue-600 text-blue-600 rounded-md font-medium hover:bg-blue-50 text-sm"
+            className="flex-1 px-4 py-2 border border-blue-600 text-blue-600 rounded-full font-medium hover:bg-blue-50 text-sm"
           >
             {t('flashcardsPanel.createManual')}
           </button>
           <button
             onClick={() => setShowGenerateForm(true)}
-            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 text-sm"
+            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 text-sm"
           >
             {t('flashcardsPanel.generateBtn')}
           </button>
@@ -383,22 +403,42 @@ export default function FlashcardsPanel({
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleViewSet(set.id)}
-                  className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded"
+                  className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-full"
                 >
                   {t('flashcardsPanel.study')}
                 </button>
-                <button
-                  onClick={() => handleEditSet(set.id)}
-                  className="px-3 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded"
-                >
-                  {t('common.edit')}
-                </button>
-                <button
-                  onClick={() => handleDeleteSet(set.id)}
-                  className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded"
-                >
-                  {t('common.delete')}
-                </button>
+                <ThreeDotMenu
+                  items={[
+                    {
+                      label: t('common.edit'),
+                      icon: (
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      ),
+                      onClick: () => handleEditSet(set.id),
+                    },
+                    {
+                      label: t('export.exportPdf'),
+                      icon: (
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      ),
+                      onClick: () => handleExportSet(set.id),
+                    },
+                    {
+                      label: t('common.delete'),
+                      icon: (
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      ),
+                      onClick: () => handleDeleteSet(set.id),
+                      danger: true,
+                    },
+                  ]}
+                />
               </div>
             </li>
           ))}
