@@ -90,7 +90,7 @@ export default function ThemeToggle({ className = '' }) {
                   setTheme(option.value);
                   setOpen(false);
                 }}
-                className="whitespace-nowrap px-3 py-1.5 text-xs font-semibold rounded-full transition-colors bg-transparent"
+                className="whitespace-nowrap px-3 py-1.5 text-xs font-semibold rounded-full transition-colors bg-transparent border-none shadow-none focus:outline-none"
                 style={
                   isActive
                     ? { backgroundColor: 'var(--accent)', color: '#ffffff' }

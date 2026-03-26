@@ -37,9 +37,9 @@ export default function LanguageToggle({ className = '' }) {
             <button
               key={lang.code}
               onClick={() => { i18n.changeLanguage(lang.code); setOpen(false); }}
-              className={`w-full flex items-center gap-2 p-2 text-sm transition-colors bg-transparent ${
+              className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors bg-transparent border-none shadow-none focus:outline-none rounded-md hover:bg-gray-100 ${
                 lang.code === currentLang
-                  ? 'text-blue-600'
+                  ? 'text-blue-600 bg-blue-50/50'
                   : 'text-gray-700'
               }`}
             >
