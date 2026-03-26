@@ -5,7 +5,7 @@
  */
 
 const prisma = require('../lib/prisma');
-const { queryAndAnswer } = require('../services/rag.service');
+const { queryAndAnswer, queryAndStream } = require('../services/rag.service');
 const { sendMessageSchema, addDocumentsSchema } = require('../validators/chat.validator');
 const { NotFoundError, AuthorizationError, ValidationError } = require('../middleware/errorHandler');
 const { asyncHandler } = require('../middleware/errorHandler');
@@ -364,8 +364,210 @@ const addDocuments = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * Send a message with streaming response (SSE)
+ * POST /api/v1/classrooms/:classroomId/chat/messages/stream
+ */
+const sendMessageStream = async (req, res) => {
+  try {
+    const { classroomId } = req.params;
+    const data = sendMessageSchema.parse(req.body);
+
+    const classroom = await verifyClassroomAccess(classroomId, req.user.id);
+    const classroomDocIds = new Set(classroom.documents.map((d) => d.id));
+
+    // Verify all provided documentIds exist in this classroom
+    if (data.documentIds.length > 0) {
+      for (const docId of data.documentIds) {
+        if (!classroomDocIds.has(docId)) {
+          return res.status(404).json({
+            success: false,
+            error: { message: `Document ${docId} not found in this classroom` },
+          });
+        }
+      }
+    }
+
+    // Check token limits
+    const tierCheck = await canUseChat(req.user.id, req.user.tier);
+    if (!tierCheck.allowed) {
+      return res.status(429).json({
+        success: false,
+        error: { message: tierCheck.reason },
+      });
+    }
+
+    let session;
+    let conversationHistory = [];
+    let mergedDocIds = data.documentIds;
+    const isNewSession = !data.sessionId;
+
+    if (data.sessionId) {
+      // Load existing session with messages and documents
+      session = await prisma.chatSession.findUnique({
+        where: { id: data.sessionId },
+        include: {
+          messages: {
+            orderBy: { createdAt: 'asc' },
+            select: { role: true, content: true },
+          },
+          documents: {
+            select: { id: true },
+          },
+        },
+      });
+
+      if (!session) {
+        return res.status(404).json({
+          success: false,
+          error: { message: 'Chat session not found' },
+        });
+      }
+      if (session.userId !== req.user.id || session.classroomId !== classroomId) {
+        return res.status(403).json({
+          success: false,
+          error: { message: 'You do not have access to this session' },
+        });
+      }
+
+      conversationHistory = session.messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+
+      const existingDocIds = new Set(session.documents.map((d) => d.id));
+      const newDocIds = data.documentIds.filter((id) => !existingDocIds.has(id));
+      mergedDocIds = [...existingDocIds, ...newDocIds];
+
+      if (newDocIds.length > 0) {
+        await prisma.chatSession.update({
+          where: { id: session.id },
+          data: {
+            documents: {
+              connect: newDocIds.map((id) => ({ id })),
+            },
+          },
+        });
+      }
+    } else {
+      session = await prisma.chatSession.create({
+        data: {
+          userId: req.user.id,
+          classroomId,
+          documents: {
+            connect: data.documentIds.map((id) => ({ id })),
+          },
+        },
+      });
+    }
+
+    // Set SSE headers
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    });
+
+    // Handle client disconnect
+    let clientDisconnected = false;
+    req.on('close', () => {
+      clientDisconnected = true;
+    });
+
+    // Get the streaming response
+    const { stream, sources, hasRelevantContext, getStats } = await queryAndStream({
+      question: data.question,
+      classroomId,
+      documentIds: mergedDocIds,
+      conversationHistory,
+      tier: req.user.tier,
+    });
+
+    // Stream chunks to client
+    let fullText = '';
+    for await (const { chunk } of stream) {
+      if (clientDisconnected) break;
+      fullText += chunk;
+      res.write(`data: ${JSON.stringify({ type: 'chunk', text: chunk })}\n\n`);
+    }
+
+    if (clientDisconnected) {
+      logger.info('Client disconnected during streaming');
+      return;
+    }
+
+    // Get final stats from the completed stream
+    const stats = getStats();
+
+    // Save messages to DB
+    await prisma.chatMessage.createMany({
+      data: [
+        {
+          sessionId: session.id,
+          role: 'USER',
+          content: data.question,
+        },
+        {
+          sessionId: session.id,
+          role: 'ASSISTANT',
+          content: fullText,
+          sources: sources?.length > 0 ? sources : undefined,
+          hasRelevantContext,
+        },
+      ],
+    });
+
+    // Touch updatedAt on session
+    await prisma.chatSession.update({
+      where: { id: session.id },
+      data: { updatedAt: new Date() },
+    });
+
+    // Record token usage
+    if (stats.tokensUsed > 0) {
+      await recordTokenUsage(req.user.id, stats.tokensUsed, stats.weightedTokens);
+      logger.info(`Recorded ${stats.weightedTokens ?? stats.tokensUsed} weighted tokens for user ${req.user.id}`);
+    }
+
+    // Generate title for new sessions (fire-and-forget, don't block stream end)
+    let sessionTitle = null;
+    if (isNewSession && fullText) {
+      sessionTitle = await generateSessionTitle(session.id, data.question, fullText, req.user.tier);
+    }
+
+    // Send completion event
+    res.write(`data: ${JSON.stringify({
+      type: 'done',
+      sessionId: session.id,
+      sessionTitle,
+      sources,
+      hasRelevantContext,
+      tokensUsed: stats.tokensUsed,
+      tokensRemaining: tierCheck.remaining - stats.tokensUsed,
+    })}\n\n`);
+
+    res.end();
+  } catch (error) {
+    logger.error('sendMessageStream error', { error: error.message, stack: error.stack });
+
+    // If headers haven't been sent yet, respond normally
+    if (!res.headersSent) {
+      return res.status(500).json({
+        success: false,
+        error: { message: error.message || 'Streaming failed' },
+      });
+    }
+
+    // If already streaming, send error event and close
+    res.write(`data: ${JSON.stringify({ type: 'error', message: error.message || 'Streaming failed' })}\n\n`);
+    res.end();
+  }
+};
+
 module.exports = {
   sendMessage,
+  sendMessageStream,
   listSessions,
   getSession,
   deleteSession,

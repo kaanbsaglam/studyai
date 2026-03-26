@@ -69,6 +69,66 @@ class OpenAIProvider extends LLMProvider {
     }
   }
 
+  /**
+   * Stream text using OpenAI GPT models (async generator)
+   * @param {string} prompt - The input prompt
+   * @param {object} options - Generation options
+   * @param {string} options.model - Model to use (required)
+   * @yields {{ chunk: string }}
+   * @returns {AsyncGenerator<{chunk: string}, {tokensUsed: number}>}
+   */
+  async *generateTextStream(prompt, options = {}) {
+    if (!this.client) {
+      throw new Error('OpenAI provider is not configured. OPENAI_LLM_SECRET_KEY is missing.');
+    }
+
+    if (!options.model) {
+      throw new Error('OpenAIProvider requires a model name');
+    }
+
+    const model = options.model;
+
+    logger.debug('OpenAI generateTextStream called', { model, promptLength: prompt.length });
+
+    try {
+      const stream = await this.client.chat.completions.create({
+        model,
+        messages: [
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        stream: true,
+        stream_options: { include_usage: true },
+      });
+
+      let tokensUsed = 0;
+
+      for await (const chunk of stream) {
+        const delta = chunk.choices?.[0]?.delta?.content;
+        if (delta) {
+          yield { chunk: delta };
+        }
+        // The final chunk includes usage info
+        if (chunk.usage) {
+          tokensUsed = chunk.usage.total_tokens || 0;
+        }
+      }
+
+      logger.debug('OpenAI streaming completed', { model, tokensUsed });
+
+      return { tokensUsed };
+    } catch (error) {
+      logger.error('OpenAI generateTextStream failed', {
+        model,
+        error: error.message,
+        code: error.code,
+      });
+      throw error;
+    }
+  }
+
   getName() {
     return 'openai';
   }

@@ -25,6 +25,18 @@ class LLMProvider {
   }
 
   /**
+   * Stream text from a prompt (async generator)
+   * @param {string} prompt - The input prompt
+   * @param {object} options - Generation options
+   * @param {string} [options.model] - Model to use (provider-specific)
+   * @yields {{ chunk: string }} - Text chunks as they arrive
+   * @returns {AsyncGenerator<{chunk: string}, {tokensUsed: number}>}
+   */
+  async *generateTextStream(prompt, options = {}) {
+    throw new Error('generateTextStream() must be implemented by subclass');
+  }
+
+  /**
    * Get the provider name
    * @returns {string}
    */

@@ -21,6 +21,9 @@ export default function ChatPanel({
   const [loadingSession, setLoadingSession] = useState(false);
   const messagesEndRef = useRef(null);
   const prevSessionIdRef = useRef(sessionId);
+  const wordQueueRef = useRef([]);
+  const dripIntervalRef = useRef(null);
+  const pendingDoneRef = useRef(null); // stores 'done' event data until drip finishes
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -29,6 +32,13 @@ export default function ChatPanel({
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Cleanup drip interval on unmount
+  useEffect(() => {
+    return () => {
+      if (dripIntervalRef.current) clearInterval(dripIntervalRef.current);
+    };
+  }, []);
 
   // Load session messages when sessionId changes
   const loadSession = useCallback(async (sid) => {
@@ -62,6 +72,79 @@ export default function ChatPanel({
     }
   }, [sessionId, loadSession]);
 
+  /**
+   * Finalize the message after drip is complete
+   */
+  const finalizeMessage = (doneEvent) => {
+    setMessages((prev) => {
+      const updated = [...prev];
+      const lastMsg = updated[updated.length - 1];
+      if (lastMsg && lastMsg.role === 'assistant') {
+        updated[updated.length - 1] = {
+          ...lastMsg,
+          isStreaming: false,
+          sources: doneEvent.sources,
+          hasRelevantContext: doneEvent.hasRelevantContext,
+        };
+      }
+      return updated;
+    });
+
+    if (!sessionId && doneEvent.sessionId) {
+      prevSessionIdRef.current = doneEvent.sessionId;
+      onSessionChange?.(doneEvent.sessionId);
+      onDocumentsLocked?.();
+    }
+
+    setLoading(false);
+  };
+
+  /**
+   * Drip words one-by-one from the queue into the streaming message.
+   * When queue empties and stream is done, finalize naturally.
+   */
+  const startDrip = () => {
+    if (dripIntervalRef.current) return; // already running
+    dripIntervalRef.current = setInterval(() => {
+      if (wordQueueRef.current.length === 0) {
+        clearInterval(dripIntervalRef.current);
+        dripIntervalRef.current = null;
+
+        // If stream already ended, finalize now that drip is done
+        if (pendingDoneRef.current) {
+          const doneEvent = pendingDoneRef.current;
+          pendingDoneRef.current = null;
+          finalizeMessage(doneEvent);
+        }
+        return;
+      }
+      const word = wordQueueRef.current.shift();
+      setMessages((prev) => {
+        const updated = [...prev];
+        const lastMsg = updated[updated.length - 1];
+        if (lastMsg && lastMsg.role === 'assistant' && lastMsg.isStreaming) {
+          updated[updated.length - 1] = {
+            ...lastMsg,
+            content: lastMsg.content + word,
+          };
+        }
+        return updated;
+      });
+    }, 30);
+  };
+
+  /**
+   * Stop drip and clear queue (only used for errors).
+   */
+  const stopDrip = () => {
+    if (dripIntervalRef.current) {
+      clearInterval(dripIntervalRef.current);
+      dripIntervalRef.current = null;
+    }
+    wordQueueRef.current = [];
+    pendingDoneRef.current = null;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!input.trim() || loading) return;
@@ -73,41 +156,127 @@ export default function ChatPanel({
     setMessages((prev) => [...prev, { role: 'user', content: question }]);
     setLoading(true);
 
+    // Reset state
+    wordQueueRef.current = [];
+    pendingDoneRef.current = null;
+
+    // Add placeholder assistant message for streaming
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: 'assistant',
+        content: '',
+        isStreaming: true,
+      },
+    ]);
+
     try {
-      const response = await api.post(`/classrooms/${classroomId}/chat/messages`, {
-        question,
-        sessionId: sessionId || undefined,
-        documentIds,
-      });
-
-      const { sessionId: returnedSessionId, answer, sources, hasRelevantContext } = response.data.data;
-
-      // Add assistant message
-      setMessages((prev) => [
-        ...prev,
+      const token = localStorage.getItem('token');
+      const response = await fetch(
+        `${api.defaults.baseURL}/classrooms/${classroomId}/chat/messages/stream`,
         {
-          role: 'assistant',
-          content: answer,
-          sources,
-          hasRelevantContext,
-        },
-      ]);
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
+          body: JSON.stringify({
+            question,
+            sessionId: sessionId || undefined,
+            documentIds,
+          }),
+        }
+      );
 
-      // If this was a new session, notify parent
-      if (!sessionId && returnedSessionId) {
-        prevSessionIdRef.current = returnedSessionId;
-        onSessionChange?.(returnedSessionId);
-        onDocumentsLocked?.();
+      // If the response is not SSE (error before streaming started), handle as JSON
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error?.message || t('chatPanel.failedToGetAnswer'));
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+
+        // Process complete SSE lines
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+
+          try {
+            const event = JSON.parse(line.slice(6));
+
+            if (event.type === 'chunk') {
+              // Split chunk into words and queue for smooth drip
+              const words = event.text.split(/(\s+)/); // preserve whitespace
+              wordQueueRef.current.push(...words);
+              startDrip();
+            } else if (event.type === 'done') {
+              // Store done event — drip will finalize when queue empties
+              pendingDoneRef.current = event;
+
+              // If queue is already empty, finalize immediately
+              if (wordQueueRef.current.length === 0 && !dripIntervalRef.current) {
+                pendingDoneRef.current = null;
+                finalizeMessage(event);
+              }
+            } else if (event.type === 'error') {
+              throw new Error(event.message);
+            }
+          } catch (parseErr) {
+            // If it's our own rethrown error, propagate it
+            if (parseErr.message && !parseErr.message.includes('JSON')) {
+              throw parseErr;
+            }
+            // Otherwise ignore malformed SSE line
+          }
+        }
+      }
+
+      // Safety: if stream ended without a done event, mark streaming as done
+      if (!pendingDoneRef.current) {
+        setMessages((prev) => {
+          const updated = [...prev];
+          const lastMsg = updated[updated.length - 1];
+          if (lastMsg?.isStreaming) {
+            updated[updated.length - 1] = { ...lastMsg, isStreaming: false };
+          }
+          return updated;
+        });
       }
     } catch (err) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: err.response?.data?.error?.message || t('chatPanel.failedToGetAnswer'),
-          isError: true,
-        },
-      ]);
+      // Stop drip on error
+      stopDrip();
+      // On error, update the streaming message to show error or add new error message
+      setMessages((prev) => {
+        const updated = [...prev];
+        const lastMsg = updated[updated.length - 1];
+        if (lastMsg && lastMsg.role === 'assistant' && (lastMsg.isStreaming || !lastMsg.content)) {
+          // Replace the empty/streaming placeholder with error
+          updated[updated.length - 1] = {
+            role: 'assistant',
+            content: err.message || t('chatPanel.failedToGetAnswer'),
+            isError: true,
+            isStreaming: false,
+          };
+        } else {
+          // Add error as new message
+          updated.push({
+            role: 'assistant',
+            content: err.message || t('chatPanel.failedToGetAnswer'),
+            isError: true,
+          });
+        }
+        return updated;
+      });
     } finally {
       setLoading(false);
     }
@@ -209,13 +378,21 @@ export default function ChatPanel({
                   {message.role === 'user' || message.isError ? (
                     <p className="whitespace-pre-wrap">{message.content}</p>
                   ) : (
-                    <MarkdownRenderer className="prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-pre:my-2 prose-code:bg-gray-200 prose-code:px-1 prose-code:rounded prose-pre:bg-gray-800 prose-pre:text-gray-100">
-                      {message.content}
-                    </MarkdownRenderer>
+                    <>
+                      <MarkdownRenderer className="prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-pre:my-2 prose-code:bg-gray-200 prose-code:px-1 prose-code:rounded prose-pre:bg-gray-800 prose-pre:text-gray-100">
+                        {message.content}
+                      </MarkdownRenderer>
+                      {message.isStreaming && (
+                        <span
+                          className="inline-block w-2 h-4 bg-gray-500 ml-0.5 align-middle"
+                          style={{ animation: 'blink 1s step-end infinite' }}
+                        />
+                      )}
+                    </>
                   )}
 
-                  {/* Sources */}
-                  {message.sources?.length > 0 && (
+                  {/* Sources - only show when not streaming */}
+                  {!message.isStreaming && message.sources?.length > 0 && (
                     <div className="mt-2 pt-2 border-t border-gray-200">
                       <p className="text-xs text-gray-500 mb-1">{t('chatPanel.sources')}</p>
                       <div className="flex flex-wrap gap-1">
@@ -249,8 +426,8 @@ export default function ChatPanel({
             ))
           )}
 
-          {/* Loading indicator */}
-          {loading && (
+          {/* Loading indicator - only when waiting for first chunk */}
+          {loading && !messages.some((m) => m.isStreaming) && (
             <div className="flex justify-start">
               <div className="bg-gray-100 rounded-lg px-4 py-2">
                 <div className="flex items-center gap-2">

@@ -2,6 +2,7 @@
  * Chat Routes
  *
  * POST   /api/v1/classrooms/:classroomId/chat/messages                          - Send a message
+ * POST   /api/v1/classrooms/:classroomId/chat/messages/stream                   - Send a message (streaming SSE)
  * GET    /api/v1/classrooms/:classroomId/chat/sessions                          - List sessions
  * GET    /api/v1/classrooms/:classroomId/chat/sessions/:sessionId               - Get session
  * DELETE /api/v1/classrooms/:classroomId/chat/sessions/:sessionId               - Delete session
@@ -11,6 +12,7 @@
 const express = require('express');
 const {
   sendMessage,
+  sendMessageStream,
   listSessions,
   getSession,
   deleteSession,
@@ -31,5 +33,6 @@ router.patch('/classrooms/:classroomId/chat/sessions/:sessionId/documents', addD
 
 // Messages
 router.post('/classrooms/:classroomId/chat/messages', sendMessage);
+router.post('/classrooms/:classroomId/chat/messages/stream', sendMessageStream);
 
 module.exports = router;

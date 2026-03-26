@@ -11,7 +11,7 @@
  */
 
 const { generateEmbedding, querySimilar } = require('./embedding.service');
-const { generateWithFallback } = require('./llm.service');
+const { generateWithFallback, generateStreamWithFallback } = require('./llm.service');
 const llmConfig = require('../config/llm.config');
 const { gatherDocumentsContentStructured } = require('./documentContent.service');
 const ragConfig = require('../config/rag.config');
@@ -266,5 +266,62 @@ Please provide a helpful answer:`);
 
 module.exports = {
   queryAndAnswer,
+  queryAndStream,
   SIMILARITY_THRESHOLD,
 };
+
+/**
+ * Query documents and stream the answer (async generator version)
+ * Same context gathering as queryAndAnswer, but returns a stream for SSE.
+ *
+ * @param {Object} params - Same as queryAndAnswer
+ * @returns {Promise<{stream: AsyncGenerator, sources: object[], hasRelevantContext: boolean, getStats: function}>}
+ */
+async function queryAndStream({ question, classroomId, documentIds = [], conversationHistory = [], tier = 'FREE' }) {
+  logger.info(`RAG stream query: "${question}" in classroom ${classroomId}`, {
+    selectedDocs: documentIds.length,
+    historyLength: conversationHistory.length,
+  });
+
+  // Gather all context (same as queryAndAnswer)
+  const { selectedDocsContext, selectedDocsSources } = await getSelectedDocumentsContext(documentIds);
+  const { ragContext, ragSources } = await getRAGContext(question, classroomId, documentIds);
+
+  // Trim conversation history if too long
+  const trimmedHistory = conversationHistory.slice(-MAX_CONVERSATION_HISTORY);
+
+  // Build the prompt
+  const prompt = buildPrompt({
+    question,
+    selectedDocsContext,
+    ragContext,
+    conversationHistory: trimmedHistory,
+  });
+
+  // Combine and deduplicate sources
+  const allSources = [...selectedDocsSources, ...ragSources];
+  const seenDocIds = new Set();
+  const uniqueSources = allSources.filter((s) => {
+    if (seenDocIds.has(s.documentId)) return false;
+    seenDocIds.add(s.documentId);
+    return true;
+  });
+
+  const hasRelevantContext = selectedDocsContext.length > 0 || ragContext.length > 0;
+
+  // Get the stream from LLM
+  const models = llmConfig.tiers[tier]?.chat || llmConfig.tiers.FREE.chat;
+
+  // Stats will be populated by the onComplete callback
+  let stats = { text: '', tokensUsed: 0, weightedTokens: 0 };
+  const stream = generateStreamWithFallback(prompt, models, (finalStats) => {
+    stats = finalStats;
+  });
+
+  return {
+    stream,
+    sources: uniqueSources,
+    hasRelevantContext,
+    getStats: () => stats,
+  };
+}

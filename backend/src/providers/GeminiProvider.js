@@ -61,6 +61,54 @@ class GeminiProvider extends LLMProvider {
     }
   }
 
+  /**
+   * Stream text using Google Gemini models (async generator)
+   * @param {string} prompt - The input prompt
+   * @param {object} options - Generation options
+   * @param {string} options.model - Model to use (required)
+   * @yields {{ chunk: string }}
+   * @returns {AsyncGenerator<{chunk: string}, {tokensUsed: number}>}
+   */
+  async *generateTextStream(prompt, options = {}) {
+    if (!this.genAI) {
+      throw new Error('Gemini provider is not configured. GEMINI_API_KEY is missing.');
+    }
+
+    if (!options.model) {
+      throw new Error('GeminiProvider requires a model name');
+    }
+
+    const model = options.model;
+
+    logger.debug('Gemini generateTextStream called', { model, promptLength: prompt.length });
+
+    try {
+      const genModel = this.genAI.getGenerativeModel({ model });
+      const result = await genModel.generateContentStream(prompt);
+
+      for await (const chunk of result.stream) {
+        const text = chunk.text();
+        if (text) {
+          yield { chunk: text };
+        }
+      }
+
+      // Get final aggregated response for token usage
+      const aggregated = await result.response;
+      const tokensUsed = aggregated.usageMetadata?.totalTokenCount || 0;
+
+      logger.debug('Gemini streaming completed', { model, tokensUsed });
+
+      return { tokensUsed };
+    } catch (error) {
+      logger.error('Gemini generateTextStream failed', {
+        model,
+        error: error.message,
+      });
+      throw error;
+    }
+  }
+
   getName() {
     return 'gemini';
   }
