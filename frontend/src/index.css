@@ -74,6 +74,8 @@
 	--accent-strong: #3c5873;
 	--hero-glow: radial-gradient(circle at center, rgba(148, 163, 184, 0.25) 0%, rgba(16, 22, 34, 0) 70%);
 	--shadow: 0 5px 50px -12px rgba(0, 0, 0, 0.201);
+	--link-color: #4f46e5;
+	--link-hover-color: #4338ca;
 	/* Button variables */
 	--btn-bg: #ffffff;
 	--btn-bg-hover: #f1f5f9;
@@ -96,33 +98,35 @@
 }
 
 .dark {
-	--page-bg: #1a2029;
-	--card-bg: #262f41;
-	--card-border: #727272;
-	--input-bg: #0f141c;
-	--input-border: #324467;
-	--text-primary: #ffffff;
-	--text-secondary: #babdc1;
-	--text-muted: #8fa1b9;
-	--accent: #4a6db4;
-	--accent-soft: rgba(43, 108, 238, 0.18);
-	--accent-strong: #3c5873;
-	--hero-glow: radial-gradient(circle at center, rgba(148, 163, 184, 0.25) 0%, rgba(16, 22, 34, 0) 70%);
+	--page-bg: #121212;
+	--card-bg: #1E1E1E;
+	--card-border: transparent;
+	--input-bg: #121212;
+	--input-border: #424242;
+	--text-primary: #E0E0E0;
+	--text-secondary: #A0A0A0;
+	--text-muted: #757575;
+	--accent: #7BC9FE;
+	--accent-soft: rgba(123, 201, 254, 0.15);
+	--accent-strong: #3b82f6;
+	--hero-glow: radial-gradient(circle at center, rgba(123, 201, 254, 0.15) 0%, rgba(18, 18, 18, 0) 70%);
 	--shadow: 0 5px 50px -12px rgba(0, 0, 0, 0.5);
+	--link-color: #7BC9FE;
+	--link-hover-color: #BAE6FD;
 	/* Button variables */
-	--btn-bg: #2a3040;
-	--btn-bg-hover: #343c4e;
-	--btn-text: #e2e8f0;
-	--btn-border: #3e4a63;
-	--btn-border-hover: var(--accent);
+	--btn-bg: #2C2C2C;
+	--btn-bg-hover: #383838;
+	--btn-text: #E0E0E0;
+	--btn-border: #444444;
+	--btn-border-hover: #555555;
 	--btn-shadow: none;
-	--btn-shadow-hover: 0 1px 3px rgba(0, 0, 0, 0.15);
-	--btn-focus-ring: rgba(59, 130, 246, 0.45);
+	--btn-shadow-hover: 0 1px 3px rgba(0, 0, 0, 0.3);
+	--btn-focus-ring: rgba(123, 201, 254, 0.45);
 	--btn-primary-bg: var(--accent);
 	--btn-primary-bg-hover: var(--accent-strong);
-	--btn-primary-text: #ffffff;
+	--btn-primary-text: #121212;
 	--btn-primary-shadow: none;
-	--btn-primary-shadow-hover: 0 1px 4px rgba(43, 108, 238, 0.25);
+	--btn-primary-shadow-hover: 0 1px 4px rgba(123, 201, 254, 0.3);
 	--btn-radius: 10px;
 }
 
@@ -140,6 +144,8 @@
 	--accent-strong: #6f4a28;
 	--hero-glow: radial-gradient(circle at center, rgba(181, 139, 96, 0.35) 0%, rgba(16, 22, 34, 0) 70%);
 	--shadow: 0 5px 40px -16px rgba(88, 64, 42, 0.2);
+	--link-color: #8b5e34;
+	--link-hover-color: #6f4a28;
 	/* Button variables */
 	--btn-bg: #fbf8f1;
 	--btn-bg-hover: #f0e8d8;
@@ -160,11 +166,12 @@
 @layer base {
 	a {
 		font-weight: 500;
-		color: #646cff;
+		color: var(--link-color);
 		text-decoration: inherit;
+		transition: color 0.2s ease;
 	}
 	a:hover {
-		color: #535bf2;
+		color: var(--link-hover-color);
 	}
 
 	body {
@@ -263,12 +270,6 @@
 		background-color: var(--btn-primary-bg-hover);
 		border-color: var(--btn-primary-bg-hover);
 	}
-
-	@media (prefers-color-scheme: light) {
-		a:hover {
-			color: #747bff;
-		}
-	}
 }
 
 @layer utilities {
@@ -320,6 +321,7 @@
 	.text-blue-800 {
 		color: var(--accent) !important;
 	}
+	.border-gray-100,
 	.border-gray-200 {
 		border-color: var(--card-border) !important;
 	}
@@ -330,6 +332,7 @@
 	.border-blue-700 {
 		border-color: var(--accent) !important;
 	}
+	.divide-gray-100 > :not([hidden]) ~ :not([hidden]),
 	.divide-gray-200 > :not([hidden]) ~ :not([hidden]) {
 		border-color: var(--card-border) !important;
 	}

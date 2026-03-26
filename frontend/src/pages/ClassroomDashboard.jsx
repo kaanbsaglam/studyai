@@ -148,7 +148,7 @@ export default function ClassroomDashboard() {
 
       {/* Recent Documents */}
       <div className="bg-white rounded-lg shadow">
-        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-transparent flex items-center justify-between">
           <div>
             <h3 className="text-lg font-medium text-gray-900">{t('classroomDashboard.recentDocuments')}</h3>
             <p className="text-sm text-gray-500">{t('classroomDashboard.showingLatest')}</p>
@@ -203,7 +203,7 @@ export default function ClassroomDashboard() {
             <p className="text-sm">{t('classroomDashboard.uploadFromDocuments')}</p>
           </div>
         ) : (
-          <ul className="divide-y divide-gray-200">
+          <ul className="divide-y divide-gray-200 dark:divide-transparent">
             {recentDocuments.map((doc) => {
               const isAudio = doc.mimeType?.startsWith('audio/');
               const isProcessing = doc.status === 'PENDING' || doc.status === 'PROCESSING';

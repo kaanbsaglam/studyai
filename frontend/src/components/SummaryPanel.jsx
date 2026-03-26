@@ -187,7 +187,7 @@ export default function SummaryPanel({
   if (activeSummary) {
     return (
       <div className={compact ? 'flex flex-col h-full' : 'bg-white rounded-lg shadow'}>
-        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-transparent flex justify-between items-center">
           <div>
             <h3 className="text-lg font-medium text-gray-900">{activeSummary.title}</h3>
             <p className="text-sm text-gray-500">
@@ -264,7 +264,7 @@ export default function SummaryPanel({
   if (showGenerateForm) {
     return (
       <div className={compact ? 'flex flex-col h-full' : 'bg-white rounded-lg shadow'}>
-        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-transparent flex justify-between items-center">
           <h3 className="text-lg font-medium text-gray-900">{t('summaryPanel.generateSummary')}</h3>
           <button
             onClick={() => setShowGenerateForm(false)}
@@ -401,7 +401,7 @@ export default function SummaryPanel({
   return (
     <div className={containerClass}>
       {!compact && (
-        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-transparent flex justify-between items-center">
           <div>
             <h3 className="text-lg font-medium text-gray-900">{t('summaryPanel.title')}</h3>
             <p className="text-sm text-gray-500">{t('summaryPanel.subtitle')}</p>
@@ -424,7 +424,7 @@ export default function SummaryPanel({
       )}
 
       {compact && (
-        <div className="p-3 border-b border-gray-200 flex gap-2">
+        <div className="p-3 border-b border-gray-200 dark:border-transparent flex gap-2">
           <button
             onClick={() => { setEditingSummary(null); setShowManualModal(true); }}
             className="flex-1 px-4 py-2 border border-blue-600 text-blue-600 rounded-full font-medium hover:bg-blue-50 text-sm"
@@ -465,7 +465,7 @@ export default function SummaryPanel({
           <p className="text-sm">{t('summaryPanel.generateHint')}</p>
         </div>
       ) : (
-        <ul className="divide-y divide-gray-200 flex-1 overflow-auto">
+        <ul className="divide-y divide-gray-200 dark:divide-transparent flex-1 overflow-auto">
           {summaries.map((summary) => (
             <li key={summary.id} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50">
               <div className="flex-1 cursor-pointer" onClick={() => handleViewSummary(summary.id)}>

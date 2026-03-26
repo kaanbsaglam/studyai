@@ -257,7 +257,7 @@ export default function QuizPanel({
 
     return (
       <div className={compact ? 'flex flex-col h-full' : 'bg-white rounded-lg shadow'}>
-        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-transparent flex justify-between items-center">
           <h3 className="text-lg font-medium text-gray-900">{t('quizPanel.quizComplete')}</h3>
           <button onClick={() => setActiveQuiz(null)} className="text-gray-500 hover:text-gray-700">
             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -295,7 +295,7 @@ export default function QuizPanel({
 
           {/* Attempt History */}
           {attempts.length > 0 && (
-            <div className="border-t border-gray-200 pt-6">
+            <div className="border-t border-gray-200 dark:border-transparent pt-6">
               <h4 className="text-sm font-medium text-gray-700 mb-3">{t('quizPanel.previousAttempts')}</h4>
               <div className="space-y-2">
                 {attempts.slice(0, 5).map((attempt, idx) => {
@@ -334,7 +334,7 @@ export default function QuizPanel({
 
     return (
       <div className={compact ? 'flex flex-col h-full' : 'bg-white rounded-lg shadow'}>
-        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-transparent flex justify-between items-center">
           <div>
             <h3 className="text-lg font-medium text-gray-900">{activeQuiz.title}</h3>
             <p className="text-sm text-gray-500">
@@ -432,7 +432,7 @@ export default function QuizPanel({
   if (showGenerateForm) {
     return (
       <div className={compact ? 'flex flex-col h-full' : 'bg-white rounded-lg shadow'}>
-        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-transparent flex justify-between items-center">
           <h3 className="text-lg font-medium text-gray-900">{t('quizPanel.generateQuiz')}</h3>
           <button onClick={() => setShowGenerateForm(false)} className="text-gray-500 hover:text-gray-700">
             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -555,7 +555,7 @@ export default function QuizPanel({
   return (
     <div className={containerClass}>
       {!compact && (
-        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-transparent flex justify-between items-center">
           <div>
             <h3 className="text-lg font-medium text-gray-900">{t('quizPanel.title')}</h3>
             <p className="text-sm text-gray-500">{t('quizPanel.subtitle')}</p>
@@ -581,7 +581,7 @@ export default function QuizPanel({
       )}
 
       {compact && (
-        <div className="p-3 border-b border-gray-200 flex gap-2">
+        <div className="p-3 border-b border-gray-200 dark:border-transparent flex gap-2">
           <button
             onClick={() => {
               setEditingQuiz(null);
@@ -625,7 +625,7 @@ export default function QuizPanel({
           <p className="text-sm">{t('quizPanel.generateToStart')}</p>
         </div>
       ) : (
-        <ul className="divide-y divide-gray-200 flex-1 overflow-auto">
+        <ul className="divide-y divide-gray-200 dark:divide-transparent flex-1 overflow-auto">
           {quizSets.map((quiz) => (
             <li key={quiz.id} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50">
               <div className="flex-1 cursor-pointer" onClick={() => handleViewQuiz(quiz.id)}>

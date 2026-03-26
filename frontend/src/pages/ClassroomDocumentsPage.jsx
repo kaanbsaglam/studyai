@@ -175,7 +175,7 @@ export default function ClassroomDocumentsPage() {
 
       <div className="bg-white rounded-lg shadow">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-200 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-transparent flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <h3 className="text-lg font-medium text-gray-900">{t('classroomDocuments.title')}</h3>
             <p className="text-sm text-gray-500">{t('classroomDocuments.subtitle')}</p>
@@ -304,7 +304,7 @@ function DocumentList({ documents, allEmpty, id, t, formatFileSize, getStatusBad
   }
 
   return (
-    <ul className="divide-y divide-gray-200">
+    <ul className="divide-y divide-gray-200 dark:divide-transparent">
       {documents.map((doc) => (
         <li key={doc.id} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50">
           <Link
@@ -364,7 +364,7 @@ function AudioList({
   }
 
   return (
-    <ul className="divide-y divide-gray-200">
+    <ul className="divide-y divide-gray-200 dark:divide-transparent">
       {audioFiles.map((doc) => (
         <AudioItem
           key={doc.id}

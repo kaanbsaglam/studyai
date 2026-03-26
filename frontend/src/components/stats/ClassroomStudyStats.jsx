@@ -75,7 +75,7 @@ export default function ClassroomStudyStats({ classroomId }) {
 
       {/* Top documents by time */}
       {hasData && stats.documents?.length > 0 && (
-        <div className="mt-3 pt-3 border-t">
+        <div className="mt-3 pt-3 border-t border-gray-200">
           <div className="text-xs text-gray-500 mb-2">{t('studyStats.mostStudied')}</div>
           <div className="space-y-1">
             {stats.documents.slice(0, 3).map((doc) => (

@@ -176,7 +176,7 @@ export default function FlashcardsPanel({
   if (showGenerateForm) {
     return (
       <div className={compact ? 'flex flex-col h-full' : 'bg-white rounded-lg shadow'}>
-        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-transparent flex justify-between items-center">
           <h3 className="text-lg font-medium text-gray-900">{t('flashcardsPanel.generateFlashcards')}</h3>
           <button
             onClick={() => setShowGenerateForm(false)}
@@ -310,7 +310,7 @@ export default function FlashcardsPanel({
   return (
     <div className={containerClass}>
       {!compact && (
-        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-transparent flex justify-between items-center">
           <div>
             <h3 className="text-lg font-medium text-gray-900">{t('flashcardsPanel.title')}</h3>
             <p className="text-sm text-gray-500">{t('flashcardsPanel.subtitle')}</p>
@@ -336,7 +336,7 @@ export default function FlashcardsPanel({
       )}
 
       {compact && (
-        <div className="p-3 border-b border-gray-200 flex gap-2">
+        <div className="p-3 border-b border-gray-200 dark:border-transparent flex gap-2">
           <button
             onClick={() => {
               setEditingSet(null);
@@ -387,7 +387,7 @@ export default function FlashcardsPanel({
           </p>
         </div>
       ) : (
-        <ul className="divide-y divide-gray-200 flex-1 overflow-auto">
+        <ul className="divide-y divide-gray-200 dark:divide-transparent flex-1 overflow-auto">
           {flashcardSets.map((set) => (
             <li key={set.id} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50">
               <div

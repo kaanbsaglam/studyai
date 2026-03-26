@@ -140,7 +140,7 @@ export default function ClassroomLayout() {
       </nav>
 
       {/* Sub Navigation */}
-      <div className="bg-white border-b">
+      <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="flex gap-1 -mb-px">
             {navItems.map((item) => (
