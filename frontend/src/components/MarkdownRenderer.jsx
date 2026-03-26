@@ -27,6 +27,28 @@ const markdownComponents = {
       {children}
     </mark>
   ),
+  // Tailwind base reset removes list styles, so we set them explicitly for markdown output.
+  ul: ({ children }) => (
+    <ul
+      className="my-3 list-disc pl-6"
+      style={{ color: 'var(--text-primary)' }}
+    >
+      {children}
+    </ul>
+  ),
+  ol: ({ children }) => (
+    <ol
+      className="my-3 list-decimal pl-6"
+      style={{ color: 'var(--text-primary)' }}
+    >
+      {children}
+    </ol>
+  ),
+  li: ({ children }) => (
+    <li className="my-1 leading-6">
+      {children}
+    </li>
+  ),
   // Ensure horizontal rules render nicely
   hr: () => <hr className="my-4 border-t-2 border-gray-300" />,
   // Tables
