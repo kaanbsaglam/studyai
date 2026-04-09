@@ -6,7 +6,7 @@
 
 module.exports = {
   // Chunks below this similarity score are considered irrelevant
-  similarityThreshold: 0.4,
+  similarityThreshold: 0.7,
 
   // Number of supplementary results to retrieve from Pinecone
   topK: 5,

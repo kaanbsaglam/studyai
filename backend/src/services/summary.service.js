@@ -10,6 +10,7 @@ const { gatherDocumentsContentStructured } = require('./documentContent.service'
 const { generateWithFallback } = require('./llm.service');
 const llmConfig = require('../config/llm.config');
 const { generateWithGenerator } = require('./pipeline.service');
+const { loadPrompt } = require('../prompts/loader');
 
 // Length configurations
 const LENGTH_CONFIG = {
@@ -66,44 +67,18 @@ async function generateSummary({ content, documents, focusTopic, length, isGener
 function buildSummaryPrompt({ content, focusTopic, length, isGeneralKnowledge }) {
   const lengthInfo = LENGTH_CONFIG[length] || LENGTH_CONFIG.medium;
 
-  if (isGeneralKnowledge) {
-    const topic = focusTopic || 'the requested topic';
-    return `You are an expert at creating clear, educational summaries.
-
-Create a ${lengthInfo.description} (approximately ${lengthInfo.words} words) about: "${topic}"
-
-Guidelines:
-- Start with a clear introduction of the topic
-- Cover the most important concepts and key points
-- Use clear, accessible language
-- Organize information logically
-- End with key takeaways or conclusions
-
-Write the summary in a flowing, readable format (not bullet points unless appropriate for the content).
-
-Generate the summary:`;
-  }
-
   const topicInstruction = focusTopic
     ? `Focus specifically on aspects related to: "${focusTopic}".`
     : 'Cover the most important concepts from all the material.';
 
-  return `You are an expert at creating clear, educational summaries.
-
-Based on the following study material, create a ${lengthInfo.description} (approximately ${lengthInfo.words} words).
-${topicInstruction}
-
-Guidelines:
-- Capture the main ideas and key concepts
-- Maintain accuracy to the source material
-- Use clear, accessible language
-- Organize information logically
-- Include important details, examples, or definitions when relevant
-
-Study Material:
-${content}
-
-Write the summary in a flowing, readable format. Generate the summary:`;
+  return loadPrompt('summary/generate', {
+    isGeneralKnowledge,
+    lengthDescription: lengthInfo.description,
+    lengthWords: lengthInfo.words,
+    topic: focusTopic || 'the requested topic',
+    topicInstruction,
+    content,
+  });
 }
 
 /**

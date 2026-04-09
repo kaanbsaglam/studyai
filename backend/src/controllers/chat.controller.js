@@ -13,6 +13,7 @@ const { canUseChat, recordTokenUsage } = require('../services/tier.service');
 const { generateText } = require('../services/llm.service');
 const llmConfig = require('../config/llm.config');
 const logger = require('../config/logger');
+const { loadPrompt } = require('../prompts/loader');
 
 /**
  * Verify classroom ownership and return classroom with ready documents
@@ -65,7 +66,10 @@ async function verifySessionAccess(sessionId, classroomId, userId) {
 async function generateSessionTitle(sessionId, question, answer, tier = 'FREE') {
   try {
     const model = llmConfig.tiers[tier].chatTitle.primary;
-    const prompt = `Generate a very short title (max 6 words) for this conversation. Return ONLY the title, nothing else.\n\nUser: ${question}\nAssistant: ${answer.slice(0, 500)}`;
+    const prompt = loadPrompt('chat/titleGeneration', {
+      question,
+      answerPreview: answer.slice(0, 500),
+    });
     const { text } = await generateText(prompt, { model });
     const title = text.trim().replace(/^["']|["']$/g, '').slice(0, 100);
     await prisma.chatSession.update({

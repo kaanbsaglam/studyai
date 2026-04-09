@@ -17,6 +17,7 @@ const { gatherDocumentsContentStructured } = require('./documentContent.service'
 const ragConfig = require('../config/rag.config');
 const prisma = require('../lib/prisma');
 const logger = require('../config/logger');
+const { loadPrompt } = require('../prompts/loader');
 
 const {
   similarityThreshold: SIMILARITY_THRESHOLD,
@@ -213,55 +214,20 @@ async function getRAGContext(question, classroomId, excludeDocumentIds = []) {
  * Build the chat prompt
  */
 function buildPrompt({ question, selectedDocsContext, ragContext, conversationHistory }) {
-  const parts = [];
-
-  // System instruction
-  parts.push(`You are a helpful study assistant. You help students understand their study materials and answer their questions.
-
-Guidelines:
-- If documents are provided, use them as your primary reference
-- You can also use your general knowledge to provide helpful answers
-- Be educational and explain concepts clearly
-- If you don't know something, say so honestly
-- Keep answers focused and relevant to the question`);
-
-  // Selected documents (primary context)
-  if (selectedDocsContext) {
-    parts.push(`## Study Materials
-
-The following documents have been selected by the student:
-
-${selectedDocsContext}`);
-  }
-
-  // RAG supplementary context
-  if (ragContext) {
-    parts.push(`## Additional Context
-
-Here are some relevant excerpts from other documents in the classroom:
-
-${ragContext}`);
-  }
-
-  // Conversation history
+  // Format conversation history if present
+  let conversationHistoryText = '';
   if (conversationHistory.length > 0) {
-    const historyText = conversationHistory
+    conversationHistoryText = conversationHistory
       .map((msg) => `${msg.role === 'user' ? 'Student' : 'Assistant'}: ${msg.content}`)
       .join('\n\n');
-
-    parts.push(`## Conversation History
-
-${historyText}`);
   }
 
-  // Current question
-  parts.push(`## Current Question
-
-Student: ${question}
-
-Please provide a helpful answer:`);
-
-  return parts.join('\n\n---\n\n');
+  return loadPrompt('chat/system', {
+    question,
+    selectedDocsContext,
+    ragContext,
+    conversationHistory: conversationHistoryText,
+  });
 }
 
 module.exports = {

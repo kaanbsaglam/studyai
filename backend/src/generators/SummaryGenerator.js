@@ -7,6 +7,7 @@
 
 const Generator = require('./Generator');
 const logger = require('../config/logger');
+const { loadPrompt } = require('../prompts/loader');
 
 // Length configurations
 const LENGTH_CONFIG = {
@@ -37,45 +38,20 @@ class SummaryGenerator extends Generator {
       ? `Focus specifically on aspects related to: "${focusTopic}".`
       : 'Cover the most important concepts from all the material.';
 
-    if (depth > 0) {
-      // Intermediate extraction - extract key points as JSON
-      return `Extract the key points and main topics from this content.
-
-${topicInstruction}
-
-Content:
-${content}
-
-Extract up to ${lengthInfo.keyPoints} key points as a JSON object:
-{"keyPoints": ["point 1", "point 2", ...], "mainTopics": ["topic 1", "topic 2", ...]}
-
-Respond with ONLY valid JSON:`;
-    }
-
-    // Depth 0 - final output quality (prose summary)
-    return `You are an expert at creating clear, educational summaries.
-
-Based on the following study material, create a ${lengthInfo.description} (approximately ${lengthInfo.words} words).
-${topicInstruction}
-
-Guidelines:
-- Capture the main ideas and key concepts
-- Maintain accuracy to the source material
-- Use clear, accessible language
-- Organize information logically
-- Include important details, examples, or definitions when relevant
-
-Study Material:
-${content}
-
-Write the summary in a flowing, readable format. Generate the summary:`;
+    return loadPrompt('summary/map', {
+      isIntermediate: depth > 0,
+      topicInstruction,
+      content,
+      keyPoints: lengthInfo.keyPoints,
+      lengthDescription: lengthInfo.description,
+      lengthWords: lengthInfo.words,
+    });
   }
 
   buildReducePrompt(partialResults, params, depth) {
     const { length = 'medium', focusTopic } = params;
     const lengthInfo = LENGTH_CONFIG[length] || LENGTH_CONFIG.medium;
 
-    // Collect all key points from partial results
     const allKeyPoints = [];
     const allTopics = [];
 
@@ -88,51 +64,23 @@ Write the summary in a flowing, readable format. Generate the summary:`;
       }
     }
 
-    // Handle case where no key points were extracted
     if (allKeyPoints.length === 0 && allTopics.length === 0) {
-      return null; // Signal that reduce is not needed
+      return null;
     }
 
     const topicInstruction = focusTopic
       ? `Focus specifically on aspects related to: "${focusTopic}".`
       : '';
 
-    if (depth > 0) {
-      // Still intermediate - consolidate key points
-      return `Consolidate these key points into the most important ${lengthInfo.keyPoints} points.
-
-${topicInstruction}
-
-Key Points:
-${JSON.stringify(allKeyPoints, null, 2)}
-
-Main Topics:
-${JSON.stringify([...new Set(allTopics)], null, 2)}
-
-Respond with ONLY valid JSON:
-{"keyPoints": ["point 1", "point 2", ...], "mainTopics": ["topic 1", "topic 2", ...]}`;
-    }
-
-    // Depth 0 - synthesize into prose
-    return `You are an expert at creating clear, educational summaries.
-
-Synthesize these key points into a ${lengthInfo.description} (approximately ${lengthInfo.words} words).
-
-${topicInstruction}
-
-Key Points:
-${JSON.stringify(allKeyPoints, null, 2)}
-
-Main Topics:
-${JSON.stringify([...new Set(allTopics)], null, 2)}
-
-Guidelines:
-- Create a coherent, flowing narrative
-- Organize by main topics logically
-- Use clear, accessible language
-- Include all important concepts
-
-Write the summary as flowing prose (not bullet points):`;
+    return loadPrompt('summary/reduce', {
+      isIntermediate: depth > 0,
+      topicInstruction,
+      keyPoints: lengthInfo.keyPoints,
+      keyPointsJson: JSON.stringify(allKeyPoints, null, 2),
+      mainTopicsJson: JSON.stringify([...new Set(allTopics)], null, 2),
+      lengthDescription: lengthInfo.description,
+      lengthWords: lengthInfo.words,
+    });
   }
 
   parseResponse(responseText, depth) {

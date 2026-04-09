@@ -10,6 +10,7 @@ const { gatherDocumentsContentStructured } = require('./documentContent.service'
 const { generateWithFallback } = require('./llm.service');
 const llmConfig = require('../config/llm.config');
 const { generateWithGenerator } = require('./pipeline.service');
+const { loadPrompt } = require('../prompts/loader');
 
 /**
  * Generate quiz questions using LLM
@@ -57,61 +58,17 @@ async function generateQuiz({ content, documents, focusTopic, count, isGeneralKn
  * Build the prompt for quiz generation
  */
 function buildQuizPrompt({ content, focusTopic, count, isGeneralKnowledge }) {
-  if (isGeneralKnowledge) {
-    const topic = focusTopic || 'general knowledge';
-    return `You are a quiz creator that makes effective multiple-choice questions for learning.
-
-Create exactly ${count} multiple-choice quiz questions about: "${topic}"
-
-Guidelines:
-- Each question should test understanding, not just memorization
-- Questions should be clear and unambiguous
-- The correct answer should be definitively correct
-- Wrong answers (distractors) should be plausible but clearly incorrect
-- Vary the difficulty from easy to challenging
-- Cover different aspects of the topic
-
-Respond with ONLY a valid JSON array in this exact format, no other text:
-[
-  {
-    "question": "What is...?",
-    "correctAnswer": "The correct answer",
-    "wrongAnswers": ["Wrong answer 1", "Wrong answer 2", "Wrong answer 3"]
-  }
-]
-
-Generate exactly ${count} questions:`;
-  }
-
   const topicInstruction = focusTopic
     ? `Focus specifically on: "${focusTopic}". Only create questions related to this topic.`
     : 'Cover the most important concepts from the material.';
 
-  return `You are a quiz creator that makes effective multiple-choice questions for learning.
-
-Based on the following study material, create exactly ${count} multiple-choice quiz questions.
-${topicInstruction}
-
-Guidelines:
-- Each question should test understanding of the material
-- Questions should be clear and unambiguous
-- The correct answer should be based on the provided content
-- Wrong answers (distractors) should be plausible but clearly incorrect
-- Vary the difficulty from easy to challenging
-
-Study Material:
-${content}
-
-Respond with ONLY a valid JSON array in this exact format, no other text:
-[
-  {
-    "question": "What is...?",
-    "correctAnswer": "The correct answer",
-    "wrongAnswers": ["Wrong answer 1", "Wrong answer 2", "Wrong answer 3"]
-  }
-]
-
-Generate exactly ${count} questions:`;
+  return loadPrompt('quiz/generate', {
+    count,
+    isGeneralKnowledge,
+    topic: focusTopic || 'general knowledge',
+    topicInstruction,
+    content,
+  });
 }
 
 /**

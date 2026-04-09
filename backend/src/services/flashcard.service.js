@@ -10,6 +10,7 @@ const { gatherDocumentsContentStructured } = require('./documentContent.service'
 const { generateWithFallback } = require('./llm.service');
 const llmConfig = require('../config/llm.config');
 const { generateWithGenerator } = require('./pipeline.service');
+const { loadPrompt } = require('../prompts/loader');
 
 /**
  * Generate flashcards using LLM
@@ -57,57 +58,17 @@ async function generateFlashcards({ content, documents, focusTopic, count, isGen
  * Build the prompt for flashcard generation
  */
 function buildFlashcardPrompt({ content, focusTopic, count, isGeneralKnowledge }) {
-  // General knowledge mode (no documents)
-  if (isGeneralKnowledge) {
-    const topic = focusTopic || 'general study topics';
-    return `You are a study assistant that creates effective flashcards for learning.
-
-Create exactly ${count} flashcards about: "${topic}"
-
-Guidelines for good flashcards:
-- Each card should test ONE concept
-- Questions should be clear and specific
-- Answers should be concise but complete
-- Avoid yes/no questions
-- Include a mix of definitions, concepts, and applications
-- Cover fundamental to intermediate level knowledge
-
-Respond with ONLY a valid JSON array of flashcards in this exact format, no other text:
-[
-  {"front": "Question 1?", "back": "Answer 1"},
-  {"front": "Question 2?", "back": "Answer 2"}
-]
-
-Generate exactly ${count} flashcards:`;
-  }
-
-  // Document-based mode
   const topicInstruction = focusTopic
     ? `Focus specifically on the topic: "${focusTopic}". Only create flashcards related to this topic.`
     : 'Cover the most important concepts from the material.';
 
-  return `You are a study assistant that creates effective flashcards for learning.
-
-Based on the following study material, create exactly ${count} flashcards.
-${topicInstruction}
-
-Guidelines for good flashcards:
-- Each card should test ONE concept
-- Questions should be clear and specific
-- Answers should be concise but complete
-- Avoid yes/no questions
-- Include a mix of definitions, concepts, and applications
-
-Study Material:
-${content}
-
-Respond with ONLY a valid JSON array of flashcards in this exact format, no other text:
-[
-  {"front": "Question 1?", "back": "Answer 1"},
-  {"front": "Question 2?", "back": "Answer 2"}
-]
-
-Generate exactly ${count} flashcards:`;
+  return loadPrompt('flashcard/generate', {
+    count,
+    isGeneralKnowledge,
+    topic: focusTopic || 'general study topics',
+    topicInstruction,
+    content,
+  });
 }
 
 /**
