@@ -12,6 +12,7 @@ const { addDocumentProcessingJob, documentQueue } = require('../lib/queue');
 const { NotFoundError, AuthorizationError, ValidationError } = require('../middleware/errorHandler');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { canUploadDocument, canUploadAudio } = require('../services/tier.service');
+const { searchDocuments } = require('../services/search.service');
 const logger = require('../config/logger');
 
 /**
@@ -337,6 +338,39 @@ const reprocessDocument = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * Search documents in a classroom using hybrid vector + keyword search
+ * GET /api/v1/classrooms/:classroomId/documents/search?q=...
+ */
+const searchDocumentsInClassroom = asyncHandler(async (req, res) => {
+  const { classroomId } = req.params;
+  const query = req.query.q?.trim();
+
+  if (!query || query.length < 2) {
+    return res.json({ success: true, data: { results: [] } });
+  }
+
+  // Verify classroom access
+  const classroom = await prisma.classroom.findUnique({
+    where: { id: classroomId },
+  });
+
+  if (!classroom) {
+    throw new NotFoundError('Classroom');
+  }
+
+  if (classroom.userId !== req.user.id) {
+    throw new AuthorizationError('You do not have access to this classroom');
+  }
+
+  const results = await searchDocuments(query, classroomId);
+
+  res.json({
+    success: true,
+    data: { results },
+  });
+});
+
 module.exports = {
   uploadDocument,
   getDocuments,
@@ -345,4 +379,5 @@ module.exports = {
   deleteDocument,
   getStreamUrl,
   reprocessDocument,
+  searchDocumentsInClassroom,
 };

@@ -21,6 +21,7 @@ const {
   getStreamUrl,
   deleteDocument,
   reprocessDocument,
+  searchDocumentsInClassroom,
 } = require('../controllers/document.controller');
 const { authenticate } = require('../middleware/auth.middleware');
 const { MAX_FILE_SIZE } = require('../validators/document.validator');
@@ -40,6 +41,7 @@ router.use(authenticate);
 
 // Classroom-scoped routes
 router.post('/classrooms/:classroomId/documents', upload.single('file'), uploadDocument);
+router.get('/classrooms/:classroomId/documents/search', searchDocumentsInClassroom);
 router.get('/classrooms/:classroomId/documents', getDocuments);
 
 // Document routes

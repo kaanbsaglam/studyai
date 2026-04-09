@@ -19,6 +19,9 @@ export default function ClassroomDocumentsPage() {
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [tabInitialized, setTabInitialized] = useState(false);
+  const [semanticResults, setSemanticResults] = useState(null); // null = no search, [] = no results
+  const [searchLoading, setSearchLoading] = useState(false);
+  const searchAbortRef = useRef(null);
 
   // Auto-select audio tab on first load when there are only audio files
   useEffect(() => {
@@ -154,11 +157,77 @@ export default function ClassroomDocumentsPage() {
 
   const currentList = activeTab === 'documents' ? documentFiles : audioFiles;
 
+  // Debounced semantic search
+  useEffect(() => {
+    const trimmed = searchQuery.trim();
+
+    // Clear semantic results when query is too short
+    if (trimmed.length < 3) {
+      setSemanticResults(null);
+      setSearchLoading(false);
+      return;
+    }
+
+    setSearchLoading(true);
+
+    const timer = setTimeout(async () => {
+      // Abort previous request
+      if (searchAbortRef.current) {
+        searchAbortRef.current.abort();
+      }
+      const controller = new AbortController();
+      searchAbortRef.current = controller;
+
+      try {
+        const res = await api.get(`/classrooms/${id}/documents/search`, {
+          params: { q: trimmed },
+          signal: controller.signal,
+        });
+        setSemanticResults(res.data.data.results);
+      } catch (err) {
+        if (err.name !== 'CanceledError' && err.code !== 'ERR_CANCELED') {
+          setSemanticResults(null);
+        }
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, id]);
+
   const filteredItems = useMemo(() => {
     const normalized = searchQuery.trim().toLowerCase();
     if (!normalized) return currentList;
-    return currentList.filter((doc) => doc.originalName?.toLowerCase().includes(normalized));
-  }, [currentList, searchQuery]);
+
+    // Title matches (instant, client-side)
+    const titleMatches = currentList.filter((doc) =>
+      doc.originalName?.toLowerCase().includes(normalized)
+    );
+
+    // If no semantic results yet, return title matches only
+    if (!semanticResults || semanticResults.length === 0) {
+      return titleMatches;
+    }
+
+    // Build a score map from semantic results
+    const semanticScoreMap = new Map(
+      semanticResults.map((r) => [r.documentId, r.score])
+    );
+
+    // Merge: title matches first, then semantic-only matches
+    const titleMatchIds = new Set(titleMatches.map((d) => d.id));
+    const semanticOnly = currentList.filter(
+      (doc) => semanticScoreMap.has(doc.id) && !titleMatchIds.has(doc.id)
+    );
+
+    // Sort semantic-only by score descending
+    semanticOnly.sort((a, b) =>
+      (semanticScoreMap.get(b.id) || 0) - (semanticScoreMap.get(a.id) || 0)
+    );
+
+    return [...titleMatches, ...semanticOnly];
+  }, [currentList, searchQuery, semanticResults]);
 
   const acceptTypes =
     activeTab === 'audio'
@@ -187,8 +256,13 @@ export default function ClassroomDocumentsPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t('classroomDocuments.searchDocuments')}
-                className="w-64 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="w-64 px-3 py-2 pr-8 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               />
+              {searchLoading && (
+                <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-blue-600"></div>
+                </div>
+              )}
             </div>
             <input
               ref={fileInputRef}
