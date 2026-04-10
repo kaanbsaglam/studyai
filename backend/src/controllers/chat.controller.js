@@ -181,22 +181,22 @@ const sendMessage = asyncHandler(async (req, res) => {
     tier: req.user.tier,
   });
 
-  // Save user and assistant messages
-  await prisma.chatMessage.createMany({
-    data: [
-      {
-        sessionId: session.id,
-        role: 'USER',
-        content: data.question,
-      },
-      {
-        sessionId: session.id,
-        role: 'ASSISTANT',
-        content: result.answer,
-        sources: result.sources?.length > 0 ? result.sources : undefined,
-        hasRelevantContext: result.hasRelevantContext,
-      },
-    ],
+  // Save user and assistant messages (separate creates to guarantee ordering by createdAt)
+  await prisma.chatMessage.create({
+    data: {
+      sessionId: session.id,
+      role: 'USER',
+      content: data.question,
+    },
+  });
+  await prisma.chatMessage.create({
+    data: {
+      sessionId: session.id,
+      role: 'ASSISTANT',
+      content: result.answer,
+      sources: result.sources?.length > 0 ? result.sources : undefined,
+      hasRelevantContext: result.hasRelevantContext,
+    },
   });
 
   // Touch updatedAt on session
@@ -504,22 +504,22 @@ const sendMessageStream = async (req, res) => {
     // Get final stats from the completed stream
     const stats = getStats();
 
-    // Save messages to DB
-    await prisma.chatMessage.createMany({
-      data: [
-        {
-          sessionId: session.id,
-          role: 'USER',
-          content: data.question,
-        },
-        {
-          sessionId: session.id,
-          role: 'ASSISTANT',
-          content: fullText,
-          sources: sources?.length > 0 ? sources : undefined,
-          hasRelevantContext,
-        },
-      ],
+    // Save messages to DB (separate creates to guarantee ordering by createdAt)
+    await prisma.chatMessage.create({
+      data: {
+        sessionId: session.id,
+        role: 'USER',
+        content: data.question,
+      },
+    });
+    await prisma.chatMessage.create({
+      data: {
+        sessionId: session.id,
+        role: 'ASSISTANT',
+        content: fullText,
+        sources: sources?.length > 0 ? sources : undefined,
+        hasRelevantContext,
+      },
     });
 
     // Touch updatedAt on session
