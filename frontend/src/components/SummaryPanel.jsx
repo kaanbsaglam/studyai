@@ -290,7 +290,7 @@ export default function SummaryPanel({
               value={formTitle}
               onChange={(e) => setFormTitle(e.target.value)}
               placeholder="e.g., Chapter 5 Overview"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className={`w-full px-3 py-2 border border-gray-300 ${compact ? 'rounded-full' : 'rounded-md'} focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
               required
             />
           </div>
@@ -315,7 +315,7 @@ export default function SummaryPanel({
               value={formFocusTopic}
               onChange={(e) => setFormFocusTopic(e.target.value)}
               placeholder={isGeneralKnowledge ? 'e.g., Machine Learning, World War II' : 'e.g., photosynthesis, key themes'}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className={`w-full px-3 py-2 border border-gray-300 ${compact ? 'rounded-full' : 'rounded-md'} focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
               required={isGeneralKnowledge}
             />
             <p className="text-xs text-gray-500 mt-1">
@@ -337,7 +337,7 @@ export default function SummaryPanel({
                   key={option.value}
                   type="button"
                   onClick={() => setFormLength(option.value)}
-                  className={`p-3 rounded-lg border-2 text-center transition-colors ${
+                  className={`p-3 ${compact ? 'rounded-full' : 'rounded-lg'} border-2 text-center transition-colors ${
                     formLength === option.value
                       ? 'border-blue-500 bg-blue-50 text-blue-700'
                       : 'border-gray-200 hover:border-gray-300'

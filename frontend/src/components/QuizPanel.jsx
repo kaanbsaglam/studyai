@@ -455,7 +455,7 @@ export default function QuizPanel({
               value={formTitle}
               onChange={(e) => setFormTitle(e.target.value)}
               placeholder="e.g., Chapter 5 Review Quiz"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className={`w-full px-3 py-2 border border-gray-300 ${compact ? 'rounded-full' : 'rounded-md'} focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
               required
             />
           </div>
@@ -480,7 +480,7 @@ export default function QuizPanel({
               value={formFocusTopic}
               onChange={(e) => setFormFocusTopic(e.target.value)}
               placeholder={isGeneralKnowledge ? 'e.g., World War II, Photosynthesis' : 'e.g., photosynthesis'}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className={`w-full px-3 py-2 border border-gray-300 ${compact ? 'rounded-full' : 'rounded-md'} focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
               required={isGeneralKnowledge}
             />
             <p className="text-xs text-gray-500 mt-1">
@@ -495,7 +495,7 @@ export default function QuizPanel({
             <select
               value={formCount}
               onChange={(e) => setFormCount(Number(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className={`w-full px-3 py-2 border border-gray-300 ${compact ? 'rounded-full' : 'rounded-md'} focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
             >
               <option value={5}>5 {t('quizPanel.questions')}</option>
               <option value={10}>10 {t('quizPanel.questions')}</option>

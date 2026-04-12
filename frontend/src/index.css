@@ -18,6 +18,14 @@
   animation: fade-in 0.2s ease-out;
 }
 
+/* Dark mode focus halo around PDF pages in document viewer */
+.dark .pdf-focus-halo {
+	box-shadow:
+		0 0 0 1px rgba(231, 231, 231, 0.108),
+		0 0 28px rgba(113, 113, 113, 0.182),
+		0 10px 30px rgba(86, 86, 86, 0.665) !important;
+}
+
 @keyframes blink {
   50% { opacity: 0; }
 }
@@ -213,6 +221,24 @@
 	}
 	button:active {
 		transform: scale(0.97);
+	}
+
+	select {
+		background-color: var(--card-bg) !important;
+		color: var(--text-primary) !important;
+		border-color: var(--card-border) !important;
+		color-scheme: light dark;
+	}
+
+	option {
+		background-color: var(--card-bg) !important;
+		color: var(--text-primary) !important;
+	}
+
+	option:checked,
+	option:hover {
+		background-color: var(--input-bg) !important;
+		color: var(--text-primary) !important;
 	}
 
 	/* Link styled as a button (pill shape) */

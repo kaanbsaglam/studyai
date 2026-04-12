@@ -455,12 +455,12 @@ export default function ChatPanel({
                 : t('chatPanel.uploadDocsFirst')
             }
             disabled={loading || loadingSession}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
+            className={`flex-1 px-4 py-2 border border-gray-300 ${compact ? 'rounded-full' : 'rounded-lg'} focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100`}
           />
           <button
             type="submit"
             disabled={loading || loadingSession || !input.trim()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`px-4 py-2 bg-blue-600 text-white ${compact ? 'rounded-full' : 'rounded-lg'} hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             {t('common.send')}
           </button>

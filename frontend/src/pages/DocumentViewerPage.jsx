@@ -221,14 +221,17 @@ export default function DocumentViewerPage() {
           <div className="flex items-center gap-2">
             <Link
               to={`/classrooms/${classroomId}/documents`}
-              className="px-2 py-1 rounded text-xs font-medium text-gray-600 bg-gray-200 hover:bg-gray-300"
+              className="h-7 px-2 rounded-full text-xs font-medium text-gray-600 bg-gray-200 border border-gray-300 hover:bg-gray-300 inline-flex items-center gap-1"
             >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
               {t('common.back')}
             </Link>
             {/* Notes toggle - with label */}
             <button
               onClick={() => setNotesOpen(!notesOpen)}
-              className={`px-2 py-1 rounded text-xs font-medium flex items-center gap-1 ${
+              className={`h-7 px-2 rounded-full text-xs font-medium flex items-center gap-1 ${
                 notesOpen
                   ? 'text-blue-700 bg-blue-100'
                   : 'text-gray-600 bg-gray-200 hover:bg-gray-300'
@@ -239,7 +242,7 @@ export default function DocumentViewerPage() {
               </svg>
               {t('documentViewer.notes')}
             </button>
-            <span className="text-gray-300">|</span>
+            <span className="mx-0.5 h-6 w-1 rounded-full bg-gray-300" aria-hidden="true"></span>
             <h2 className="font-medium text-gray-900 truncate max-w-sm text-sm">{document?.originalName}</h2>
           </div>
           <div className="flex items-center gap-2">
@@ -247,7 +250,7 @@ export default function DocumentViewerPage() {
               <>
                 <button
                   onClick={() => setScale((s) => Math.max(s - 0.25, 0.5))}
-                  className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded"
+                  className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-full"
                   title={t('documentViewer.zoomOut')}
                 >
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -257,20 +260,20 @@ export default function DocumentViewerPage() {
                 <span className="text-xs text-gray-500 w-10 text-center">{Math.round(scale * 100)}%</span>
                 <button
                   onClick={() => setScale((s) => Math.min(s + 0.25, 2.5))}
-                  className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded"
+                  className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-full"
                   title={t('documentViewer.zoomIn')}
                 >
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
                 </button>
-                <span className="text-gray-300">|</span>
+                <span className="mx-0.5 h-6 w-1 rounded-full bg-gray-300" aria-hidden="true"></span>
               </>
             )}
             {/* Tools sidebar toggle - with label */}
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className={`px-2 py-1 rounded text-xs font-medium flex items-center gap-1 ${
+              className={`h-7 px-2 rounded-full text-xs font-medium flex items-center gap-1 ${
                 sidebarOpen
                   ? 'text-blue-700 bg-blue-100'
                   : 'text-gray-600 bg-gray-200 hover:bg-gray-300'
@@ -285,7 +288,7 @@ export default function DocumentViewerPage() {
         </div>
 
         {/* Document Content */}
-        <div ref={pdfContainerRef} className="flex-1 overflow-auto bg-gray-50 p-2">
+        <div ref={pdfContainerRef} className="flex-1 overflow-auto bg-white p-2">
           {document?.mimeType === 'application/pdf' && pdfUrl ? (
             <div className="flex flex-col items-center">
               <Document
@@ -305,7 +308,7 @@ export default function DocumentViewerPage() {
                 <Page
                   pageNumber={pageNumber}
                   width={containerWidth ? Math.min(containerWidth, 900) * scale : undefined}
-                  className="shadow-lg"
+                  className="shadow-lg pdf-focus-halo"
                   renderTextLayer={true}
                   renderAnnotationLayer={true}
                 />
@@ -317,7 +320,7 @@ export default function DocumentViewerPage() {
                   <button
                     onClick={goToPrevPage}
                     disabled={pageNumber <= 1}
-                    className="p-1 text-gray-600 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-1 rounded-full text-gray-600 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -329,7 +332,7 @@ export default function DocumentViewerPage() {
                   <button
                     onClick={goToNextPage}
                     disabled={pageNumber >= numPages}
-                    className="p-1 text-gray-600 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-1 rounded-full text-gray-600 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -356,7 +359,7 @@ export default function DocumentViewerPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${
+                className={`flex-1 py-1.5 text-xs font-medium rounded-full transition-all ${
                   activeTab === tab.id
                     ? 'shadow-sm'
                     : 'hover:opacity-80'
@@ -386,7 +389,7 @@ export default function DocumentViewerPage() {
                     if (session) handleSelectChatSession(session);
                   }
                 }}
-                className="w-full text-xs px-2 py-1.5 border border-gray-200 rounded bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full text-xs px-2 py-1.5 border border-gray-200 rounded-full bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
               >
                 <option value="">{t('chatSessions.newChat')}</option>
                 {chatSessions.map((s) => (
@@ -407,7 +410,7 @@ export default function DocumentViewerPage() {
               {allDocuments.length > 1 && (
                 <button
                   onClick={() => setShowDocSelector(!showDocSelector)}
-                  className="text-xs text-blue-600 hover:text-blue-800"
+                  className="text-xs text-blue-600 hover:text-blue-800 rounded-full font-medium"
                 >
                   {showDocSelector ? t('documentViewer.hide') : t('documentViewer.addMore')}
                 </button>

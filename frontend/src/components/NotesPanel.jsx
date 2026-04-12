@@ -164,7 +164,7 @@ export default function NotesPanel({
     return (
       <div className={compact ? 'flex flex-col h-full' : 'bg-white rounded-lg shadow flex flex-col h-full'}>
         {/* Header with title */}
-        <div className="px-3 py-2 border-b border-gray-200">
+        <div className={`${compact ? 'px-3 py-2' : 'px-6 py-4'} border-b border-gray-200`}>
           <input
             type="text"
             value={editTitle}
@@ -176,7 +176,7 @@ export default function NotesPanel({
         </div>
 
         {/* Toolbar */}
-        <div className="px-3 py-1.5 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+        <div className={`${compact ? 'px-3 py-1.5' : 'px-6 py-3'} border-b border-gray-200 flex justify-between items-center bg-gray-50`}>
           <button
             onClick={() => setShowPreview(!showPreview)}
             className={`px-2 py-1 text-xs rounded-full flex items-center gap-1 ${
@@ -209,7 +209,7 @@ export default function NotesPanel({
         </div>
 
         {error && (
-          <div className="mx-3 mt-2 bg-red-50 border border-red-200 text-red-600 px-2 py-1.5 rounded text-xs">
+          <div className={`${compact ? 'mx-3 mt-2 px-2 py-1.5 text-xs' : 'mx-6 mt-4 px-4 py-3 text-sm'} bg-red-50 border border-red-200 text-red-600 rounded`}>
             {error}
           </div>
         )}
@@ -218,7 +218,7 @@ export default function NotesPanel({
         <div className="flex-1 flex flex-col overflow-hidden">
           {showPreview ? (
             /* Preview mode */
-            <div className="flex-1 p-3 overflow-auto">
+            <div className={`flex-1 ${compact ? 'p-3' : 'p-6'} overflow-auto`}>
               {editContent ? (
                 <MarkdownRenderer>{editContent}</MarkdownRenderer>
               ) : (
@@ -231,7 +231,7 @@ export default function NotesPanel({
               value={editContent}
               onChange={(e) => setEditContent(e.target.value)}
               placeholder={t('notesPanel.writePlaceholder')}
-              className="flex-1 p-3 resize-none border-none focus:outline-none focus:ring-0 text-sm"
+              className={`flex-1 ${compact ? 'p-3' : 'p-6'} resize-none border-none focus:outline-none focus:ring-0 text-sm`}
             />
           )}
         </div>
@@ -243,7 +243,7 @@ export default function NotesPanel({
   if (activeNote && !isEditing) {
     return (
       <div className={compact ? 'flex flex-col h-full' : 'bg-white rounded-lg shadow flex flex-col h-full'}>
-        <div className="px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+        <div className={`${compact ? 'px-4 py-3' : 'px-6 py-4'} border-b border-gray-200 flex justify-between items-center`}>
           <div className="flex-1 min-w-0">
             <h3 className="text-lg font-medium text-gray-900 truncate">{activeNote.title}</h3>
             <p className="text-xs text-gray-500">
@@ -309,7 +309,7 @@ export default function NotesPanel({
           </div>
         </div>
 
-        <div className="flex-1 p-4 overflow-auto">
+        <div className={`flex-1 ${compact ? 'p-4' : 'p-6'} overflow-auto`}>
           {activeNote.content ? (
             <MarkdownRenderer>{activeNote.content}</MarkdownRenderer>
           ) : (
@@ -327,21 +327,21 @@ export default function NotesPanel({
 
   return (
     <div className={containerClass}>
-      <div className="px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+      <div className={`${compact ? 'px-4 py-3' : 'px-6 py-4'} border-b border-gray-200 flex justify-between items-center`}>
         <div>
           <h3 className="text-lg font-medium text-gray-900">{t('notesPanel.title')}</h3>
           <p className="text-xs text-gray-500">{t('notesPanel.noteCount', { count: notes.length })}</p>
         </div>
         <button
           onClick={startCreating}
-          className="px-3 py-1.5 bg-blue-600 text-white rounded-full text-sm font-medium hover:bg-blue-700 dark:hover:bg-blue-500/80"
+          className="px-4 py-2 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 dark:hover:bg-blue-500/80 inline-flex items-center justify-center"
         >
           {t('notesPanel.newNote')}
         </button>
       </div>
 
       {error && (
-        <div className="mx-4 mt-2 bg-red-50 border border-red-200 text-red-600 px-3 py-2 rounded text-sm">
+        <div className={`${compact ? 'mx-4 mt-2 px-3 py-2' : 'mx-6 mt-4 px-4 py-3'} bg-red-50 border border-red-200 text-red-600 rounded text-sm`}>
           {error}
         </div>
       )}
@@ -369,7 +369,7 @@ export default function NotesPanel({
           {notes.map((note) => (
             <li
               key={note.id}
-              className="px-4 py-3 cursor-pointer transition-colors"
+              className={`${compact ? 'px-4 py-3' : 'px-6 py-4'} cursor-pointer transition-colors`}
               style={{ borderBottom: '1px solid var(--card-border)' }}
               onClick={() => openNote(note.id)}
               onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--input-bg)'}
