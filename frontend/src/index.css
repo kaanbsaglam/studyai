@@ -361,4 +361,18 @@
 	.hover\:text-blue-800:hover {
 		color: var(--accent) !important;
 	}
+	[data-theme="earth"] .hover\:bg-blue-50:hover,
+	[data-theme="earth"] .hover\:bg-blue-100:hover,
+	[data-theme="earth"] .hover\:bg-blue-200:hover {
+		background-color: rgba(139, 94, 52, 0.12) !important;
+	}
+	[data-theme="earth"] .hover\:bg-gray-100:hover {
+		background-color: rgba(139, 94, 52, 0.08) !important;
+	}
+	[data-theme="earth"] .hover\:bg-gray-200:hover {
+		background-color: rgba(139, 94, 52, 0.14) !important;
+	}
+	[data-theme="earth"] .hover\:bg-blue-700:hover {
+		background-color: #7a4f2c !important;
+	}
 }

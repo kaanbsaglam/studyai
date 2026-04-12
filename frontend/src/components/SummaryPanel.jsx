@@ -409,13 +409,13 @@ export default function SummaryPanel({
           <div className="flex items-center gap-2">
             <button
               onClick={() => { setEditingSummary(null); setShowManualModal(true); }}
-              className="px-4 py-2 border border-blue-600 text-blue-600 rounded-full font-medium hover:bg-blue-50"
+              className="px-4 py-2 border border-blue-600 text-blue-600 rounded-full font-medium hover:bg-blue-50 dark:hover:bg-blue-900/30 dark:hover:text-blue-200 dark:hover:border-blue-400"
             >
               {t('summaryPanel.createManual')}
             </button>
             <button
               onClick={() => setShowGenerateForm(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700"
+              className="px-4 py-2 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 dark:hover:bg-blue-500/80"
             >
               {t('summaryPanel.generate')}
             </button>
@@ -427,13 +427,13 @@ export default function SummaryPanel({
         <div className="p-3 border-b border-gray-200 dark:border-transparent flex gap-2">
           <button
             onClick={() => { setEditingSummary(null); setShowManualModal(true); }}
-            className="flex-1 px-4 py-2 border border-blue-600 text-blue-600 rounded-full font-medium hover:bg-blue-50 text-sm"
+            className="flex-1 h-10 px-4 border border-blue-600 text-blue-600 rounded-full font-medium hover:bg-blue-50 dark:hover:bg-blue-900/30 dark:hover:text-blue-200 dark:hover:border-blue-400 text-sm inline-flex items-center justify-center leading-none"
           >
             {t('summaryPanel.createManual')}
           </button>
           <button
             onClick={() => setShowGenerateForm(true)}
-            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 text-sm"
+            className="flex-1 h-10 px-4 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 dark:hover:bg-blue-500/80 text-sm inline-flex items-center justify-center leading-none"
           >
             {t('summaryPanel.generateBtn')}
           </button>
@@ -478,7 +478,7 @@ export default function SummaryPanel({
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleViewSummary(summary.id)}
-                  className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-full"
+                  className="h-8 px-3 text-sm text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 dark:hover:text-blue-200 rounded-full inline-flex items-center justify-center leading-none"
                 >
                   {t('common.view')}
                 </button>

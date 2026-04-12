@@ -29,14 +29,14 @@ export default function ThreeDotMenu({ items = [] }) {
           e.stopPropagation();
           setOpen((prev) => !prev);
         }}
-        className="p-1.5 rounded-full hover:bg-gray-100 transition-colors"
+        className="h-8 w-8 p-0 border bg-transparent rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition-colors inline-flex items-center justify-center leading-none shadow-none"
         style={{ color: 'var(--text-muted, #6b7280)' }}
         title="More options"
       >
-        <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-          <circle cx="10" cy="4" r="1.5" />
-          <circle cx="10" cy="10" r="1.5" />
-          <circle cx="10" cy="16" r="1.5" />
+        <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+          <circle cx="10" cy="4" r="2" />
+          <circle cx="10" cy="10" r="2" />
+          <circle cx="10" cy="16" r="2" />
         </svg>
       </button>
 

@@ -180,7 +180,9 @@ export default function NotesPanel({
           <button
             onClick={() => setShowPreview(!showPreview)}
             className={`px-2 py-1 text-xs rounded-full flex items-center gap-1 ${
-              showPreview ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-200'
+              showPreview
+                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-200'
+                : 'text-gray-600 hover:bg-gray-200 dark:hover:bg-white/10'
             }`}
           >
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -192,14 +194,14 @@ export default function NotesPanel({
           <div className="flex items-center gap-1">
             <button
               onClick={cancelEdit}
-              className="px-2 py-1 text-xs text-gray-600 hover:bg-gray-200 rounded-full"
+              className="px-2 py-1 text-xs text-gray-600 hover:bg-gray-200 dark:hover:bg-white/10 rounded-full"
             >
               {t('common.cancel')}
             </button>
             <button
               onClick={isCreating ? handleCreateNote : handleUpdateNote}
               disabled={saving || !editTitle.trim()}
-              className="px-2 py-1 text-xs bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50"
+              className="px-2 py-1 text-xs bg-blue-600 text-white rounded-full hover:bg-blue-700 dark:hover:bg-blue-500/80 disabled:opacity-50"
             >
               {saving ? t('common.saving') : t('common.save')}
             </button>
@@ -256,7 +258,7 @@ export default function NotesPanel({
           <div className="flex items-center gap-2">
             <button
               onClick={() => setActiveNote(null)}
-              className="p-1 text-gray-500 hover:text-gray-700 rounded-full"
+              className="p-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 rounded-full"
               title={t('notesPanel.backToList')}
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -332,7 +334,7 @@ export default function NotesPanel({
         </div>
         <button
           onClick={startCreating}
-          className="px-3 py-1.5 bg-blue-600 text-white rounded-full text-sm font-medium hover:bg-blue-700"
+          className="px-3 py-1.5 bg-blue-600 text-white rounded-full text-sm font-medium hover:bg-blue-700 dark:hover:bg-blue-500/80"
         >
           {t('notesPanel.newNote')}
         </button>
