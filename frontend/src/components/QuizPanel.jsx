@@ -625,9 +625,9 @@ export default function QuizPanel({
           <p className="text-sm">{t('quizPanel.generateToStart')}</p>
         </div>
       ) : (
-        <ul className="divide-y divide-gray-200 dark:divide-transparent flex-1 overflow-auto">
+        <ul className="flex-1 overflow-auto">
           {quizSets.map((quiz) => (
-            <li key={quiz.id} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50">
+            <li key={quiz.id} className="notes-entry-divider px-6 py-4 flex items-center justify-between hover:bg-gray-50">
               <div className="flex-1 cursor-pointer" onClick={() => handleViewQuiz(quiz.id)}>
                 <p className="font-medium text-gray-900">{quiz.title}</p>
                 <p className="text-sm text-gray-500">

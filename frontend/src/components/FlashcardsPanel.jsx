@@ -387,9 +387,9 @@ export default function FlashcardsPanel({
           </p>
         </div>
       ) : (
-        <ul className="divide-y divide-gray-200 dark:divide-transparent flex-1 overflow-auto">
+        <ul className="flex-1 overflow-auto">
           {flashcardSets.map((set) => (
-            <li key={set.id} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50">
+            <li key={set.id} className="notes-entry-divider px-6 py-4 flex items-center justify-between hover:bg-gray-50">
               <div
                 className="flex-1 cursor-pointer"
                 onClick={() => handleViewSet(set.id)}

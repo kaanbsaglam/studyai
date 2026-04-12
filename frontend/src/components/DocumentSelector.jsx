@@ -7,6 +7,7 @@ export default function DocumentSelector({
   onChange,
   disabled = false,
   lockedIds = [],
+  showHelpText = true,
 }) {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
@@ -42,13 +43,13 @@ export default function DocumentSelector({
   }
 
   return (
-    <div className="relative">
+    <div className="relative w-full min-w-[20rem] flex-none">
       {/* Trigger button */}
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         disabled={disabled}
-        className="w-full px-4 py-2 text-left bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+        className="w-full px-4 py-2 text-left bg-white border border-gray-300 focus:ring-0 rounded-lg hover:bg-gray-50 focus:outline-none focus-visible:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
       >
         <div className="flex justify-between items-center">
           <span className="text-gray-700">
@@ -69,27 +70,11 @@ export default function DocumentSelector({
 
       {/* Selected documents preview */}
       {selectedDocuments.length > 0 && !isOpen && (
-        <div className="mt-2 flex flex-wrap gap-1">
+        <div className="mt-1 space-y-0.5 text-xs leading-tight text-gray-500">
           {selectedDocuments.map((doc) => (
-            <span
-              key={doc.id}
-              className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded"
-            >
+            <p key={doc.id} className="truncate" title={doc.originalName}>
               {doc.originalName}
-              {!lockedIds.includes(doc.id) && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleDocument(doc.id);
-                  }}
-                  className="hover:text-blue-900"
-                >
-                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              )}
-            </span>
+            </p>
           ))}
         </div>
       )}
@@ -159,11 +144,13 @@ export default function DocumentSelector({
       )}
 
       {/* Help text */}
-      <p className="mt-1 text-xs text-gray-500">
-        {selectedIds.length === 0
-          ? t('documentSelector.noDocsSelectedHint')
-          : t('documentSelector.docsSelectedHint')}
-      </p>
+      {showHelpText && (
+        <p className="mt-1 text-xs text-gray-500">
+          {selectedIds.length === 0
+            ? t('documentSelector.noDocsSelectedHint')
+            : t('documentSelector.docsSelectedHint')}
+        </p>
+      )}
     </div>
   );
 }

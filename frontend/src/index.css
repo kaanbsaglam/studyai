@@ -18,6 +18,14 @@
   animation: fade-in 0.2s ease-out;
 }
 
+.notes-entry-divider {
+	border-bottom: 1px solid var(--card-border);
+}
+
+.dark .notes-entry-divider {
+	border-bottom-color: rgba(123, 201, 254, 0.55) !important;
+}
+
 /* Dark mode focus halo around PDF pages in document viewer */
 .dark .pdf-focus-halo {
 	box-shadow:

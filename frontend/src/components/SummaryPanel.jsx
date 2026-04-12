@@ -465,9 +465,9 @@ export default function SummaryPanel({
           <p className="text-sm">{t('summaryPanel.generateHint')}</p>
         </div>
       ) : (
-        <ul className="divide-y divide-gray-200 dark:divide-transparent flex-1 overflow-auto">
+        <ul className="flex-1 overflow-auto">
           {summaries.map((summary) => (
-            <li key={summary.id} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50">
+            <li key={summary.id} className="notes-entry-divider px-6 py-4 flex items-center justify-between hover:bg-gray-50">
               <div className="flex-1 cursor-pointer" onClick={() => handleViewSummary(summary.id)}>
                 <p className="font-medium text-gray-900">{summary.title}</p>
                 <p className="text-sm text-gray-500">

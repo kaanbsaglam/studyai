@@ -106,23 +106,23 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex gap-4 h-[calc(100vh-12rem)]">
+    <div className="flex h-[calc(100vh-12rem)] items-stretch gap-4 overflow-hidden">
       {/* Sidebar */}
       {sidebarOpen && (
-        <div className="w-64 min-w-48 flex flex-col bg-white rounded-lg shadow overflow-hidden">
+        <div className="w-64 min-w-48 flex h-full flex-col bg-white rounded-lg shadow overflow-hidden">
           {/* Sidebar Header */}
-          <div className="px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+          <div className="px-4 py-3 border-b border-gray-200 flex shrink-0 justify-between items-center">
             <h3 className="text-sm font-medium text-gray-900">{t('chatSessions.sessions')}</h3>
             <button
               onClick={handleNewChat}
-              className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+              className="text-xs px-2 py-1 bg-blue-600 text-white rounded-full hover:bg-blue-700"
             >
               {t('chatSessions.newChat')}
             </button>
           </div>
 
           {/* Session List */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 min-h-0 overflow-y-auto">
             {sessions.length === 0 ? (
               <div className="p-4 text-center text-sm text-gray-400">
                 {t('chatSessions.noSessions')}
@@ -132,27 +132,26 @@ export default function ChatPage() {
                 <div
                   key={session.id}
                   onClick={() => handleSelectSession(session)}
-                  className={`px-4 py-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50 group ${
+                  className={`notes-entry-divider px-4 py-2 cursor-pointer hover:bg-gray-50 group ${
                     activeSessionId === session.id ? 'bg-blue-50 border-l-2 border-l-blue-600' : ''
                   }`}
                 >
-                  <div className="flex justify-between items-start">
-                    <p className="text-sm font-medium text-gray-900 truncate flex-1">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-medium text-gray-900 truncate flex-1 pr-2">
                       {session.title || t('chatSessions.untitled')}
                     </p>
-                    <button
+                    <span
                       onClick={(e) => handleDeleteSession(session.id, e)}
-                      className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 ml-2 flex-shrink-0"
+                      className="text-red-500 hover:text-red-600 opacity-0 group-hover:opacity-100 ml-1 flex-shrink-0 transition-opacity"
                       title={t('common.delete')}
+                      role="button"
+                      tabIndex={0}
                     >
-                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 7h12M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m-7 0l.5 11a1 1 0 001 .955h6a1 1 0 001-.955L17 7" />
                       </svg>
-                    </button>
+                    </span>
                   </div>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    {t('chatSessions.messageCount', { count: session._count?.messages || 0 })}
-                  </p>
                 </div>
               ))
             )}
@@ -161,12 +160,12 @@ export default function ChatPage() {
       )}
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex min-w-0 flex-1 flex-col h-full overflow-hidden">
         {/* Header with sidebar toggle */}
-        <div className="mb-4 flex items-start gap-4">
+        <div className="shrink-0 flex items-start gap-3 pb-3">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className={`mt-1 p-1.5 rounded ${
+            className={`mt-1 p-1.5 rounded-full focus:ring-0 ${
               sidebarOpen ? 'text-blue-700 bg-blue-100' : 'text-gray-500 bg-gray-200 hover:bg-gray-300'
             }`}
             title={t('chatSessions.toggleSidebar')}
@@ -175,33 +174,39 @@ export default function ChatPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
             </svg>
           </button>
-          <div className="flex-1">
-            <h2 className="text-xl font-semibold text-gray-900">{t('chatPage.title')}</h2>
-            <p className="text-gray-500 mb-4">
-              {t('chatPage.subtitle')}
-            </p>
+          <div className="flex min-w-0 flex-1 items-start gap-3">
+            <div className="min-w-0 pt-0.5">
+              <h2 className="text-base font-semibold text-gray-900">{t('chatPage.title')}</h2>
+              <p className="text-xs text-gray-500 leading-tight">
+                {t('chatPage.subtitle')}
+              </p>
+            </div>
 
-            {/* Document selector */}
-            <DocumentSelector
-              documents={documents}
-              selectedIds={selectedDocIds}
-              onChange={handleDocChange}
-              disabled={false}
-              lockedIds={docsLocked ? lockedDocIds : []}
-            />
+            <div className="min-w-[20rem] flex-none w-full max-w-[24rem]">
+              <DocumentSelector
+                documents={documents}
+                selectedIds={selectedDocIds}
+                onChange={handleDocChange}
+                disabled={false}
+                lockedIds={docsLocked ? lockedDocIds : []}
+                showHelpText={true}
+              />
+            </div>
           </div>
         </div>
 
-        <ChatPanel
-          classroomId={classroomId}
-          documentIds={selectedDocIds}
-          selectedDocuments={selectedDocuments}
-          hasReadyDocuments={hasReadyDocuments}
-          fullHeight
-          sessionId={activeSessionId}
-          onSessionChange={handleSessionChange}
-          onDocumentsLocked={handleDocumentsLocked}
-        />
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <ChatPanel
+            classroomId={classroomId}
+            documentIds={selectedDocIds}
+            selectedDocuments={selectedDocuments}
+            hasReadyDocuments={hasReadyDocuments}
+            fullHeight
+            sessionId={activeSessionId}
+            onSessionChange={handleSessionChange}
+            onDocumentsLocked={handleDocumentsLocked}
+          />
+        </div>
       </div>
     </div>
   );

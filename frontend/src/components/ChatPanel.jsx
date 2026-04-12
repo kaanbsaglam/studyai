@@ -289,9 +289,9 @@ export default function ChatPanel({
   };
 
   const containerClass = compact
-    ? 'flex flex-col h-full'
+    ? 'flex h-full min-h-0 flex-col'
     : fullHeight
-    ? 'bg-white rounded-lg shadow flex flex-col h-[calc(100vh-16rem)]'
+    ? 'bg-white rounded-lg shadow flex h-full min-h-0 flex-col overflow-hidden'
     : 'bg-white rounded-lg shadow flex flex-col h-[500px]';
 
   return (
@@ -337,7 +337,7 @@ export default function ChatPanel({
 
       {/* Messages */}
       {!loadingSession && (
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
           {messages.length === 0 ? (
             <div className="text-center text-gray-500 mt-8">
               <svg
@@ -443,7 +443,7 @@ export default function ChatPanel({
       )}
 
       {/* Input */}
-      <form onSubmit={handleSubmit} className="p-4 border-t border-gray-200">
+      <form onSubmit={handleSubmit} className="shrink-0 p-4 border-t border-gray-200 bg-white">
         <div className="flex gap-2">
           <input
             type="text"

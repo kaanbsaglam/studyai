@@ -369,8 +369,7 @@ export default function NotesPanel({
           {notes.map((note) => (
             <li
               key={note.id}
-              className={`${compact ? 'px-4 py-3' : 'px-6 py-4'} cursor-pointer transition-colors`}
-              style={{ borderBottom: '1px solid var(--card-border)' }}
+              className={`${compact ? 'px-4 py-3' : 'px-6 py-4'} notes-entry-divider cursor-pointer transition-colors`}
               onClick={() => openNote(note.id)}
               onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--input-bg)'}
               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
@@ -378,19 +377,20 @@ export default function NotesPanel({
               <div className="flex justify-between items-start">
                 <div className="flex-1 min-w-0">
                   <p className="font-medium truncate" style={{ color: 'var(--text-primary)' }}>{note.title}</p>
-                  <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                    {formatDate(note.updatedAt)}
+                  <p
+                    className="mt-1 text-xs truncate"
+                    style={{ color: 'var(--text-muted)' }}
+                  >
+                    {t('notesPanel.updated', { date: formatDate(note.updatedAt) })}
                     {note.document && (
-                      <span className="ml-2" style={{ color: 'var(--accent)' }}>
-                        {note.document.originalName}
+                      <span className="ml-2 inline-flex items-center gap-1" style={{ color: 'var(--accent)' }}>
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 3h6l4 4v14H7a2 2 0 01-2-2V5a2 2 0 012-2zm6 1v4h4" />
+                        </svg>
+                        {t('notesPanel.linkedTo', { name: note.document.originalName })}
                       </span>
                     )}
                   </p>
-                  {note.content && (
-                    <div className="mt-1.5 line-clamp-2 overflow-hidden note-preview-markdown" style={{ color: 'var(--text-secondary)', maxHeight: '2.8em' }}>
-                      <MarkdownRenderer>{note.content.substring(0, 150)}</MarkdownRenderer>
-                    </div>
-                  )}
                 </div>
               </div>
             </li>
