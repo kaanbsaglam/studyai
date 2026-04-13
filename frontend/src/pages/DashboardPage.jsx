@@ -1,8 +1,9 @@
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
+import HeaderMenu from '../components/HeaderMenu';
 
 export default function DashboardPage() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { t } = useTranslation();
 
   return (
@@ -17,12 +18,7 @@ export default function DashboardPage() {
               <span className="text-gray-600">
                 {user?.name || user?.email}
               </span>
-              <button
-                onClick={logout}
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md"
-              >
-                {t('common.logout')}
-              </button>
+              <HeaderMenu />
             </div>
           </div>
         </div>

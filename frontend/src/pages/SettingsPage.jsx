@@ -4,12 +4,12 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useTimer } from '../hooks/useTimer';
 import TimerPill from '../components/timer/TimerPill';
+import HeaderMenu from '../components/HeaderMenu';
 import LanguageToggle from '../components/LanguageToggle';
-import ThemeToggle from '../components/ThemeToggle';
 
 export default function SettingsPage() {
   const { t } = useTranslation();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { settings, settingsLoading, updateSettings } = useTimer();
 
   const [localSettings, setLocalSettings] = useState(null);
@@ -79,7 +79,7 @@ export default function SettingsPage() {
                 </Link>
               )}
               <TimerPill />
-              <ThemeToggle />
+              <HeaderMenu />
               <Link
                 to="/account"
                 className={`link-btn ${
@@ -89,12 +89,6 @@ export default function SettingsPage() {
                 {user?.tier || 'FREE'}
               </Link>
               <span className="text-gray-600">{user?.name || user?.email}</span>
-              <button
-                onClick={logout}
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md"
-              >
-                {t('common.logout')}
-              </button>
             </div>
           </div>
         </div>
