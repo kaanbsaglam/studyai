@@ -256,11 +256,16 @@ export default function ClassroomDocumentsPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t('classroomDocuments.searchDocuments')}
-                className="w-64 px-3 py-2 pr-8 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                aria-busy={searchLoading}
+                className={`w-64 px-3 py-2 pr-8 border rounded-md text-sm transition-colors duration-200 focus:outline-none ${
+                  searchLoading
+                    ? 'search-input-loading border-search-loading focus:ring-0 focus:border-search-loading'
+                    : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                }`}
               />
               {searchLoading && (
-                <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-blue-600"></div>
+                <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true">
+                  <span className="search-spinner"/>
                 </div>
               )}
             </div>
