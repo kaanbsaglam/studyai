@@ -164,7 +164,7 @@ export default function ClassroomDashboard() {
             />
             <label
               htmlFor="file-upload"
-              className={`px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium cursor-pointer hover:bg-blue-700 inline-block ${
+              className={`px-4 py-2 bg-blue-600 text-white rounded-full text-sm font-medium cursor-pointer hover:bg-blue-700 inline-block ${
                 uploading ? 'opacity-50 cursor-not-allowed' : ''
               }`}
             >
@@ -233,7 +233,7 @@ export default function ClassroomDashboard() {
                     <p className="text-sm text-gray-500">{formatFileSize(doc.size)}</p>
                   </div>
                 </Link>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
                   {getStatusBadge(doc.status)}
                   {doc.status === 'PROCESSING' && (
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
@@ -241,17 +241,17 @@ export default function ClassroomDashboard() {
                   {canOpen && (
                     <Link
                       to={detailPath}
-                      className={`text-sm hover:opacity-80 ${isAudio ? 'text-purple-600' : 'text-blue-600'}`}
+                      className={`link-btn ${isAudio ? 'text-purple-600' : 'text-blue-600'}`}
                     >
                       {t('common.open')}
                     </Link>
                   )}
-                  <span
+                  <button
                     onClick={() => handleDeleteDocument(doc.id)}
-                    className="text-sm text-red-600 hover:text-red-800 cursor-pointer font-semibold"
+                    className="link-btn text-red-600 hover:text-red-800"
                   >
                     {t('common.delete')}
-                  </span>
+                  </button>
                 </div>
               </li>
               );

@@ -257,7 +257,7 @@ export default function ClassroomDocumentsPage() {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t('classroomDocuments.searchDocuments')}
                 aria-busy={searchLoading}
-                className={`w-64 px-3 py-2 pr-8 border rounded-md text-sm transition-colors duration-200 focus:outline-none ${
+                className={`w-64 px-3 py-2 pr-8 border rounded-full text-sm transition-colors duration-200 focus:outline-none ${
                   searchLoading
                     ? 'search-input-loading border-search-loading focus:ring-0 focus:border-search-loading'
                     : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
@@ -279,7 +279,7 @@ export default function ClassroomDocumentsPage() {
             />
             <label
               htmlFor="file-upload"
-              className={`px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium cursor-pointer hover:bg-blue-700 inline-block ${
+              className={`px-4 py-2 bg-blue-600 text-white rounded-full text-sm font-medium cursor-pointer hover:bg-blue-700 inline-block ${
                 uploading ? 'opacity-50 cursor-not-allowed' : ''
               }`}
             >
@@ -398,17 +398,20 @@ function DocumentList({ documents, allEmpty, id, t, formatFileSize, getStatusBad
               <p className="text-sm text-gray-500">{formatFileSize(doc.size)}</p>
             </div>
           </Link>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             {getStatusBadge(doc.status)}
             {doc.status === 'PROCESSING' && (
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
             )}
             {doc.status === 'READY' && (
-              <Link to={`/classrooms/${id}/documents/${doc.id}`} className="text-sm text-blue-600 hover:text-blue-800">
+              <Link
+                to={`/classrooms/${id}/documents/${doc.id}`}
+                className="link-btn"
+              >
                 {t('common.open')}
               </Link>
             )}
-            <button onClick={() => onDelete(doc.id)} className="text-sm text-red-600 hover:text-red-800">
+            <button onClick={() => onDelete(doc.id)} className="link-btn text-red-600 hover:text-red-800">
               {t('common.delete')}
             </button>
           </div>
@@ -489,13 +492,13 @@ function AudioItem({ doc, id, t, formatFileSize, getStatusBadge, onDelete }) {
           {!isProcessing && (
             <Link
               to={`/classrooms/${id}/audio/${doc.id}`}
-              className="text-sm text-purple-600 hover:text-purple-800"
+              className="link-btn"
             >
               {t('common.open')}
             </Link>
           )}
 
-          <button onClick={() => onDelete(doc.id)} className="text-sm text-red-600 hover:text-red-800">
+          <button onClick={() => onDelete(doc.id)} className="link-btn text-red-600 hover:text-red-800">
             {t('common.delete')}
           </button>
         </div>
