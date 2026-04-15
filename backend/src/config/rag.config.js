@@ -11,9 +11,6 @@ module.exports = {
   // Number of supplementary results to retrieve from Pinecone
   topK: 5,
 
-  // Maximum characters for supplementary RAG context
-  maxRagContextChars: 15000,
-
   // Maximum conversation history messages to include in prompt
-  maxConversationHistory: 20,
+  maxConversationHistory: 200,
 };
