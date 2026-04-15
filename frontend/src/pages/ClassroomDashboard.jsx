@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useOutletContext, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../api/axios';
+import { isCodeFileByName } from '../components/CodeViewer';
 import ClassroomStudyStats from '../components/stats/ClassroomStudyStats';
 import ClassroomStats from '../components/ClassroomMaterialsSummary';
 
@@ -48,7 +49,7 @@ export default function ClassroomDashboard() {
       'audio/x-m4a',
     ];
 
-    if (!allowedTypes.includes(file.type)) {
+    if (!allowedTypes.includes(file.type) && !isCodeFileByName(file.name)) {
       setError(t('classroomDashboard.invalidFileType'));
       return;
     }
@@ -157,7 +158,7 @@ export default function ClassroomDashboard() {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".pdf,.docx,.txt,.mp3,.wav,.m4a,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,audio/mpeg,audio/wav,audio/mp4"
+              accept=".pdf,.docx,.txt,.js,.mjs,.jsx,.ts,.tsx,.py,.java,.c,.cpp,.h,.hpp,.cs,.go,.rs,.rb,.php,.swift,.kt,.html,.htm,.css,.scss,.json,.xml,.yaml,.yml,.md,.sh,.sql,.r,.lua,.dart,.toml,.mp3,.wav,.m4a,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,audio/mpeg,audio/wav,audio/mp4"
               onChange={handleFileSelect}
               className="hidden"
               id="file-upload"
@@ -222,6 +223,10 @@ export default function ClassroomDashboard() {
                     <svg className="h-8 w-8 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.5 14.5v-1M12 15.5v-3M14.5 14.5v-1" />
+                    </svg>
+                  ) : isCodeFileByName(doc.originalName) ? (
+                    <svg className="h-8 w-8 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
                     </svg>
                   ) : (
                     <svg className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">

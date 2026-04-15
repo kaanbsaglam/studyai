@@ -17,13 +17,16 @@ const openai = env.OPENAI_WHISPER_SECRET_KEY
   ? new OpenAI({ apiKey: env.OPENAI_WHISPER_SECRET_KEY })
   : null;
 
+const { isCodeFile } = require('../validators/document.validator');
+
 /**
  * Extract text from a file buffer based on MIME type
  * @param {Buffer} buffer - File content
  * @param {string} mimeType - File MIME type
+ * @param {string} [filename] - Original filename (used for code file detection)
  * @returns {Promise<string>} Extracted text
  */
-async function extractText(buffer, mimeType) {
+async function extractText(buffer, mimeType, filename) {
   switch (mimeType) {
     case 'application/pdf':
       return extractFromPdf(buffer);
@@ -38,6 +41,10 @@ async function extractText(buffer, mimeType) {
       // Check if it's an audio file
       if (mimeType.startsWith('audio/')) {
         return transcribeAudio(buffer, mimeType);
+      }
+      // Check if it's a code file — read as plain text
+      if (isCodeFile(mimeType, filename)) {
+        return buffer.toString('utf-8');
       }
       throw new Error(`Unsupported file type: ${mimeType}`);
   }
@@ -131,16 +138,17 @@ function getAudioExtension(mimeType) {
  * @param {Buffer} buffer - File content
  * @param {string} mimeType - File MIME type
  * @param {string} tier - User tier ('FREE' or 'PREMIUM')
+ * @param {string} [filename] - Original filename (for code file detection)
  * @returns {Promise<{text: string, tokensUsed: number, extractionMethod: string|null}>}
  */
-async function extractTextWithTier(buffer, mimeType, tier) {
+async function extractTextWithTier(buffer, mimeType, tier, filename) {
   // For PDFs, use tier-based extraction
   if (mimeType === 'application/pdf') {
     return await extractPdf(buffer, { tier });
   }
 
   // For other types, use the standard extraction (no tokens used, no extraction method)
-  const text = await extractText(buffer, mimeType);
+  const text = await extractText(buffer, mimeType, filename);
   return {
     text,
     tokensUsed: 0,
