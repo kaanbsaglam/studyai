@@ -118,17 +118,21 @@ model Classroom {
 // Documents
 // ============================================
 model Document {
-  id               String            @id @default(uuid())
-  filename         String
-  originalName     String            @map("original_name")
-  mimeType         String            @map("mime_type")
-  size             Int               // File size in bytes
-  s3Key            String            @map("s3_key")  // Path in S3
-  status           DocumentStatus    @default(PENDING)
-  extractionMethod ExtractionMethod? @map("extraction_method") // Method used to extract text
-  errorMessage     String?           @map("error_message") // If status is FAILED
-  createdAt        DateTime          @default(now()) @map("created_at")
-  updatedAt        DateTime          @updatedAt @map("updated_at")
+  id                  String            @id @default(uuid())
+  filename            String
+  originalName        String            @map("original_name")
+  mimeType            String            @map("mime_type")
+  size                Int               // File size in bytes
+  s3Key               String            @map("s3_key")  // Path in S3
+  status              DocumentStatus    @default(PENDING)
+  extractionMethod    ExtractionMethod? @map("extraction_method") // Method used to extract text
+  errorMessage        String?           @map("error_message") // If status is FAILED
+  topicMetadata       Json?             @map("topic_metadata") // { summary, topics } - extracted for PREMIUM docs
+  metadataExtractedAt DateTime?         @map("metadata_extracted_at")
+  processedTier       UserTier?         @map("processed_tier") // Owner's tier when this doc was processed
+  reprocessingAt      DateTime?         @map("reprocessing_at") // Non-null while an upgrade reprocess is in flight
+  createdAt           DateTime          @default(now()) @map("created_at")
+  updatedAt           DateTime          @updatedAt @map("updated_at")
 
   // Relations
   userId        String         @map("user_id")
