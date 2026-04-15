@@ -13,6 +13,7 @@ const { NotFoundError, AuthorizationError, ValidationError } = require('../middl
 const { asyncHandler } = require('../middleware/errorHandler');
 const { canUploadDocument, canUploadAudio } = require('../services/tier.service');
 const { searchDocuments } = require('../services/search.service');
+const { isUpgradeable, performUpgrade } = require('../services/documentUpgrade.service');
 const logger = require('../config/logger');
 
 /**
@@ -123,13 +124,22 @@ const getDocuments = asyncHandler(async (req, res) => {
       size: true,
       status: true,
       errorMessage: true,
+      extractionMethod: true,
+      topicMetadata: true,
+      processedTier: true,
+      reprocessingAt: true,
       createdAt: true,
     },
   });
 
+  const enriched = documents.map((d) => ({
+    ...d,
+    isUpgradeable: isUpgradeable(d, req.user.tier),
+  }));
+
   res.json({
     success: true,
-    data: { documents },
+    data: { documents: enriched },
   });
 });
 
@@ -165,7 +175,9 @@ const getDocument = asyncHandler(async (req, res) => {
 
   res.json({
     success: true,
-    data: { document },
+    data: {
+      document: { ...document, isUpgradeable: isUpgradeable(document, req.user.tier) },
+    },
   });
 });
 
@@ -339,6 +351,91 @@ const reprocessDocument = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Upgrade a single document — re-run processing at PREMIUM quality.
+ * POST /api/v1/documents/:id/upgrade
+ */
+const upgradeDocument = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  if (req.user.tier !== 'PREMIUM') {
+    throw new AuthorizationError('Document upgrade is a premium feature');
+  }
+
+  const document = await prisma.document.findUnique({ where: { id } });
+
+  if (!document) {
+    throw new NotFoundError('Document');
+  }
+
+  if (document.userId !== req.user.id) {
+    throw new AuthorizationError('You do not have access to this document');
+  }
+
+  if (document.reprocessingAt) {
+    throw new ValidationError('Document upgrade is already in progress');
+  }
+
+  if (!isUpgradeable(document, req.user.tier)) {
+    throw new ValidationError('Document is not eligible for upgrade');
+  }
+
+  await performUpgrade(id);
+
+  res.status(202).json({
+    success: true,
+    message: 'Document upgrade queued',
+  });
+});
+
+/**
+ * Upgrade every eligible document in a classroom.
+ * POST /api/v1/classrooms/:classroomId/documents/upgrade-all
+ */
+const upgradeAllInClassroom = asyncHandler(async (req, res) => {
+  const { classroomId } = req.params;
+
+  if (req.user.tier !== 'PREMIUM') {
+    throw new AuthorizationError('Document upgrade is a premium feature');
+  }
+
+  const classroom = await prisma.classroom.findUnique({ where: { id: classroomId } });
+
+  if (!classroom) {
+    throw new NotFoundError('Classroom');
+  }
+
+  if (classroom.userId !== req.user.id) {
+    throw new AuthorizationError('You do not have access to this classroom');
+  }
+
+  const candidates = await prisma.document.findMany({
+    where: { classroomId, userId: req.user.id },
+    select: {
+      id: true,
+      status: true,
+      mimeType: true,
+      extractionMethod: true,
+      topicMetadata: true,
+      reprocessingAt: true,
+    },
+  });
+
+  const eligible = candidates.filter((d) => isUpgradeable(d, req.user.tier));
+
+  // Serial loop on purpose — avoid thrashing Pinecone / queue with bursts.
+  for (const doc of eligible) {
+    await performUpgrade(doc.id);
+  }
+
+  logger.info(`Bulk upgrade enqueued for classroom ${classroomId}`, { count: eligible.length });
+
+  res.status(202).json({
+    success: true,
+    data: { enqueued: eligible.length },
+  });
+});
+
+/**
  * Search documents in a classroom using hybrid vector + keyword search
  * GET /api/v1/classrooms/:classroomId/documents/search?q=...
  */
@@ -379,5 +476,7 @@ module.exports = {
   deleteDocument,
   getStreamUrl,
   reprocessDocument,
+  upgradeDocument,
+  upgradeAllInClassroom,
   searchDocumentsInClassroom,
 };

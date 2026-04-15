@@ -164,7 +164,12 @@
     "failedToUpload": "Doküman yüklenemedi",
     "play": "Oynat",
     "viewTranscription": "Dönüşümü Görüntüle",
-    "audioNotSupported": "Tarayıcınız ses öğesini desteklemiyor."
+    "audioNotSupported": "Tarayıcınız ses öğesini desteklemiyor.",
+    "upgrade": "Yükselt",
+    "upgrading": "Yükseltiliyor…",
+    "upgradeAllEligible": "Uygun olanları yükselt ({{count}})",
+    "upgradeTooltip": "Bu dokümanı PREMIUM kalitede yeniden işle (Vision + konu çıkarımı)",
+    "failedToUpgrade": "Doküman yükseltilemedi"
   },
   "audioDetail": {
     "loading": "Ses dosyası yükleniyor...",

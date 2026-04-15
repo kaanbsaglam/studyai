@@ -164,7 +164,12 @@
     "failedToUpload": "Failed to upload document",
     "play": "Play",
     "viewTranscription": "View Transcription",
-    "audioNotSupported": "Your browser does not support the audio element."
+    "audioNotSupported": "Your browser does not support the audio element.",
+    "upgrade": "Upgrade",
+    "upgrading": "Upgrading…",
+    "upgradeAllEligible": "Upgrade all eligible ({{count}})",
+    "upgradeTooltip": "Re-process at PREMIUM quality (Vision + topic extraction)",
+    "failedToUpgrade": "Failed to upgrade document"
   },
   "audioDetail": {
     "loading": "Loading audio...",

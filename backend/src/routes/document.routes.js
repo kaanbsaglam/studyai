@@ -21,6 +21,8 @@ const {
   getStreamUrl,
   deleteDocument,
   reprocessDocument,
+  upgradeDocument,
+  upgradeAllInClassroom,
   searchDocumentsInClassroom,
 } = require('../controllers/document.controller');
 const { authenticate } = require('../middleware/auth.middleware');
@@ -49,6 +51,8 @@ router.get('/documents/:id', getDocument);
 router.get('/documents/:id/download', getDownloadUrl);
 router.get('/documents/:id/stream', getStreamUrl);
 router.post('/documents/:id/reprocess', reprocessDocument);
+router.post('/documents/:id/upgrade', upgradeDocument);
+router.post('/classrooms/:classroomId/documents/upgrade-all', upgradeAllInClassroom);
 router.delete('/documents/:id', deleteDocument);
 
 module.exports = router;
