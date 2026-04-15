@@ -140,7 +140,7 @@
     "deleteDocConfirm": "Bu dokümanı silmek istediğinizden emin misiniz?",
     "failedToDeleteDoc": "Doküman silinemedi",
     "invalidFileType": "Geçersiz dosya türü. İzin verilenler: PDF, DOCX, TXT, kod dosyaları (.js, .py, .java, vb.), MP3, WAV, M4A",
-    "fileTooLarge": "Dosya çok büyük. Maksimum boyut 10MB",
+    "fileTooLarge": "Dosya çok büyük. Maksimum boyut 50MB",
     "failedToUpload": "Doküman yüklenemedi"
   },
   "classroomDocuments": {
@@ -160,7 +160,7 @@
     "deleteConfirm": "Bu dokümanı silmek istediğinizden emin misiniz?",
     "failedToDelete": "Doküman silinemedi",
     "invalidFileType": "Geçersiz dosya türü. İzin verilenler: PDF, DOCX, TXT, kod dosyaları (.js, .py, .java, vb.), MP3, WAV, M4A",
-    "fileTooLarge": "Dosya çok büyük. Maksimum boyut 10MB",
+    "fileTooLarge": "Dosya çok büyük. Maksimum boyut 50MB",
     "failedToUpload": "Doküman yüklenemedi",
     "play": "Oynat",
     "viewTranscription": "Dönüşümü Görüntüle",
