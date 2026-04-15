@@ -139,7 +139,7 @@
     "deleteConfirm": "Bu sınıfı silmek istediğinizden emin misiniz? Tüm dokümanlar silinecektir.",
     "deleteDocConfirm": "Bu dokümanı silmek istediğinizden emin misiniz?",
     "failedToDeleteDoc": "Doküman silinemedi",
-    "invalidFileType": "Geçersiz dosya türü. İzin verilenler: PDF, DOCX, TXT, MP3, WAV, M4A",
+    "invalidFileType": "Geçersiz dosya türü. İzin verilenler: PDF, DOCX, TXT, kod dosyaları (.js, .py, .java, vb.), MP3, WAV, M4A",
     "fileTooLarge": "Dosya çok büyük. Maksimum boyut 10MB",
     "failedToUpload": "Doküman yüklenemedi"
   },
@@ -155,11 +155,11 @@
     "noDocumentsYet": "Henüz doküman yok",
     "noDocumentsMatch": "Aramanızla eşleşen doküman yok",
     "noAudioYet": "Henüz ses dosyası yok",
-    "uploadHint": "Yapay zeka ile çalışmaya başlamak için PDF, DOCX veya TXT dosyaları yükleyin",
+    "uploadHint": "Yapay zeka ile çalışmaya başlamak için PDF, DOCX, TXT veya kod dosyaları yükleyin",
     "uploadAudioHint": "Metne dönüştürmek için MP3, WAV veya M4A ses dosyaları yükleyin",
     "deleteConfirm": "Bu dokümanı silmek istediğinizden emin misiniz?",
     "failedToDelete": "Doküman silinemedi",
-    "invalidFileType": "Geçersiz dosya türü. İzin verilenler: PDF, DOCX, TXT, MP3, WAV, M4A",
+    "invalidFileType": "Geçersiz dosya türü. İzin verilenler: PDF, DOCX, TXT, kod dosyaları (.js, .py, .java, vb.), MP3, WAV, M4A",
     "fileTooLarge": "Dosya çok büyük. Maksimum boyut 10MB",
     "failedToUpload": "Doküman yüklenemedi",
     "play": "Oynat",
@@ -586,5 +586,11 @@
     "downloadPdf": "PDF Olarak İndir",
     "downloadTxt": "TXT Olarak İndir",
     "answerKey": "Cevap Anahtarı"
+  },
+  "codeViewer": {
+    "copy": "Kopyala",
+    "copied": "Kopyalandı!",
+    "download": "İndir",
+    "lines": "{{count}} satır"
   }
 }

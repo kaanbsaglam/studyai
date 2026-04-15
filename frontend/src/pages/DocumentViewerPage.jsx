@@ -7,6 +7,7 @@ import FlashcardsPanel from '../components/FlashcardsPanel';
 import QuizPanel from '../components/QuizPanel';
 import SummaryPanel from '../components/SummaryPanel';
 import NotesPanel from '../components/NotesPanel';
+import CodeViewer, { isCodeFileByName } from '../components/CodeViewer';
 import { useStudyTracker } from '../hooks/useStudyTracker';
 import { useTranslation } from 'react-i18next';
 
@@ -26,6 +27,7 @@ export default function DocumentViewerPage() {
 
   const [document, setDocument] = useState(null);
   const [content, setContent] = useState('');
+  const [codeContent, setCodeContent] = useState(null); // Raw code string for code files
   const [pdfUrl, setPdfUrl] = useState(null);
   const [numPages, setNumPages] = useState(null);
   const [pageNumber, setPageNumber] = useState(1);
@@ -94,6 +96,8 @@ export default function DocumentViewerPage() {
     return () => resizeObserver.disconnect();
   }, [pdfUrl]); // Re-attach when PDF loads
 
+  const isCodeDoc = (doc) => isCodeFileByName(doc?.originalName);
+
   const fetchDocument = async () => {
     try {
       setLoading(true);
@@ -105,6 +109,11 @@ export default function DocumentViewerPage() {
         // Get presigned URL for PDF
         const downloadResponse = await api.get(`/documents/${docId}/download`);
         setPdfUrl(downloadResponse.data.data.url);
+      } else if (isCodeDoc(doc)) {
+        // For code files, fetch raw content from S3 to preserve formatting
+        const downloadResponse = await api.get(`/documents/${docId}/download`);
+        const rawText = await fetch(downloadResponse.data.data.url).then((r) => r.text());
+        setCodeContent(rawText);
       } else {
         // For text files, fetch content from chunks
         const chunksContent = doc.chunks?.map((c) => c.content).join('\n\n') || '';
@@ -340,6 +349,10 @@ export default function DocumentViewerPage() {
                   </button>
                 </div>
               )}
+            </div>
+          ) : isCodeDoc(document) && codeContent ? (
+            <div className="max-w-5xl mx-auto w-full">
+              <CodeViewer code={codeContent} filename={document?.originalName} />
             </div>
           ) : (
             <div className="bg-white rounded-lg shadow p-6 max-w-4xl mx-auto">

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useOutletContext, useParams } from 'react-router-dom';
 import api from '../api/axios';
+import { isCodeFileByName } from '../components/CodeViewer';
 
 function isAudioMime(mimeType) {
   return mimeType?.startsWith('audio/');
@@ -62,7 +63,7 @@ export default function ClassroomDocumentsPage() {
       'audio/x-m4a',
     ];
 
-    if (!allowedTypes.includes(file.type)) {
+    if (!allowedTypes.includes(file.type) && !isCodeFileByName(file.name)) {
       setError(t('classroomDocuments.invalidFileType'));
       return;
     }
@@ -232,7 +233,7 @@ export default function ClassroomDocumentsPage() {
   const acceptTypes =
     activeTab === 'audio'
       ? '.mp3,.wav,.m4a,audio/mpeg,audio/wav,audio/mp4'
-      : '.pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain';
+      : '.pdf,.docx,.txt,.js,.mjs,.jsx,.ts,.tsx,.py,.java,.c,.cpp,.h,.hpp,.cs,.go,.rs,.rb,.php,.swift,.kt,.html,.htm,.css,.scss,.json,.xml,.yaml,.yml,.md,.sh,.sql,.r,.lua,.dart,.toml,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain';
 
   return (
     <div className="space-y-6">
@@ -390,8 +391,12 @@ function DocumentList({ documents, allEmpty, id, t, formatFileSize, getStatusBad
             to={doc.status === 'READY' ? `/classrooms/${id}/documents/${doc.id}` : '#'}
             className={`flex items-center gap-3 flex-1 ${doc.status !== 'READY' ? 'pointer-events-none' : ''}`}
           >
-            <svg className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            <svg className={`h-8 w-8 ${isCodeFileByName(doc.originalName) ? 'text-emerald-500' : 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              {isCodeFileByName(doc.originalName) ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              )}
             </svg>
             <div>
               <p className="font-medium text-gray-900">{doc.originalName}</p>

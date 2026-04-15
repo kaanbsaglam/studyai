@@ -62,7 +62,8 @@ async function processDocument(job) {
     const { text, tokensUsed, extractionMethod } = await extractTextWithTier(
       fileBuffer,
       document.mimeType,
-      userTier
+      userTier,
+      document.originalName
     );
 
     if (!text || text.trim().length === 0) {

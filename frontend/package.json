@@ -12,6 +12,7 @@
   "dependencies": {
     "@react-pdf/renderer": "^4.3.2",
     "axios": "^1.13.2",
+    "highlight.js": "^11.11.1",
     "i18next": "^25.8.4",
     "i18next-browser-languagedetector": "^8.2.0",
     "react": "^19.2.0",

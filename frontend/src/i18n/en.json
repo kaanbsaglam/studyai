@@ -139,7 +139,7 @@
     "deleteConfirm": "Are you sure you want to delete this classroom? All documents will be deleted.",
     "deleteDocConfirm": "Are you sure you want to delete this document?",
     "failedToDeleteDoc": "Failed to delete document",
-    "invalidFileType": "Invalid file type. Allowed: PDF, DOCX, TXT, MP3, WAV, M4A",
+    "invalidFileType": "Invalid file type. Allowed: PDF, DOCX, TXT, code files (.js, .py, .java, etc.), MP3, WAV, M4A",
     "fileTooLarge": "File too large. Maximum size is 10MB",
     "failedToUpload": "Failed to upload document"
   },
@@ -155,11 +155,11 @@
     "noDocumentsYet": "No documents yet",
     "noDocumentsMatch": "No documents match your search",
     "noAudioYet": "No audio files yet",
-    "uploadHint": "Upload PDF, DOCX, or TXT files to start studying with AI",
+    "uploadHint": "Upload PDF, DOCX, TXT, or code files to start studying with AI",
     "uploadAudioHint": "Upload MP3, WAV, or M4A audio files to transcribe into text",
     "deleteConfirm": "Are you sure you want to delete this document?",
     "failedToDelete": "Failed to delete document",
-    "invalidFileType": "Invalid file type. Allowed: PDF, DOCX, TXT, MP3, WAV, M4A",
+    "invalidFileType": "Invalid file type. Allowed: PDF, DOCX, TXT, code files (.js, .py, .java, etc.), MP3, WAV, M4A",
     "fileTooLarge": "File too large. Maximum size is 10MB",
     "failedToUpload": "Failed to upload document",
     "play": "Play",
@@ -594,5 +594,11 @@
     "downloadPdf": "Download as PDF",
     "downloadTxt": "Download as TXT",
     "answerKey": "Answer Key"
+  },
+  "codeViewer": {
+    "copy": "Copy",
+    "copied": "Copied!",
+    "download": "Download",
+    "lines": "{{count}} lines"
   }
 }
