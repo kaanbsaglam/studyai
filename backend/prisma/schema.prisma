@@ -296,9 +296,15 @@ model Summary {
 model Note {
   id        String   @id @default(uuid())
   title     String
-  content   String   @db.Text // Markdown content
+  content   String   @db.Text // Markdown content (empty for audio notes)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Audio note fields (null for text/markdown notes)
+  mimeType     String? @map("mime_type")
+  s3Key        String? @map("s3_key")
+  originalName String? @map("original_name")
+  size         Int?
 
   // Relations
   classroomId String    @map("classroom_id")
