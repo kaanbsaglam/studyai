@@ -522,7 +522,15 @@
     "failedToCreate": "Not oluşturulamadı",
     "failedToUpdate": "Not güncellenemedi",
     "failedToDelete": "Not silinemedi",
-    "failedToLoadNote": "Not yüklenemedi"
+    "failedToLoadNote": "Not yüklenemedi",
+    "textNote": "Metin notu",
+    "audioNote": "Ses dosyası",
+    "uploadAudio": "Ses Yükle",
+    "uploadingAudio": "Yükleniyor...",
+    "uploadAudioTitle": "Bir ses notu yükle",
+    "loadingAudio": "Ses yükleniyor...",
+    "invalidAudioFile": "Lütfen bir ses dosyası seçin (MP3, WAV, M4A, OGG veya WebM).",
+    "failedToUploadAudio": "Ses notu yüklenemedi"
   },
   "documentSelector": {
     "noDocuments": "Doküman mevcut değil. Önce doküman yükleyin ve işleyin.",

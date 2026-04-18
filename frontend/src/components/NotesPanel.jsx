@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import MarkdownRenderer from './MarkdownRenderer';
 import api from '../api/axios';
@@ -24,6 +24,14 @@ export default function NotesPanel({
   const [editContent, setEditContent] = useState('');
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+
+  // Audio note state
+  const audioFileInputRef = useRef(null);
+  const [uploadingAudio, setUploadingAudio] = useState(false);
+  const [audioStreamUrl, setAudioStreamUrl] = useState(null);
+
+  const isAudioNote = (note) =>
+    !!(note && note.mimeType && note.mimeType.startsWith('audio/'));
 
   useEffect(() => {
     fetchNotes();
@@ -108,11 +116,55 @@ export default function NotesPanel({
   const openNote = async (noteId) => {
     try {
       const response = await api.get(`/notes/${noteId}`);
-      setActiveNote(response.data.data.note);
+      const note = response.data.data.note;
+      setActiveNote(note);
       setIsEditing(false);
       setIsCreating(false);
+      setAudioStreamUrl(null);
+
+      if (isAudioNote(note)) {
+        try {
+          const streamRes = await api.get(`/notes/${noteId}/stream`);
+          setAudioStreamUrl(streamRes.data.data.url);
+        } catch {
+          setError(t('notesPanel.failedToLoadNote'));
+        }
+      }
     } catch {
       setError(t('notesPanel.failedToLoadNote'));
+    }
+  };
+
+  const handleAudioUpload = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    if (!file.type.startsWith('audio/')) {
+      setError(t('notesPanel.invalidAudioFile'));
+      return;
+    }
+
+    setUploadingAudio(true);
+    setError('');
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('title', file.name);
+      if (documentId) formData.append('documentId', documentId);
+
+      const response = await api.post(
+        `/classrooms/${classroomId}/notes/audio`,
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+
+      const newNote = response.data.data.note;
+      setNotes((prev) => [newNote, ...prev]);
+    } catch (err) {
+      setError(err.response?.data?.error?.message || t('notesPanel.failedToUploadAudio'));
+    } finally {
+      setUploadingAudio(false);
     }
   };
 
@@ -267,33 +319,41 @@ export default function NotesPanel({
             </button>
             <ThreeDotMenu
               items={[
-                {
-                  label: t('common.edit'),
-                  icon: (
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                  ),
-                  onClick: startEditing,
-                },
-                {
-                  label: t('export.downloadPdf'),
-                  icon: (
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                  ),
-                  onClick: () => handleExportNotePdf(activeNote),
-                },
-                {
-                  label: t('export.downloadTxt'),
-                  icon: (
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                  ),
-                  onClick: () => handleExportNoteTxt(activeNote),
-                },
+                ...(isAudioNote(activeNote)
+                  ? []
+                  : [
+                      {
+                        label: t('common.edit'),
+                        icon: (
+                          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        ),
+                        onClick: startEditing,
+                      },
+                    ]),
+                ...(isAudioNote(activeNote)
+                  ? []
+                  : [
+                      {
+                        label: t('export.downloadPdf'),
+                        icon: (
+                          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                        ),
+                        onClick: () => handleExportNotePdf(activeNote),
+                      },
+                      {
+                        label: t('export.downloadTxt'),
+                        icon: (
+                          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                        ),
+                        onClick: () => handleExportNoteTxt(activeNote),
+                      },
+                    ]),
                 {
                   label: t('common.delete'),
                   icon: (
@@ -310,7 +370,23 @@ export default function NotesPanel({
         </div>
 
         <div className={`flex-1 ${compact ? 'p-4' : 'p-6'} overflow-auto`}>
-          {activeNote.content ? (
+          {isAudioNote(activeNote) ? (
+            <div className="flex flex-col items-center justify-center py-8">
+              <div className="w-24 h-24 rounded-full bg-purple-50 flex items-center justify-center mb-4">
+                <svg className="h-12 w-12 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11a7 7 0 01-14 0m7 7v3m-4 0h8m-4-7a3 3 0 01-3-3V6a3 3 0 116 0v5a3 3 0 01-3 3z" />
+                </svg>
+              </div>
+              <p className="text-gray-900 font-medium text-center mb-1 max-w-md truncate">
+                {activeNote.originalName || activeNote.title}
+              </p>
+              {audioStreamUrl ? (
+                <audio controls src={audioStreamUrl} className="w-full max-w-md mt-4" preload="metadata" />
+              ) : (
+                <p className="text-gray-400 text-sm mt-4">{t('notesPanel.loadingAudio')}</p>
+              )}
+            </div>
+          ) : activeNote.content ? (
             <MarkdownRenderer>{activeNote.content}</MarkdownRenderer>
           ) : (
             <p className="text-gray-400 italic">{t('notesPanel.emptyNote')}</p>
@@ -332,13 +408,64 @@ export default function NotesPanel({
           <h3 className="text-lg font-medium text-gray-900">{t('notesPanel.title')}</h3>
           <p className="text-xs text-gray-500">{t('notesPanel.noteCount', { count: notes.length })}</p>
         </div>
-        <button
-          onClick={startCreating}
-          className="px-4 py-2 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 dark:hover:bg-blue-500/80 inline-flex items-center justify-center"
-        >
-          {t('notesPanel.newNote')}
-        </button>
+        <div className="flex items-center gap-2">
+          <input
+            ref={audioFileInputRef}
+            type="file"
+            accept="audio/*"
+            className="hidden"
+            onChange={handleAudioUpload}
+          />
+          <div className="relative group">
+            <button
+              type="button"
+              disabled={uploadingAudio}
+              className="px-4 py-2 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 dark:hover:bg-blue-500/80 inline-flex items-center justify-center disabled:opacity-50"
+            >
+              {t('notesPanel.newNote')}
+            </button>
+            <div
+              className="absolute right-0 top-full mt-1 z-20 min-w-[180px] rounded-xl border overflow-hidden opacity-0 invisible translate-y-1 group-hover:opacity-100 group-hover:visible group-hover:translate-y-0 group-focus-within:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 transition-all duration-150"
+              style={{
+                backgroundColor: 'var(--card-bg)',
+                borderColor: 'var(--border-color)',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
+              }}
+            >
+              <button
+                type="button"
+                onClick={startCreating}
+                className="group/item w-full px-3 py-2.5 text-left text-sm flex items-center gap-2.5 border-0 outline-none focus:outline-none hover:bg-blue-500/10 dark:hover:bg-blue-400/15 hover:pl-4 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-150"
+                style={{ color: 'var(--text-primary)', background: 'transparent' }}
+              >
+                <svg className="h-4 w-4 flex-shrink-0 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                {t('notesPanel.textNote')}
+              </button>
+              <button
+                type="button"
+                onClick={() => audioFileInputRef.current?.click()}
+                disabled={uploadingAudio}
+                className="group/item w-full px-3 py-2.5 text-left text-sm flex items-center gap-2.5 border-0 outline-none focus:outline-none hover:bg-blue-500/10 dark:hover:bg-blue-400/15 hover:pl-4 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-50 disabled:hover:pl-3 transition-all duration-150"
+                style={{ color: 'var(--text-primary)', background: 'transparent' }}
+              >
+                <svg className="h-4 w-4 flex-shrink-0 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-14 0m7 7v3m-4 0h8m-4-7a3 3 0 01-3-3V6a3 3 0 116 0v5a3 3 0 01-3 3z" />
+                </svg>
+                {uploadingAudio ? t('notesPanel.uploadingAudio') : t('notesPanel.audioNote')}
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
+
+      {uploadingAudio && (
+        <div className="h-1 w-full overflow-hidden bg-blue-100 dark:bg-blue-900/40">
+          <div className="h-full w-1/3 bg-blue-600 animate-[indeterminate_1.2s_ease-in-out_infinite]" style={{ animation: 'indeterminate 1.2s ease-in-out infinite' }}></div>
+          <style>{`@keyframes indeterminate { 0% { transform: translateX(-100%); } 100% { transform: translateX(400%); } }`}</style>
+        </div>
+      )}
 
       {error && (
         <div className={`${compact ? 'mx-4 mt-2 px-3 py-2' : 'mx-6 mt-4 px-4 py-3'} bg-red-50 border border-red-200 text-red-600 rounded text-sm`}>
@@ -376,7 +503,18 @@ export default function NotesPanel({
             >
               <div className="flex justify-between items-start">
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate" style={{ color: 'var(--text-primary)' }}>{note.title}</p>
+                  <p className="font-medium truncate flex items-center gap-1.5" style={{ color: 'var(--text-primary)' }}>
+                    {isAudioNote(note) ? (
+                      <svg className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--text-primary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-14 0m7 7v3m-4 0h8m-4-7a3 3 0 01-3-3V6a3 3 0 116 0v5a3 3 0 01-3 3z" />
+                      </svg>
+                    ) : (
+                      <svg className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--text-primary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    )}
+                    <span className="truncate">{note.title}</span>
+                  </p>
                   <p
                     className="mt-1 text-xs truncate"
                     style={{ color: 'var(--text-muted)' }}

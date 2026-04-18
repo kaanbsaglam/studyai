@@ -522,7 +522,15 @@
     "failedToCreate": "Failed to create note",
     "failedToUpdate": "Failed to update note",
     "failedToDelete": "Failed to delete note",
-    "failedToLoadNote": "Failed to load note"
+    "failedToLoadNote": "Failed to load note",
+    "textNote": "Text note",
+    "audioNote": "Audio file",
+    "uploadAudio": "Upload Audio",
+    "uploadingAudio": "Uploading...",
+    "uploadAudioTitle": "Upload an audio note",
+    "loadingAudio": "Loading audio...",
+    "invalidAudioFile": "Please select an audio file (MP3, WAV, M4A, OGG, or WebM).",
+    "failedToUploadAudio": "Failed to upload audio note"
   },
   "documentSelector": {
     "noDocuments": "No documents available. Upload and process documents first.",
