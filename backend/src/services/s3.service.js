@@ -25,11 +25,11 @@ const s3Client = new S3Client({
  * @param {string} classroomId - Classroom ID for organizing files
  * @returns {Promise<{key: string, filename: string}>}
  */
-async function uploadFile(fileBuffer, originalName, mimeType, classroomId) {
+async function uploadFile(fileBuffer, originalName, mimeType, classroomId, folder = 'documents') {
   // Generate unique filename
   const extension = originalName.split('.').pop();
   const filename = `${uuidv4()}.${extension}`;
-  const key = `documents/${classroomId}/${filename}`;
+  const key = `${folder}/${classroomId}/${filename}`;
 
   const command = new PutObjectCommand({
     Bucket: env.S3_BUCKET_NAME,
