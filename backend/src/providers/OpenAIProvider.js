@@ -9,6 +9,28 @@ const LLMProvider = require('./LLMProvider');
 const { env } = require('../config/env');
 const logger = require('../config/logger');
 
+/**
+ * OpenAI strict mode requires every object to have additionalProperties: false.
+ * Walk the schema and inject it where missing so call sites can author the same
+ * minimal schema shape Gemini accepts.
+ */
+function prepareOpenAISchema(schema) {
+  if (!schema || typeof schema !== 'object') return schema;
+  const out = Array.isArray(schema) ? [...schema] : { ...schema };
+  if (out.type === 'object') {
+    if (out.additionalProperties === undefined) out.additionalProperties = false;
+    if (out.properties) {
+      out.properties = Object.fromEntries(
+        Object.entries(out.properties).map(([k, v]) => [k, prepareOpenAISchema(v)])
+      );
+    }
+  }
+  if (out.type === 'array' && out.items) {
+    out.items = prepareOpenAISchema(out.items);
+  }
+  return out;
+}
+
 class OpenAIProvider extends LLMProvider {
   constructor(config = {}) {
     super(config);
@@ -27,6 +49,7 @@ class OpenAIProvider extends LLMProvider {
    * @param {string} prompt - The input prompt
    * @param {object} options - Generation options
    * @param {string} options.model - Model to use (required)
+   * @param {object} [options.schema] - Optional response schema for structured JSON output
    * @returns {Promise<{text: string, tokensUsed: number}>}
    */
   async generateText(prompt, options = {}) {
@@ -39,8 +62,18 @@ class OpenAIProvider extends LLMProvider {
     }
 
     const model = options.model;
+    const responseFormat = options.schema
+      ? {
+          type: 'json_schema',
+          json_schema: {
+            name: 'response',
+            schema: prepareOpenAISchema(options.schema),
+            strict: true,
+          },
+        }
+      : undefined;
 
-    logger.debug('OpenAI generateText called', { model, promptLength: prompt.length });
+    logger.debug('OpenAI generateText called', { model, promptLength: prompt.length, structured: !!options.schema });
 
     try {
       const response = await this.client.chat.completions.create({
@@ -51,6 +84,7 @@ class OpenAIProvider extends LLMProvider {
             content: prompt,
           },
         ],
+        ...(responseFormat ? { response_format: responseFormat } : {}),
       });
 
       const text = response.choices[0]?.message?.content || '';

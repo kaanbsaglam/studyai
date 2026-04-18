@@ -14,10 +14,11 @@ const logger = require('../config/logger');
  * Provider is resolved from the model registry.
  *
  * @param {string} prompt
- * @param {{ model: string }} options - model name (must exist in registry)
+ * @param {{ model: string, schema?: object }} options - model name (must exist in registry),
+ *   plus optional response schema for structured JSON output.
  * @returns {Promise<{ text: string, tokensUsed: number, weightedTokens: number }>}
  */
-async function generateText(prompt, { model }) {
+async function generateText(prompt, { model, schema }) {
   const modelConfig = llmConfig.models[model];
   if (!modelConfig) {
     throw new Error(`Unknown model: ${model}. Register it in llm.config.js models.`);
@@ -29,9 +30,10 @@ async function generateText(prompt, { model }) {
     model,
     provider: modelConfig.provider,
     promptLength: prompt.length,
+    structured: !!schema,
   });
 
-  const result = await provider.generateText(prompt, { model });
+  const result = await provider.generateText(prompt, { model, schema });
 
   const weightedTokens = Math.ceil(result.tokensUsed * modelConfig.costWeight);
 
@@ -55,17 +57,18 @@ async function generateText(prompt, { model }) {
  *
  * @param {string} prompt
  * @param {{ primary: string, fallback: string|null }} models
+ * @param {{ schema?: object }} [options] - Optional response schema for structured JSON output
  * @returns {Promise<{ text: string, tokensUsed: number, weightedTokens: number }>}
  */
-async function generateWithFallback(prompt, { primary, fallback }) {
+async function generateWithFallback(prompt, { primary, fallback }, { schema } = {}) {
   try {
-    return await generateText(prompt, { model: primary });
+    return await generateText(prompt, { model: primary, schema });
   } catch (err) {
     if (!fallback || fallback === primary) throw err;
     logger.warn(`Primary model ${primary} failed, trying fallback ${fallback}`, {
       error: err.message,
     });
-    return await generateText(prompt, { model: fallback });
+    return await generateText(prompt, { model: fallback, schema });
   }
 }
 

@@ -14,16 +14,17 @@ const llmConfig = require('../config/llm.config');
 const { loadPrompt } = require('../prompts/loader');
 const logger = require('../config/logger');
 
-/**
- * Strip ```json ... ``` fences the LLM may have wrapped the JSON in.
- */
-function stripJsonFences(raw) {
-  let s = raw.trim();
-  if (s.startsWith('```')) {
-    s = s.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
-  }
-  return s.trim();
-}
+const TOPIC_METADATA_SCHEMA = {
+  type: 'object',
+  properties: {
+    summary: { type: 'string' },
+    topics: {
+      type: 'array',
+      items: { type: 'string' },
+    },
+  },
+  required: ['summary', 'topics'],
+};
 
 /**
  * Validate the parsed object matches the shape contract.
@@ -63,13 +64,12 @@ async function extractTopicMetadata(documentText, tier) {
 
   const { text, tokensUsed, weightedTokens } = await generateText(prompt, {
     model: scenario.primary,
+    schema: TOPIC_METADATA_SCHEMA,
   });
-
-  const cleaned = stripJsonFences(text);
 
   let parsed;
   try {
-    parsed = JSON.parse(cleaned);
+    parsed = JSON.parse(text);
   } catch (err) {
     throw new Error(`Topic extraction output is not valid JSON: ${err.message}`);
   }

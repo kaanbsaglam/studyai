@@ -10,6 +10,7 @@ const { gatherDocumentsContentStructured } = require('./documentContent.service'
 const { generateWithFallback } = require('./llm.service');
 const llmConfig = require('../config/llm.config');
 const { generateWithGenerator } = require('./pipeline.service');
+const { getGenerator } = require('../generators');
 const { loadPrompt } = require('../prompts/loader');
 
 /**
@@ -35,8 +36,14 @@ async function generateFlashcards({ content, documents, focusTopic, count, isGen
   if (isGeneralKnowledge) {
     const prompt = buildFlashcardPrompt({ content: null, focusTopic, count, isGeneralKnowledge: true });
     const models = llmConfig.tiers[tier]?.studyAid || llmConfig.tiers.FREE.studyAid;
-    const { text: responseText, tokensUsed, weightedTokens } = await generateWithFallback(prompt, models);
-    const cards = parseFlashcardResponse(responseText);
+    const generator = getGenerator('flashcard');
+    const { text: responseText, tokensUsed, weightedTokens } = await generateWithFallback(
+      prompt,
+      models,
+      { schema: generator.getSchema(0) }
+    );
+    const parsed = generator.parseResponse(responseText, 0);
+    const cards = generator.validateResult(parsed, { count });
     logger.info(`Generated ${cards.length} flashcards, ${tokensUsed} tokens used`);
     return { cards, tokensUsed, weightedTokens };
   }
@@ -69,64 +76,6 @@ function buildFlashcardPrompt({ content, focusTopic, count, isGeneralKnowledge }
     topicInstruction,
     content,
   });
-}
-
-/**
- * Parse the LLM response into flashcard objects
- * @param {string} responseText
- * @returns {Array<{front: string, back: string}>}
- * @throws {Error} If parsing fails
- */
-function parseFlashcardResponse(responseText) {
-  // Try to extract JSON from the response
-  // Sometimes the model wraps it in markdown code blocks
-  let jsonStr = responseText.trim();
-
-  // Remove markdown code blocks if present
-  if (jsonStr.startsWith('```json')) {
-    jsonStr = jsonStr.slice(7);
-  } else if (jsonStr.startsWith('```')) {
-    jsonStr = jsonStr.slice(3);
-  }
-  if (jsonStr.endsWith('```')) {
-    jsonStr = jsonStr.slice(0, -3);
-  }
-  jsonStr = jsonStr.trim();
-
-  // Try to parse the JSON
-  let parsed;
-  try {
-    parsed = JSON.parse(jsonStr);
-  } catch (e) {
-    logger.error('Failed to parse flashcard JSON response', { responseText, error: e.message });
-    throw new Error('Failed to generate flashcards. The AI response was not in the expected format. Please try again.');
-  }
-
-  // Validate the structure
-  if (!Array.isArray(parsed)) {
-    logger.error('Flashcard response is not an array', { parsed });
-    throw new Error('Failed to generate flashcards. The AI response was not in the expected format. Please try again.');
-  }
-
-  // Validate each card
-  const cards = [];
-  for (let i = 0; i < parsed.length; i++) {
-    const card = parsed[i];
-    if (!card || typeof card.front !== 'string' || typeof card.back !== 'string') {
-      logger.warn(`Invalid flashcard at index ${i}`, { card });
-      continue; // Skip invalid cards instead of failing completely
-    }
-    cards.push({
-      front: card.front.trim(),
-      back: card.back.trim(),
-    });
-  }
-
-  if (cards.length === 0) {
-    throw new Error('Failed to generate flashcards. No valid cards were created. Please try again.');
-  }
-
-  return cards;
 }
 
 /**

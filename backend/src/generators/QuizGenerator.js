@@ -9,9 +9,29 @@ const Generator = require('./Generator');
 const logger = require('../config/logger');
 const { loadPrompt } = require('../prompts/loader');
 
+const QUIZ_SCHEMA = {
+  type: 'array',
+  items: {
+    type: 'object',
+    properties: {
+      question: { type: 'string' },
+      correctAnswer: { type: 'string' },
+      wrongAnswers: {
+        type: 'array',
+        items: { type: 'string' },
+      },
+    },
+    required: ['question', 'correctAnswer', 'wrongAnswers'],
+  },
+};
+
 class QuizGenerator extends Generator {
   getName() {
     return 'quiz';
+  }
+
+  getSchema(depth) {
+    return QUIZ_SCHEMA;
   }
 
   needsDocumentContext() {
@@ -57,11 +77,9 @@ class QuizGenerator extends Generator {
   }
 
   parseResponse(responseText, depth) {
-    const jsonStr = this.stripMarkdownCodeBlocks(responseText);
-
     let parsed;
     try {
-      parsed = JSON.parse(jsonStr);
+      parsed = JSON.parse(responseText);
     } catch (e) {
       logger.error('QuizGenerator: Failed to parse JSON response', { error: e.message });
       throw new Error('Failed to parse quiz response. Please try again.');

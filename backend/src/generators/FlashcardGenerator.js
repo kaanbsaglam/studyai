@@ -9,9 +9,25 @@ const Generator = require('./Generator');
 const logger = require('../config/logger');
 const { loadPrompt } = require('../prompts/loader');
 
+const FLASHCARDS_SCHEMA = {
+  type: 'array',
+  items: {
+    type: 'object',
+    properties: {
+      front: { type: 'string' },
+      back: { type: 'string' },
+    },
+    required: ['front', 'back'],
+  },
+};
+
 class FlashcardGenerator extends Generator {
   getName() {
     return 'flashcard';
+  }
+
+  getSchema(depth) {
+    return FLASHCARDS_SCHEMA;
   }
 
   needsDocumentContext() {
@@ -57,11 +73,9 @@ class FlashcardGenerator extends Generator {
   }
 
   parseResponse(responseText, depth) {
-    const jsonStr = this.stripMarkdownCodeBlocks(responseText);
-
     let parsed;
     try {
-      parsed = JSON.parse(jsonStr);
+      parsed = JSON.parse(responseText);
     } catch (e) {
       logger.error('FlashcardGenerator: Failed to parse JSON response', { error: e.message });
       throw new Error('Failed to parse flashcard response. Please try again.');

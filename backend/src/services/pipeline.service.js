@@ -295,9 +295,10 @@ async function preprocessOversizedDocuments(documents, generator, tier, tierConf
 async function processChunk(generator, chunk, params, tier) {
   const prompt = generator.buildMapPrompt(chunk, params, 0);
   const models = llmConfig.tiers[tier]?.pipeline?.map || llmConfig.tiers.FREE.pipeline.map;
+  const schema = generator.getSchema(0);
 
   try {
-    const { text, tokensUsed, weightedTokens } = await generateWithFallback(prompt, models);
+    const { text, tokensUsed, weightedTokens } = await generateWithFallback(prompt, models, { schema });
     const result = generator.parseResponse(text, 0);
 
     return { result, tokensUsed, weightedTokens, failed: false };
@@ -510,8 +511,9 @@ async function generateWithGenerator(generatorName, content, params, options = {
     const contentStr = getContentString(processedContent);
     const prompt = generator.buildMapPrompt(contentStr, params, 0);
     const models = llmConfig.tiers[tier]?.pipeline?.map || llmConfig.tiers.FREE.pipeline.map;
+    const schema = generator.getSchema(0);
 
-    const { text, tokensUsed, weightedTokens } = await generateWithFallback(prompt, models);
+    const { text, tokensUsed, weightedTokens } = await generateWithFallback(prompt, models, { schema });
     totalTokensUsed += tokensUsed;
     totalWeightedTokens += weightedTokens;
 
@@ -595,7 +597,8 @@ async function generateWithGenerator(generatorName, content, params, options = {
   }
 
   const reduceModels = llmConfig.tiers[tier]?.pipeline?.reduce || llmConfig.tiers.FREE.pipeline.reduce;
-  const { text: reduceText, tokensUsed: reduceTokens, weightedTokens: reduceWeightedTokens } = await generateWithFallback(reducePrompt, reduceModels);
+  const reduceSchema = generator.getSchema(0);
+  const { text: reduceText, tokensUsed: reduceTokens, weightedTokens: reduceWeightedTokens } = await generateWithFallback(reducePrompt, reduceModels, { schema: reduceSchema });
 
   totalTokensUsed += reduceTokens;
   totalWeightedTokens += reduceWeightedTokens;
