@@ -68,6 +68,7 @@ model User {
   pomodoroSettings   PomodoroSettings?
   flashcardProgress FlashcardProgress[]
   chatSessions     ChatSession[]
+  orchestratorSessions OrchestratorSession[]
 
   @@map("users")
 }
@@ -110,6 +111,7 @@ model Classroom {
   notes         Note[]
   studySessions StudySession[]
   chatSessions  ChatSession[]
+  orchestratorSessions OrchestratorSession[]
 
   @@map("classrooms")
 }
@@ -144,6 +146,7 @@ model Document {
   notes         Note[]
   studySessions StudySession[]
   chatSessions  ChatSession[] @relation("ChatSessionDocuments")
+  orchestratorSessions OrchestratorSession[] @relation("OrchestratorSessionDocuments")
 
   @@map("documents")
 }
@@ -402,4 +405,42 @@ model ChatMessage {
 
   @@index([sessionId, createdAt])
   @@map("chat_messages")
+}
+
+// ============================================
+// Orchestrator Chat (PREMIUM-only, LangGraph-backed)
+// Fully separate from ChatSession so each schema evolves independently.
+// ============================================
+model OrchestratorSession {
+  id          String   @id @default(uuid())
+  title       String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  classroomId String   @map("classroom_id")
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  messages    OrchestratorMessage[]
+  documents   Document[] @relation("OrchestratorSessionDocuments")
+
+  @@index([classroomId, updatedAt])
+  @@index([userId])
+  @@map("orchestrator_sessions")
+}
+
+model OrchestratorMessage {
+  id            String          @id @default(uuid())
+  role          ChatMessageRole
+  content       String          @db.Text
+  sources       Json?
+  planningTrace Json?           @map("planning_trace") // { tasks, directResponse } — planner's decision for the turn
+  stageTokens   Json?           @map("stage_tokens")   // { planner, retrievers:[], synthesis } — for the report
+  createdAt     DateTime        @default(now()) @map("created_at")
+
+  sessionId String              @map("session_id")
+  session   OrchestratorSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+  @@map("orchestrator_messages")
 }
