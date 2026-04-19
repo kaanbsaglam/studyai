@@ -2,13 +2,21 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useOutletContext } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import ChatPanel from '../components/ChatPanel';
+import OrchestratorChatPanel from '../components/OrchestratorChatPanel';
 import DocumentSelector from '../components/DocumentSelector';
 import { useStudyTracker } from '../hooks/useStudyTracker';
+import { useChatMode } from '../context/ChatModeContext';
+import { CHAT_MODES } from '../context/chatModeConstants';
 import api from '../api/axios';
+import {
+  listOrchestratorSessions,
+  deleteOrchestratorSession,
+} from '../api/orchestratorChat';
 
 export default function ChatPage() {
   const { id: classroomId } = useParams();
   const { classroom } = useOutletContext();
+  const { mode } = useChatMode();
   const [selectedDocIds, setSelectedDocIds] = useState([]);
   const [activeSessionId, setActiveSessionId] = useState(null);
   const [sessions, setSessions] = useState([]);
@@ -17,21 +25,34 @@ export default function ChatPage() {
   const [lockedDocIds, setLockedDocIds] = useState([]);
   const { t } = useTranslation();
 
-  // Track study time for chat activity
   useStudyTracker(classroomId, 'CHAT');
 
   const documents = classroom?.documents || [];
   const hasReadyDocuments = documents.some((d) => d.status === 'READY');
   const selectedDocuments = documents.filter((d) => selectedDocIds.includes(d.id));
+  const isOrchestrator = mode === CHAT_MODES.ORCHESTRATOR;
 
   const fetchSessions = useCallback(async () => {
     try {
-      const response = await api.get(`/classrooms/${classroomId}/chat/sessions`);
-      setSessions(response.data.data.sessions);
+      if (isOrchestrator) {
+        const list = await listOrchestratorSessions(classroomId);
+        setSessions(list);
+      } else {
+        const response = await api.get(`/classrooms/${classroomId}/chat/sessions`);
+        setSessions(response.data.data.sessions);
+      }
     } catch {
-      // Silently fail
+      setSessions([]);
     }
-  }, [classroomId]);
+  }, [classroomId, isOrchestrator]);
+
+  // Reset UI state when mode flips so histories stay separate.
+  useEffect(() => {
+    setActiveSessionId(null);
+    setDocsLocked(false);
+    setLockedDocIds([]);
+    setSelectedDocIds([]);
+  }, [mode]);
 
   useEffect(() => {
     fetchSessions();
@@ -40,11 +61,9 @@ export default function ChatPage() {
   const handleSessionChange = (newSessionId) => {
     setActiveSessionId(newSessionId);
     if (newSessionId) {
-      // Re-fetch sessions to pick up new one / updated order
       fetchSessions();
     }
     if (!newSessionId) {
-      // "New Chat" — unlock docs
       setDocsLocked(false);
       setLockedDocIds([]);
     }
@@ -57,18 +76,25 @@ export default function ChatPage() {
 
   const handleSelectSession = async (session) => {
     setActiveSessionId(session.id);
-    // Lock docs to session's documents
-    const sessionDocIds = session.documents.map((d) => d.id);
-    setSelectedDocIds(sessionDocIds);
-    setLockedDocIds(sessionDocIds);
-    setDocsLocked(true);
+    // Orchestrator sessions don't track per-session doc selection (planner
+    // sees the whole classroom), so only restore doc lock for standard chat.
+    if (!isOrchestrator) {
+      const sessionDocIds = session.documents?.map((d) => d.id) || [];
+      setSelectedDocIds(sessionDocIds);
+      setLockedDocIds(sessionDocIds);
+      setDocsLocked(true);
+    }
   };
 
   const handleDeleteSession = async (sessionId, e) => {
     e.stopPropagation();
     if (!confirm(t('chatSessions.deleteConfirm'))) return;
     try {
-      await api.delete(`/classrooms/${classroomId}/chat/sessions/${sessionId}`);
+      if (isOrchestrator) {
+        await deleteOrchestratorSession(classroomId, sessionId);
+      } else {
+        await api.delete(`/classrooms/${classroomId}/chat/sessions/${sessionId}`);
+      }
       setSessions((prev) => prev.filter((s) => s.id !== sessionId));
       if (activeSessionId === sessionId) {
         setActiveSessionId(null);
@@ -89,39 +115,49 @@ export default function ChatPage() {
 
   const handleDocChange = (newIds) => {
     if (docsLocked) {
-      // Only allow adding, not removing locked docs
       const merged = [...new Set([...lockedDocIds, ...newIds])];
       setSelectedDocIds(merged);
-
-      // If new docs were added beyond locked ones, patch the session
       const addedIds = merged.filter((id) => !lockedDocIds.includes(id));
       if (addedIds.length > 0 && activeSessionId) {
-        api.patch(`/classrooms/${classroomId}/chat/sessions/${activeSessionId}/documents`, {
-          documentIds: addedIds,
-        }).catch(() => {});
+        api
+          .patch(
+            `/classrooms/${classroomId}/chat/sessions/${activeSessionId}/documents`,
+            { documentIds: addedIds },
+          )
+          .catch(() => {});
       }
     } else {
       setSelectedDocIds(newIds);
     }
   };
 
+  const pageTitle = isOrchestrator ? t('orchestratorChat.assistant') : t('chatPage.title');
+  const pageSubtitle = isOrchestrator ? t('orchestratorChat.subtitle') : t('chatPage.subtitle');
+
   return (
     <div className="flex h-[calc(100vh-12rem)] items-stretch gap-4 overflow-hidden">
       {/* Sidebar */}
       {sidebarOpen && (
         <div className="w-64 min-w-48 flex h-full flex-col bg-white rounded-lg shadow overflow-hidden">
-          {/* Sidebar Header */}
           <div className="px-4 py-3 border-b border-gray-200 flex shrink-0 justify-between items-center">
-            <h3 className="text-sm font-medium text-gray-900">{t('chatSessions.sessions')}</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-medium text-gray-900">{t('chatSessions.sessions')}</h3>
+              {isOrchestrator && (
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 font-medium">
+                  {t('orchestratorChat.modeBadge')}
+                </span>
+              )}
+            </div>
             <button
               onClick={handleNewChat}
-              className="text-xs px-2 py-1 bg-blue-600 text-white rounded-full hover:bg-blue-700"
+              className={`text-xs px-2 py-1 text-white rounded-full ${
+                isOrchestrator ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700'
+              }`}
             >
               {t('chatSessions.newChat')}
             </button>
           </div>
 
-          {/* Session List */}
           <div className="flex-1 min-h-0 overflow-y-auto">
             {sessions.length === 0 ? (
               <div className="p-4 text-center text-sm text-gray-400">
@@ -133,7 +169,11 @@ export default function ChatPage() {
                   key={session.id}
                   onClick={() => handleSelectSession(session)}
                   className={`notes-entry-divider px-4 py-2 cursor-pointer hover:bg-gray-50 group ${
-                    activeSessionId === session.id ? 'bg-blue-50 border-l-2 border-l-blue-600' : ''
+                    activeSessionId === session.id
+                      ? isOrchestrator
+                        ? 'bg-purple-50 border-l-2 border-l-purple-600'
+                        : 'bg-blue-50 border-l-2 border-l-blue-600'
+                      : ''
                   }`}
                 >
                   <div className="flex items-center justify-between">
@@ -161,12 +201,15 @@ export default function ChatPage() {
 
       {/* Main Chat Area */}
       <div className="flex min-w-0 flex-1 flex-col h-full overflow-hidden">
-        {/* Header with sidebar toggle */}
         <div className="shrink-0 flex items-start gap-3 pb-3">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className={`mt-1 p-1.5 rounded-full focus:ring-0 ${
-              sidebarOpen ? 'text-blue-700 bg-blue-100' : 'text-gray-500 bg-gray-200 hover:bg-gray-300'
+              sidebarOpen
+                ? isOrchestrator
+                  ? 'text-purple-700 bg-purple-100'
+                  : 'text-blue-700 bg-blue-100'
+                : 'text-gray-500 bg-gray-200 hover:bg-gray-300'
             }`}
             title={t('chatSessions.toggleSidebar')}
           >
@@ -176,36 +219,46 @@ export default function ChatPage() {
           </button>
           <div className="flex min-w-0 flex-1 items-start gap-3">
             <div className="min-w-0 pt-0.5">
-              <h2 className="text-base font-semibold text-gray-900">{t('chatPage.title')}</h2>
-              <p className="text-xs text-gray-500 leading-tight">
-                {t('chatPage.subtitle')}
-              </p>
+              <h2 className="text-base font-semibold text-gray-900">{pageTitle}</h2>
+              <p className="text-xs text-gray-500 leading-tight">{pageSubtitle}</p>
             </div>
 
-            <div className="min-w-[20rem] flex-none w-full max-w-[24rem]">
-              <DocumentSelector
-                documents={documents}
-                selectedIds={selectedDocIds}
-                onChange={handleDocChange}
-                disabled={false}
-                lockedIds={docsLocked ? lockedDocIds : []}
-                showHelpText={true}
-              />
-            </div>
+            {!isOrchestrator && (
+              <div className="min-w-[20rem] flex-none w-full max-w-[24rem]">
+                <DocumentSelector
+                  documents={documents}
+                  selectedIds={selectedDocIds}
+                  onChange={handleDocChange}
+                  disabled={false}
+                  lockedIds={docsLocked ? lockedDocIds : []}
+                  showHelpText={true}
+                />
+              </div>
+            )}
           </div>
         </div>
 
         <div className="flex-1 min-h-0 overflow-hidden">
-          <ChatPanel
-            classroomId={classroomId}
-            documentIds={selectedDocIds}
-            selectedDocuments={selectedDocuments}
-            hasReadyDocuments={hasReadyDocuments}
-            fullHeight
-            sessionId={activeSessionId}
-            onSessionChange={handleSessionChange}
-            onDocumentsLocked={handleDocumentsLocked}
-          />
+          {isOrchestrator ? (
+            <OrchestratorChatPanel
+              classroomId={classroomId}
+              hasReadyDocuments={hasReadyDocuments}
+              fullHeight
+              sessionId={activeSessionId}
+              onSessionChange={handleSessionChange}
+            />
+          ) : (
+            <ChatPanel
+              classroomId={classroomId}
+              documentIds={selectedDocIds}
+              selectedDocuments={selectedDocuments}
+              hasReadyDocuments={hasReadyDocuments}
+              fullHeight
+              sessionId={activeSessionId}
+              onSessionChange={handleSessionChange}
+              onDocumentsLocked={handleDocumentsLocked}
+            />
+          )}
         </div>
       </div>
     </div>

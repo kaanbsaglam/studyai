@@ -97,7 +97,15 @@
     "failedToSave": "Failed to save settings",
     "moreSettingsSoon": "More settings coming soon...",
     "language": "Language",
-    "languageDescription": "Select your preferred language"
+    "languageDescription": "Select your preferred language",
+    "chatMode": "Chat Mode",
+    "chatModeDescription": "Choose between standard RAG chat and the LangGraph orchestrator chat.",
+    "chatModeStandard": "Standard",
+    "chatModeStandardDesc": "Fast, single-step retrieval-augmented chat.",
+    "chatModeOrchestrator": "Orchestrator",
+    "chatModeOrchestratorDesc": "Multi-step planner with parallel retrievers — better for comparisons and multi-document questions.",
+    "chatModePremiumOnly": "Orchestrator mode is available to PREMIUM users only.",
+    "chatModeSeparateHistory": "Each mode keeps its own chat history."
   },
   "account": {
     "title": "Account & Usage",
@@ -299,6 +307,27 @@
     "askQuestion": "Ask a question...",
     "uploadDocsFirst": "Upload documents first...",
     "failedToGetAnswer": "Failed to get answer. Please try again."
+  },
+  "orchestratorChat": {
+    "assistant": "Orchestrator Assistant",
+    "subtitle": "LangGraph-powered chat: planner → parallel retrievers → synthesis",
+    "modeBadge": "ORCHESTRATOR",
+    "planning": "Planning…",
+    "planningDone": "Planner finished — {{count}} task",
+    "planningDone_plural": "Planner finished — {{count}} tasks",
+    "planningDoneDirect": "Planner answered directly (no retrieval needed)",
+    "retrieverRunning": "Retriever running",
+    "retrieverDone": "Retriever finished",
+    "synthesizing": "Synthesizing answer…",
+    "showTrace": "Show reasoning trace",
+    "hideTrace": "Hide reasoning trace",
+    "noTasks": "No retrieval tasks",
+    "tasks": "Tasks",
+    "task": "Task {{index}}",
+    "query": "Query",
+    "documents": "Documents",
+    "retrieverResult": "Result excerpt",
+    "failedToGetAnswer": "Orchestrator failed to answer. Please try again."
   },
   "flashcardsPanel": {
     "generateFlashcards": "Generate Flashcards",
