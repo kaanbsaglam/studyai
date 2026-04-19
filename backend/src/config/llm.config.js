@@ -42,6 +42,11 @@ module.exports = {
       chatTitle:        { primary: 'gemini-2.0-flash', fallback: null },
       studyAid:         { primary: 'gemini-2.0-flash', fallback: null },
       topicExtraction:  { primary: 'gemini-2.0-flash', fallback: null },
+      orchestrator: {
+        planner:        { primary: 'gemini-2.0-flash', fallback: null },
+        retriever:      { primary: 'gemini-2.0-flash', fallback: null },
+        synthesis:      { primary: 'gemini-2.5-pro',   fallback: 'gemini-2.0-flash' },
+      },
       pipeline: {
         map:            { primary: 'gemini-2.0-flash', fallback: null },
         reduce:         { primary: 'gemini-2.0-flash', fallback: null },
