@@ -31,6 +31,42 @@ async function createNote({ title, content, classroomId, userId, documentId }) {
 }
 
 /**
+ * Create an audio note (file uploaded to S3)
+ */
+async function createAudioNote({
+  title,
+  classroomId,
+  userId,
+  documentId,
+  mimeType,
+  s3Key,
+  originalName,
+  size,
+}) {
+  return prisma.note.create({
+    data: {
+      title,
+      content: '',
+      classroomId,
+      userId,
+      documentId: documentId || null,
+      mimeType,
+      s3Key,
+      originalName,
+      size,
+    },
+    include: {
+      document: {
+        select: {
+          id: true,
+          originalName: true,
+        },
+      },
+    },
+  });
+}
+
+/**
  * Update an existing note
  */
 async function updateNote(id, { title, content }) {
@@ -114,6 +150,7 @@ async function deleteNote(id) {
 
 module.exports = {
   createNote,
+  createAudioNote,
   updateNote,
   getNoteById,
   getNotesByClassroom,
