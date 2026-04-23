@@ -19,6 +19,8 @@ const { isAudioFile } = require('./validators/document.validator');
 const { chunkText } = require('./services/chunker.service');
 const { recordTokenUsage } = require('./services/tier.service');
 const { generateEmbeddings, upsertVectors, deleteVectorsByDocument } = require('./services/embedding.service');
+const { extractTopicMetadata } = require('./services/topicExtraction.service');
+const llmConfig = require('./config/llm.config');
 const { v4: uuidv4 } = require('uuid');
 
 logger.info('🔧 Worker starting...');
@@ -127,12 +129,34 @@ async function processDocument(job) {
       })),
     });
 
-    // Step 8: Update document status to READY and save extraction method
+    // Step 8: Topic extraction (PREMIUM only, config-as-gate).
+    // Runs once per document; failure is non-fatal — doc still goes READY with null metadata.
+    let topicMetadata = null;
+    let metadataExtractedAt = null;
+    if (llmConfig.tiers[userTier]?.topicExtraction) {
+      try {
+        const result = await extractTopicMetadata(text, userTier);
+        topicMetadata = result.metadata;
+        metadataExtractedAt = new Date();
+        await recordTokenUsage(document.userId, result.tokensUsed, result.weightedTokens);
+        logger.info(`Topic metadata extracted for document ${documentId}`);
+      } catch (err) {
+        logger.warn(`Topic extraction failed for document ${documentId}: ${err.message}`);
+        // Intentionally swallow — doc still transitions to READY below.
+      }
+    }
+
+    // Step 9: Single combined update — status + extraction method + topic metadata
+    // + processed tier snapshot + clear any in-flight reprocessing flag.
     await prisma.document.update({
       where: { id: documentId },
       data: {
         status: 'READY',
         extractionMethod: extractionMethod || undefined,
+        topicMetadata: topicMetadata || undefined,
+        metadataExtractedAt: metadataExtractedAt || undefined,
+        processedTier: userTier,
+        reprocessingAt: null,
       },
     });
 

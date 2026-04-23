@@ -97,7 +97,15 @@
     "failedToSave": "Ayarlar kaydedilemedi",
     "moreSettingsSoon": "Daha fazla ayar yakında...",
     "language": "Dil",
-    "languageDescription": "Tercih ettiğiniz dili seçin"
+    "languageDescription": "Tercih ettiğiniz dili seçin",
+    "chatMode": "Sohbet Modu",
+    "chatModeDescription": "Standart RAG sohbeti ile LangGraph orkestratör sohbeti arasında seçim yapın.",
+    "chatModeStandard": "Standart",
+    "chatModeStandardDesc": "Hızlı, tek adımlı erişim destekli sohbet.",
+    "chatModeOrchestrator": "Orkestratör",
+    "chatModeOrchestratorDesc": "Çok adımlı planlayıcı ve paralel erişimciler — karşılaştırma ve çok belgeli sorular için daha iyi.",
+    "chatModePremiumOnly": "Orkestratör modu yalnızca PREMIUM kullanıcılar içindir.",
+    "chatModeSeparateHistory": "Her mod kendi sohbet geçmişini tutar."
   },
   "account": {
     "title": "Hesap ve Kullanım",
@@ -140,7 +148,7 @@
     "deleteDocConfirm": "Bu dokümanı silmek istediğinizden emin misiniz?",
     "failedToDeleteDoc": "Doküman silinemedi",
     "invalidFileType": "Geçersiz dosya türü. İzin verilenler: PDF, DOCX, TXT, kod dosyaları (.js, .py, .java, vb.), MP3, WAV, M4A",
-    "fileTooLarge": "Dosya çok büyük. Maksimum boyut 10MB",
+    "fileTooLarge": "Dosya çok büyük. Maksimum boyut 50MB",
     "failedToUpload": "Doküman yüklenemedi"
   },
   "classroomDocuments": {
@@ -160,11 +168,16 @@
     "deleteConfirm": "Bu dokümanı silmek istediğinizden emin misiniz?",
     "failedToDelete": "Doküman silinemedi",
     "invalidFileType": "Geçersiz dosya türü. İzin verilenler: PDF, DOCX, TXT, kod dosyaları (.js, .py, .java, vb.), MP3, WAV, M4A",
-    "fileTooLarge": "Dosya çok büyük. Maksimum boyut 10MB",
+    "fileTooLarge": "Dosya çok büyük. Maksimum boyut 50MB",
     "failedToUpload": "Doküman yüklenemedi",
     "play": "Oynat",
     "viewTranscription": "Dönüşümü Görüntüle",
-    "audioNotSupported": "Tarayıcınız ses öğesini desteklemiyor."
+    "audioNotSupported": "Tarayıcınız ses öğesini desteklemiyor.",
+    "upgrade": "Yükselt",
+    "upgrading": "Yükseltiliyor…",
+    "upgradeAllEligible": "Uygun olanları yükselt ({{count}})",
+    "upgradeTooltip": "Bu dokümanı PREMIUM kalitede yeniden işle (Vision + konu çıkarımı)",
+    "failedToUpgrade": "Doküman yükseltilemedi"
   },
   "audioDetail": {
     "loading": "Ses dosyası yükleniyor...",
@@ -294,6 +307,27 @@
     "askQuestion": "Bir soru sorun...",
     "uploadDocsFirst": "Önce doküman yükleyin...",
     "failedToGetAnswer": "Yanıt alınamadı. Lütfen tekrar deneyin."
+  },
+  "orchestratorChat": {
+    "assistant": "Orkestratör Asistan",
+    "subtitle": "LangGraph destekli sohbet: planlayıcı → paralel erişimciler → sentez",
+    "modeBadge": "ORKESTRATÖR",
+    "planning": "Planlanıyor…",
+    "planningDone": "Planlayıcı tamamlandı — {{count}} görev",
+    "planningDone_plural": "Planlayıcı tamamlandı — {{count}} görev",
+    "planningDoneDirect": "Planlayıcı doğrudan cevapladı (erişim gerekmedi)",
+    "retrieverRunning": "Erişimci çalışıyor",
+    "retrieverDone": "Erişimci tamamlandı",
+    "synthesizing": "Yanıt sentezleniyor…",
+    "showTrace": "Muhakeme izini göster",
+    "hideTrace": "Muhakeme izini gizle",
+    "noTasks": "Erişim görevi yok",
+    "tasks": "Görevler",
+    "task": "Görev {{index}}",
+    "query": "Sorgu",
+    "documents": "Belgeler",
+    "retrieverResult": "Sonuç özeti",
+    "failedToGetAnswer": "Orkestratör yanıt veremedi. Lütfen tekrar deneyin."
   },
   "flashcardsPanel": {
     "generateFlashcards": "Bilgi Kartları Oluştur",

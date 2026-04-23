@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { TimerProvider } from './context/TimerContext';
+import { ChatModeProvider } from './context/ChatModeContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import ClassroomLayout from './components/ClassroomLayout';
@@ -24,8 +25,9 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <TimerProvider>
-          <Routes>
+        <ChatModeProvider>
+          <TimerProvider>
+            <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route
@@ -91,8 +93,9 @@ function App() {
           />
           {/* Redirect unknown routes to classrooms */}
           <Route path="*" element={<Navigate to="/classrooms" replace />} />
-          </Routes>
-        </TimerProvider>
+            </Routes>
+          </TimerProvider>
+        </ChatModeProvider>
       </AuthProvider>
     </BrowserRouter>
   );

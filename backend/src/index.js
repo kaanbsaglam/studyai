@@ -129,6 +129,7 @@ apiRouter.use('/auth', require('./routes/auth.routes'));
 apiRouter.use('/classrooms', require('./routes/classroom.routes'));
 apiRouter.use('/', require('./routes/document.routes')); // Handles /classrooms/:id/documents and /documents/:id
 apiRouter.use('/', require('./routes/chat.routes')); // Handles /classrooms/:id/chat
+apiRouter.use('/', require('./routes/orchestratorChat.routes')); // PREMIUM-only LangGraph orchestrator chat
 apiRouter.use('/', require('./routes/flashcard.routes')); // Handles /classrooms/:id/flashcard-sets and /flashcard-sets/:id
 apiRouter.use('/', require('./routes/quiz.routes')); // Handles /classrooms/:id/quiz-sets and /quiz-sets/:id
 apiRouter.use('/', require('./routes/summary.routes')); // Handles /classrooms/:id/summaries and /summaries/:id

@@ -1,0 +1,2 @@
+export const CHAT_MODES = { STANDARD: 'STANDARD', ORCHESTRATOR: 'ORCHESTRATOR' };
+export const CHAT_MODE_STORAGE_KEY = 'chatMode';

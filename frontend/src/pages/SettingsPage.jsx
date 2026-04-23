@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
+import { useChatMode } from '../context/ChatModeContext';
+import { CHAT_MODES } from '../context/chatModeConstants';
 import { useTimer } from '../hooks/useTimer';
 import TimerPill from '../components/timer/TimerPill';
 import HeaderMenu from '../components/HeaderMenu';
@@ -10,6 +12,7 @@ import LanguageToggle from '../components/LanguageToggle';
 export default function SettingsPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { mode: chatMode, setMode: setChatMode, canUseOrchestrator } = useChatMode();
   const { settings, settingsLoading, updateSettings } = useTimer();
 
   const [localSettings, setLocalSettings] = useState(null);
@@ -273,6 +276,82 @@ export default function SettingsPage() {
                   {saving ? t('common.saving') : t('settings.saveChanges')}
                 </button>
               </div>
+            </div>
+
+            {/* Chat Mode */}
+            <div className="mt-6 bg-white rounded-lg shadow p-6">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-2xl">💬</span>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {t('settings.chatMode')}
+                </h3>
+              </div>
+              <p className="text-sm text-gray-500 mb-4">
+                {t('settings.chatModeDescription')}
+              </p>
+
+              {!canUseOrchestrator && (
+                <div className="mb-4 bg-yellow-50 border border-yellow-200 text-yellow-800 px-3 py-2 rounded text-xs">
+                  {t('settings.chatModePremiumOnly')}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setChatMode(CHAT_MODES.STANDARD)}
+                  className={`text-left p-4 rounded-lg border-2 transition ${
+                    chatMode === CHAT_MODES.STANDARD
+                      ? 'border-blue-600 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-medium text-gray-900">
+                      {t('settings.chatModeStandard')}
+                    </span>
+                    {chatMode === CHAT_MODES.STANDARD && (
+                      <span className="text-xs text-blue-600 font-medium">●</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    {t('settings.chatModeStandardDesc')}
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => canUseOrchestrator && setChatMode(CHAT_MODES.ORCHESTRATOR)}
+                  disabled={!canUseOrchestrator}
+                  className={`text-left p-4 rounded-lg border-2 transition ${
+                    chatMode === CHAT_MODES.ORCHESTRATOR
+                      ? 'border-blue-600 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  } ${!canUseOrchestrator ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-medium text-gray-900">
+                      {t('settings.chatModeOrchestrator')}
+                    </span>
+                    {canUseOrchestrator ? (
+                      chatMode === CHAT_MODES.ORCHESTRATOR && (
+                        <span className="text-xs text-blue-600 font-medium">●</span>
+                      )
+                    ) : (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">
+                        PREMIUM
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    {t('settings.chatModeOrchestratorDesc')}
+                  </p>
+                </button>
+              </div>
+
+              <p className="mt-4 text-xs text-gray-400 italic">
+                {t('settings.chatModeSeparateHistory')}
+              </p>
             </div>
 
             {/* Future settings placeholder */}

@@ -54,7 +54,7 @@ export default function ClassroomDashboard() {
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) {
+    if (file.size > 50 * 1024 * 1024) {
       setError(t('classroomDashboard.fileTooLarge'));
       return;
     }

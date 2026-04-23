@@ -11,6 +11,7 @@ const { asyncHandler } = require('../middleware/errorHandler');
 const { canCreateClassroom } = require('../services/tier.service');
 const { deleteFile } = require('../services/s3.service');
 const { deleteVectorsByDocument } = require('../services/embedding.service');
+const { isUpgradeable } = require('../services/documentUpgrade.service');
 const logger = require('../config/logger');
 
 /**
@@ -80,6 +81,10 @@ const getClassroom = asyncHandler(async (req, res) => {
           mimeType: true,
           size: true,
           status: true,
+          extractionMethod: true,
+          topicMetadata: true,
+          processedTier: true,
+          reprocessingAt: true,
           createdAt: true,
         },
       },
@@ -105,9 +110,17 @@ const getClassroom = asyncHandler(async (req, res) => {
     throw new AuthorizationError('You do not have access to this classroom');
   }
 
+  const enriched = {
+    ...classroom,
+    documents: classroom.documents.map((d) => ({
+      ...d,
+      isUpgradeable: isUpgradeable(d, req.user.tier),
+    })),
+  };
+
   res.json({
     success: true,
-    data: { classroom },
+    data: { classroom: enriched },
   });
 });
 

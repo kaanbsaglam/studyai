@@ -36,13 +36,16 @@ export default function ClassroomDocumentsPage() {
     }
   }, [classroom?.documents, tabInitialized]);
 
-  // Auto-refresh when documents are processing
+  // Auto-refresh when documents are processing or upgrading
   useEffect(() => {
-    const hasProcessing = classroom?.documents?.some(
-      (doc) => doc.status === 'PENDING' || doc.status === 'PROCESSING'
+    const hasInFlight = classroom?.documents?.some(
+      (doc) =>
+        doc.status === 'PENDING' ||
+        doc.status === 'PROCESSING' ||
+        doc.reprocessingAt
     );
 
-    if (hasProcessing) {
+    if (hasInFlight) {
       const interval = setInterval(refreshClassroom, 3000);
       return () => clearInterval(interval);
     }
@@ -68,7 +71,7 @@ export default function ClassroomDocumentsPage() {
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) {
+    if (file.size > 50 * 1024 * 1024) {
       setError(t('classroomDocuments.fileTooLarge'));
       return;
     }
@@ -103,6 +106,24 @@ export default function ClassroomDocumentsPage() {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+    }
+  };
+
+  const handleUpgradeDocument = async (docId) => {
+    try {
+      await api.post(`/documents/${docId}/upgrade`);
+      await refreshClassroom();
+    } catch (err) {
+      setError(err.response?.data?.error?.message || t('classroomDocuments.failedToUpgrade'));
+    }
+  };
+
+  const handleUpgradeAll = async () => {
+    try {
+      await api.post(`/classrooms/${id}/documents/upgrade-all`);
+      await refreshClassroom();
+    } catch (err) {
+      setError(err.response?.data?.error?.message || t('classroomDocuments.failedToUpgrade'));
     }
   };
 
@@ -344,12 +365,15 @@ export default function ClassroomDocumentsPage() {
         {activeTab === 'documents' ? (
           <DocumentList
             documents={filteredItems}
+            allDocuments={documentFiles}
             allEmpty={documentFiles.length === 0}
             id={id}
             t={t}
             formatFileSize={formatFileSize}
             getStatusBadge={getStatusBadge}
             onDelete={handleDeleteDocument}
+            onUpgrade={handleUpgradeDocument}
+            onUpgradeAll={handleUpgradeAll}
           />
         ) : (
           <AudioList
@@ -368,7 +392,9 @@ export default function ClassroomDocumentsPage() {
 }
 
 /* ── Document list (non-audio) ────────────────────────── */
-function DocumentList({ documents, allEmpty, id, t, formatFileSize, getStatusBadge, onDelete }) {
+function DocumentList({ documents, allDocuments, allEmpty, id, t, formatFileSize, getStatusBadge, onDelete, onUpgrade, onUpgradeAll }) {
+  const eligibleCount = (allDocuments || []).filter((d) => d.isUpgradeable).length;
+
   if (documents.length === 0) {
     return (
       <div className="p-6 text-center text-gray-500">
@@ -384,45 +410,79 @@ function DocumentList({ documents, allEmpty, id, t, formatFileSize, getStatusBad
   }
 
   return (
-    <ul className="divide-y divide-gray-200 dark:divide-transparent">
-      {documents.map((doc) => (
-        <li key={doc.id} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50">
-          <Link
-            to={doc.status === 'READY' ? `/classrooms/${id}/documents/${doc.id}` : '#'}
-            className={`flex items-center gap-3 flex-1 ${doc.status !== 'READY' ? 'pointer-events-none' : ''}`}
+    <>
+      {eligibleCount > 0 && (
+        <div className="px-6 py-3 border-b border-gray-200 dark:border-transparent flex justify-end">
+          <button
+            onClick={onUpgradeAll}
+            className="px-3 py-1.5 text-sm font-medium rounded-full bg-amber-100 text-amber-800 hover:bg-amber-200"
           >
-            <svg className={`h-8 w-8 ${isCodeFileByName(doc.originalName) ? 'text-emerald-500' : 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              {isCodeFileByName(doc.originalName) ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              )}
-            </svg>
-            <div>
-              <p className="font-medium text-gray-900">{doc.originalName}</p>
-              <p className="text-sm text-gray-500">{formatFileSize(doc.size)}</p>
-            </div>
-          </Link>
-          <div className="flex items-center gap-3">
-            {getStatusBadge(doc.status)}
-            {doc.status === 'PROCESSING' && (
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-            )}
-            {doc.status === 'READY' && (
+            {t('classroomDocuments.upgradeAllEligible', { count: eligibleCount })}
+          </button>
+        </div>
+      )}
+      <ul className="divide-y divide-gray-200 dark:divide-transparent">
+        {documents.map((doc) => {
+          const isUpgrading = !!doc.reprocessingAt;
+          return (
+            <li key={doc.id} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50">
               <Link
-                to={`/classrooms/${id}/documents/${doc.id}`}
-                className="link-btn"
+                to={doc.status === 'READY' && !isUpgrading ? `/classrooms/${id}/documents/${doc.id}` : '#'}
+                className={`flex items-center gap-3 flex-1 ${doc.status !== 'READY' || isUpgrading ? 'pointer-events-none' : ''}`}
               >
-                {t('common.open')}
+                <svg className={`h-8 w-8 ${isCodeFileByName(doc.originalName) ? 'text-emerald-500' : 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  {isCodeFileByName(doc.originalName) ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  )}
+                </svg>
+                <div>
+                  <p className="font-medium text-gray-900">{doc.originalName}</p>
+                  <p className="text-sm text-gray-500">{formatFileSize(doc.size)}</p>
+                </div>
               </Link>
-            )}
-            <button onClick={() => onDelete(doc.id)} className="link-btn text-red-600 hover:text-red-800">
-              {t('common.delete')}
-            </button>
-          </div>
-        </li>
-      ))}
-    </ul>
+              <div className="flex items-center gap-3">
+                {isUpgrading ? (
+                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-800">
+                    {t('classroomDocuments.upgrading')}
+                  </span>
+                ) : (
+                  getStatusBadge(doc.status)
+                )}
+                {(doc.status === 'PROCESSING' || isUpgrading) && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                )}
+                {doc.status === 'READY' && !isUpgrading && (
+                  <Link
+                    to={`/classrooms/${id}/documents/${doc.id}`}
+                    className="link-btn"
+                  >
+                    {t('common.open')}
+                  </Link>
+                )}
+                {doc.isUpgradeable && !isUpgrading && (
+                  <button
+                    onClick={() => onUpgrade(doc.id)}
+                    title={t('classroomDocuments.upgradeTooltip')}
+                    className="link-btn text-amber-700 hover:text-amber-900"
+                  >
+                    {t('classroomDocuments.upgrade')}
+                  </button>
+                )}
+                <button
+                  onClick={() => onDelete(doc.id)}
+                  disabled={isUpgrading}
+                  className={`link-btn text-red-600 hover:text-red-800 ${isUpgrading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {t('common.delete')}
+                </button>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </>
   );
 }
 

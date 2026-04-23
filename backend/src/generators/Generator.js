@@ -95,21 +95,13 @@ class Generator {
   }
 
   /**
-   * Helper to strip markdown code blocks from response
-   * @param {string} text - Response text
-   * @returns {string} Cleaned text
+   * Return the JSON schema (OpenAPI-3 subset) the LLM must conform its response to,
+   * or null if this depth produces non-JSON output (e.g. prose).
+   * @param {number} depth - Current recursion depth (0 = final, 1+ = intermediate)
+   * @returns {object|null}
    */
-  stripMarkdownCodeBlocks(text) {
-    let jsonStr = text.trim();
-    if (jsonStr.startsWith('```json')) {
-      jsonStr = jsonStr.slice(7);
-    } else if (jsonStr.startsWith('```')) {
-      jsonStr = jsonStr.slice(3);
-    }
-    if (jsonStr.endsWith('```')) {
-      jsonStr = jsonStr.slice(0, -3);
-    }
-    return jsonStr.trim();
+  getSchema(depth) {
+    return null;
   }
 
   /**

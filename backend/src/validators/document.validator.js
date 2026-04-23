@@ -85,7 +85,7 @@ const CODE_FILE_EXTENSIONS = new Set([
   'cmake',
 ]);
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const { maxFileSizeBytes: MAX_FILE_SIZE } = require('../config/document.config');
 
 /**
  * Get the file extension (lowercase, no dot) from a filename
@@ -159,7 +159,7 @@ function validateFile(file) {
   if (file.size > MAX_FILE_SIZE) {
     return {
       valid: false,
-      error: 'File too large. Maximum size is 10MB',
+      error: 'File too large. Maximum size is 50MB',
     };
   }
 

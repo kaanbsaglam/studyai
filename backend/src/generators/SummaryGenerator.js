@@ -16,9 +16,23 @@ const LENGTH_CONFIG = {
   long: { words: '800-1200', keyPoints: 15, description: 'comprehensive summary' },
 };
 
+// Depth-0 output is prose; intermediate (depth > 0) emits structured key-points + topics.
+const SUMMARY_INTERMEDIATE_SCHEMA = {
+  type: 'object',
+  properties: {
+    keyPoints: { type: 'array', items: { type: 'string' } },
+    mainTopics: { type: 'array', items: { type: 'string' } },
+  },
+  required: ['keyPoints', 'mainTopics'],
+};
+
 class SummaryGenerator extends Generator {
   getName() {
     return 'summary';
+  }
+
+  getSchema(depth) {
+    return depth > 0 ? SUMMARY_INTERMEDIATE_SCHEMA : null;
   }
 
   needsDocumentContext() {
@@ -85,15 +99,11 @@ class SummaryGenerator extends Generator {
 
   parseResponse(responseText, depth) {
     if (depth > 0) {
-      // Intermediate - parse JSON
-      const jsonStr = this.stripMarkdownCodeBlocks(responseText);
-
       let parsed;
       try {
-        parsed = JSON.parse(jsonStr);
+        parsed = JSON.parse(responseText);
       } catch (e) {
         logger.warn('SummaryGenerator: Failed to parse JSON, extracting as text', { error: e.message });
-        // Fallback: treat as plain text key points
         return {
           keyPoints: [responseText.trim()],
           mainTopics: [],

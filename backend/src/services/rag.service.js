@@ -22,7 +22,6 @@ const { loadPrompt } = require('../prompts/loader');
 const {
   similarityThreshold: SIMILARITY_THRESHOLD,
   topK: RAG_TOP_K,
-  maxRagContextChars: MAX_RAG_CONTEXT_CHARS,
   maxConversationHistory: MAX_CONVERSATION_HISTORY,
 } = ragConfig;
 
@@ -167,23 +166,12 @@ async function getRAGContext(question, classroomId, excludeDocumentIds = []) {
     const chunkMap = new Map(chunks.map((c) => [c.pineconeId, c]));
 
     // Build context string
-    let contextParts = [];
-    let totalLength = 0;
-
-    for (const match of topMatches) {
+    const contextParts = topMatches.map((match) => {
       const chunk = chunkMap.get(match.id);
       const content = chunk?.content || match.metadata?.text || '';
       const filename = chunk?.document?.originalName || match.metadata?.filename || 'Unknown';
-
-      const part = `[${filename}]: ${content}`;
-
-      if (totalLength + part.length > MAX_RAG_CONTEXT_CHARS) {
-        break;
-      }
-
-      contextParts.push(part);
-      totalLength += part.length;
-    }
+      return `[${filename}]: ${content}`;
+    });
 
     const ragContext = contextParts.join('\n\n');
 

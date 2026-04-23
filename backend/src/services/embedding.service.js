@@ -8,6 +8,7 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { Pinecone } = require('@pinecone-database/pinecone');
 const { env } = require('../config/env');
 const logger = require('../config/logger');
+const prisma = require('../lib/prisma');
 
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
@@ -74,16 +75,22 @@ async function upsertVectors(vectors) {
 }
 
 /**
- * Delete vectors by document ID (using metadata filter)
+ * Delete all Pinecone vectors belonging to a document by looking up chunk
+ * pineconeIds in the DB. Metadata-filter delete is unsupported on our
+ * serverless index, so we fan out to ID-based delete.
  * @param {string} documentId - Document ID
  */
 async function deleteVectorsByDocument(documentId) {
   try {
-    // Delete by metadata filter
-    await index.deleteMany({
-      filter: { documentId },
+    const chunks = await prisma.documentChunk.findMany({
+      where: { documentId },
+      select: { pineconeId: true },
     });
-    logger.info(`Deleted vectors for document: ${documentId}`);
+    const ids = chunks.map((c) => c.pineconeId).filter(Boolean);
+    if (ids.length === 0) {
+      return;
+    }
+    await deleteVectorsByIds(ids);
   } catch (error) {
     logger.error('Failed to delete vectors from Pinecone', {
       error: error.message,
@@ -98,11 +105,12 @@ async function deleteVectorsByDocument(documentId) {
  * @param {object} options - Query options
  * @param {number} options.topK - Number of results (default 5)
  * @param {string} options.classroomId - Filter by classroom
- * @param {string} [options.documentId] - Optional filter by specific document
+ * @param {string} [options.documentId] - Optional filter by a single document
+ * @param {string[]} [options.documentIds] - Optional filter by a set of documents (Pinecone $in)
  * @returns {Promise<object[]>} Similar vectors with scores
  */
 async function querySimilar(queryVector, options = {}) {
-  const { topK = 5, classroomId, documentId } = options;
+  const { topK = 5, classroomId, documentId, documentIds } = options;
 
   const queryOptions = {
     vector: queryVector,
@@ -110,13 +118,14 @@ async function querySimilar(queryVector, options = {}) {
     includeMetadata: true,
   };
 
-  // Build filter based on provided options
   const filter = {};
   if (classroomId) {
     filter.classroomId = classroomId;
   }
   if (documentId) {
     filter.documentId = documentId;
+  } else if (Array.isArray(documentIds) && documentIds.length > 0) {
+    filter.documentId = { $in: documentIds };
   }
 
   if (Object.keys(filter).length > 0) {

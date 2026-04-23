@@ -18,6 +18,11 @@ class LLMProvider {
    * @param {string} prompt - The input prompt
    * @param {object} options - Generation options
    * @param {string} [options.model] - Model to use (provider-specific)
+   * @param {object} [options.schema] - JSON schema (OpenAPI-3 subset) for structured
+   *   output. When provided, the provider must enforce server-side JSON output
+   *   matching this shape (Gemini: responseSchema; OpenAI: response_format json_schema strict).
+   *   Schemas should list every property in `required` (no optional fields) so they
+   *   round-trip through OpenAI's strict mode.
    * @returns {Promise<{text: string, tokensUsed: number}>}
    */
   async generateText(prompt, options = {}) {

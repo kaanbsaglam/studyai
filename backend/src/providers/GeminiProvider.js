@@ -27,6 +27,7 @@ class GeminiProvider extends LLMProvider {
    * @param {string} prompt - The input prompt
    * @param {object} options - Generation options
    * @param {string} options.model - Model to use (required)
+   * @param {object} [options.schema] - Optional response schema for structured JSON output
    * @returns {Promise<{text: string, tokensUsed: number}>}
    */
   async generateText(prompt, options = {}) {
@@ -39,11 +40,16 @@ class GeminiProvider extends LLMProvider {
     }
 
     const model = options.model;
+    const generationConfig = options.schema
+      ? { responseMimeType: 'application/json', responseSchema: options.schema }
+      : undefined;
 
-    logger.debug('Gemini generateText called', { model, promptLength: prompt.length });
+    logger.debug('Gemini generateText called', { model, promptLength: prompt.length, structured: !!options.schema });
 
     try {
-      const genModel = this.genAI.getGenerativeModel({ model });
+      const genModel = this.genAI.getGenerativeModel(
+        generationConfig ? { model, generationConfig } : { model }
+      );
       const result = await genModel.generateContent(prompt);
 
       const text = result.response.text();

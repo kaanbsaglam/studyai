@@ -10,6 +10,7 @@ const { gatherDocumentsContentStructured } = require('./documentContent.service'
 const { generateWithFallback } = require('./llm.service');
 const llmConfig = require('../config/llm.config');
 const { generateWithGenerator } = require('./pipeline.service');
+const { getGenerator } = require('../generators');
 const { loadPrompt } = require('../prompts/loader');
 
 /**
@@ -35,8 +36,14 @@ async function generateQuiz({ content, documents, focusTopic, count, isGeneralKn
   if (isGeneralKnowledge) {
     const prompt = buildQuizPrompt({ content: null, focusTopic, count, isGeneralKnowledge: true });
     const models = llmConfig.tiers[tier]?.studyAid || llmConfig.tiers.FREE.studyAid;
-    const { text: responseText, tokensUsed, weightedTokens } = await generateWithFallback(prompt, models);
-    const questions = parseQuizResponse(responseText);
+    const generator = getGenerator('quiz');
+    const { text: responseText, tokensUsed, weightedTokens } = await generateWithFallback(
+      prompt,
+      models,
+      { schema: generator.getSchema(0) }
+    );
+    const parsed = generator.parseResponse(responseText, 0);
+    const questions = generator.validateResult(parsed, { count });
     logger.info(`Generated ${questions.length} quiz questions, ${tokensUsed} tokens used`);
     return { questions, tokensUsed, weightedTokens };
   }
@@ -69,65 +76,6 @@ function buildQuizPrompt({ content, focusTopic, count, isGeneralKnowledge }) {
     topicInstruction,
     content,
   });
-}
-
-/**
- * Parse the LLM response into quiz question objects
- */
-function parseQuizResponse(responseText) {
-  let jsonStr = responseText.trim();
-
-  // Remove markdown code blocks if present
-  if (jsonStr.startsWith('```json')) {
-    jsonStr = jsonStr.slice(7);
-  } else if (jsonStr.startsWith('```')) {
-    jsonStr = jsonStr.slice(3);
-  }
-  if (jsonStr.endsWith('```')) {
-    jsonStr = jsonStr.slice(0, -3);
-  }
-  jsonStr = jsonStr.trim();
-
-  let parsed;
-  try {
-    parsed = JSON.parse(jsonStr);
-  } catch (e) {
-    logger.error('Failed to parse quiz JSON response', { responseText, error: e.message });
-    throw new Error('Failed to generate quiz. The AI response was not in the expected format. Please try again.');
-  }
-
-  if (!Array.isArray(parsed)) {
-    logger.error('Quiz response is not an array', { parsed });
-    throw new Error('Failed to generate quiz. The AI response was not in the expected format. Please try again.');
-  }
-
-  // Validate each question
-  const questions = [];
-  for (let i = 0; i < parsed.length; i++) {
-    const q = parsed[i];
-    if (
-      !q ||
-      typeof q.question !== 'string' ||
-      typeof q.correctAnswer !== 'string' ||
-      !Array.isArray(q.wrongAnswers) ||
-      q.wrongAnswers.length < 3
-    ) {
-      logger.warn(`Invalid quiz question at index ${i}`, { q });
-      continue;
-    }
-
-    questions.push({
-      question: q.question.trim(),
-      correctAnswer: q.correctAnswer.trim(),
-      wrongAnswers: q.wrongAnswers.slice(0, 3).map((a) => a.trim()),
-    });
-  }
-
-  if (questions.length === 0) {
-    throw new Error('Failed to generate quiz. No valid questions were created. Please try again.');
-  }
-
-  return questions;
 }
 
 /**
