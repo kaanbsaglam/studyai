@@ -47,14 +47,17 @@ enum ExtractionMethod {
 // User & Authentication
 // ============================================
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  passwordHash String   @map("password_hash")
-  name         String?
-  role         UserRole @default(USER)
-  tier         UserTier @default(FREE)
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id                     String    @id @default(uuid())
+  email                  String    @unique
+  passwordHash           String?   @map("password_hash")
+  googleId               String?   @unique @map("google_id")
+  passwordResetTokenHash String?   @map("password_reset_token_hash")
+  passwordResetExpiresAt DateTime? @map("password_reset_expires_at")
+  name                   String?
+  role                   UserRole  @default(USER)
+  tier                   UserTier  @default(FREE)
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
 
   // Relations
   classrooms       Classroom[]
