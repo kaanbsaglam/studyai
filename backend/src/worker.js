@@ -59,9 +59,9 @@ async function processDocument(job) {
     logger.info(`Downloading file from S3: ${document.s3Key}`);
     const fileBuffer = await getFile(document.s3Key);
 
-    // Step 2: Extract text (tier-based for PDFs)
+    // Step 2: Extract text (tier-based for PDFs and audio)
     logger.info(`Extracting text from ${document.mimeType}`, { tier: userTier });
-    const { text, tokensUsed, extractionMethod } = await extractTextWithTier(
+    const { text, tokensUsed, weightedTokens, extractionMethod } = await extractTextWithTier(
       fileBuffer,
       document.mimeType,
       userTier,
@@ -74,13 +74,15 @@ async function processDocument(job) {
 
     logger.info(`Extracted ${text.length} characters`, {
       tokensUsed,
+      weightedTokens,
       extractionMethod,
     });
 
-    // Record token usage if any tokens were used (e.g., Gemini Vision)
+    // Record token usage if any tokens were used (Whisper duration or Gemini
+    // Vision tokens). Pass weightedTokens so cost-weighting is honored.
     if (tokensUsed > 0) {
-      await recordTokenUsage(document.userId, tokensUsed);
-      logger.info(`Recorded ${tokensUsed} tokens for extraction`);
+      await recordTokenUsage(document.userId, tokensUsed, weightedTokens);
+      logger.info(`Recorded ${weightedTokens ?? tokensUsed} weighted tokens for extraction`);
     }
 
     // Step 3: Chunk text

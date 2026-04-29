@@ -38,9 +38,9 @@ async function extractText(buffer, mimeType, filename) {
       return buffer.toString('utf-8');
 
     default:
-      // Check if it's an audio file
+      // Audio is handled by extractTextWithTier (needs duration → cost weighting)
       if (mimeType.startsWith('audio/')) {
-        return transcribeAudio(buffer, mimeType);
+        throw new Error('Audio extraction must go through extractTextWithTier');
       }
       // Check if it's a code file — read as plain text
       if (isCodeFile(mimeType, filename)) {
@@ -81,11 +81,14 @@ async function extractFromDocx(buffer) {
 }
 
 /**
- * Transcribe audio file using OpenAI Whisper
+ * Transcribe audio file using OpenAI Whisper.
+ * Uses verbose_json so we get duration back — that's what we bill against the
+ * daily quota (Whisper pricing is per-minute, not per-token).
+ *
  * @param {Buffer} buffer - Audio file buffer
  * @param {string} mimeType - Audio MIME type
  * @param {string} [tier='PREMIUM'] - User tier (audio is premium-only)
- * @returns {Promise<string>} Transcribed text
+ * @returns {Promise<{text: string, durationSeconds: number, model: string}>}
  */
 async function transcribeAudio(buffer, mimeType, tier = 'PREMIUM') {
   if (!openai) {
@@ -102,15 +105,23 @@ async function transcribeAudio(buffer, mimeType, tier = 'PREMIUM') {
     const transcription = await openai.audio.transcriptions.create({
       file: file,
       model: whisperModel,
-      response_format: 'text',
+      response_format: 'verbose_json',
     });
+
+    const durationSeconds = transcription.duration || 0;
 
     logger.info('Audio transcription completed', {
       mimeType,
-      transcriptLength: transcription.length
+      model: whisperModel,
+      durationSeconds,
+      transcriptLength: transcription.text?.length || 0,
     });
 
-    return transcription;
+    return {
+      text: transcription.text || '',
+      durationSeconds,
+      model: whisperModel,
+    };
   } catch (error) {
     logger.error('Audio transcription failed', { error: error.message });
     throw new Error('Failed to transcribe audio file');
@@ -139,7 +150,7 @@ function getAudioExtension(mimeType) {
  * @param {string} mimeType - File MIME type
  * @param {string} tier - User tier ('FREE' or 'PREMIUM')
  * @param {string} [filename] - Original filename (for code file detection)
- * @returns {Promise<{text: string, tokensUsed: number, extractionMethod: string|null}>}
+ * @returns {Promise<{text: string, tokensUsed: number, weightedTokens: number, extractionMethod: string|null}>}
  */
 async function extractTextWithTier(buffer, mimeType, tier, filename) {
   // For PDFs, use tier-based extraction
@@ -147,11 +158,30 @@ async function extractTextWithTier(buffer, mimeType, tier, filename) {
     return await extractPdf(buffer, { tier });
   }
 
+  // For audio, transcribe and convert duration into "raw tokens" so the
+  // model registry's costWeight can scale it into the user's daily budget.
+  // Convention: 1 second = 100 raw tokens. With whisper-1 costWeight = 0.33,
+  // 1 minute of audio ≈ 6000 raw × 0.33 = ~2000 weighted tokens, which
+  // matches Whisper's $0.006/min cost ratio against gpt-4o-mini output.
+  if (mimeType.startsWith('audio/')) {
+    const { text, durationSeconds, model } = await transcribeAudio(buffer, mimeType, tier);
+    const costWeight = llmConfig.models[model]?.costWeight || 0;
+    const tokensUsed = Math.ceil(durationSeconds * 100);
+    const weightedTokens = Math.ceil(tokensUsed * costWeight);
+    return {
+      text,
+      tokensUsed,
+      weightedTokens,
+      extractionMethod: 'WHISPER',
+    };
+  }
+
   // For other types, use the standard extraction (no tokens used, no extraction method)
   const text = await extractText(buffer, mimeType, filename);
   return {
     text,
     tokensUsed: 0,
+    weightedTokens: 0,
     extractionMethod: null,
   };
 }

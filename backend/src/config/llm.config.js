@@ -21,7 +21,9 @@ module.exports = {
     'gpt-5':             { provider: 'openai',  costWeight: 1.55 },
     'gpt-4.1':           { provider: 'openai',  costWeight: 2.50 },
     'gpt-4o':            { provider: 'openai',  costWeight: 3.00 },
-    'whisper-1':         { provider: 'openai',  costWeight: 0.10 },
+    // Whisper raw "tokens" = audio_seconds * 100 (set in textExtractor); 0.33
+    // puts 1 minute ≈ 2000 weighted tokens, matching $0.006/min cost ratio.
+    'whisper-1':         { provider: 'openai',  costWeight: 0.33 },
   },
 
   // ── Scenario Config ─────────────────────────────────────────────
@@ -38,8 +40,8 @@ module.exports = {
         summarize:    { primary: 'gpt-4o-mini', fallback: null },
       },
       extraction: {
-        vision:       { primary: 'gemini-2.5-flash', fallback: null },
-        whisper:      { primary: 'whisper-1',        fallback: null },
+        vision:       { primary: null,        fallback: null },
+        whisper:      { primary: null,        fallback: null },
       },
     },
     PREMIUM: {
@@ -58,7 +60,7 @@ module.exports = {
         summarize:      { primary: 'gpt-4o-mini', fallback: null },
       },
       extraction: {
-        vision:         { primary: 'gemini-2.0-flash', fallback: null },
+        vision:         { primary: 'gemini-2.5-flash', fallback: null },
         whisper:        { primary: 'whisper-1',        fallback: null },
       },
     },

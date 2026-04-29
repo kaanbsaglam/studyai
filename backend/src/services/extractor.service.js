@@ -56,16 +56,25 @@ async function extractPdf(buffer, options = {}) {
     }
     const result = await extractor.extract(buffer, extractOptions);
 
+    // Apply costWeight so daily quota tracks the model's actual price.
+    // pdf-parse uses 0 tokens, so weightedTokens collapses to 0.
+    const costWeight = extractOptions.model
+      ? (llmConfig.models[extractOptions.model]?.costWeight || 0)
+      : 0;
+    const weightedTokens = Math.ceil((result.tokensUsed || 0) * costWeight);
+
     logger.info('Extractor extractPdf completed', {
       tier,
       extractor: primaryExtractorName,
       tokensUsed: result.tokensUsed,
+      weightedTokens,
       textLength: result.text.length,
     });
 
     return {
       text: result.text,
       tokensUsed: result.tokensUsed,
+      weightedTokens,
       extractionMethod: extractor.getExtractionMethod(),
     };
   } catch (error) {
@@ -84,18 +93,30 @@ async function extractPdf(buffer, options = {}) {
 
       try {
         const fallbackExtractor = getExtractor(fallbackExtractorName);
-        const result = await fallbackExtractor.extract(buffer, options);
+        const fallbackOptions = { ...options };
+        if (fallbackExtractorName === 'gemini-vision') {
+          const visionConfig = llmConfig.tiers[tier]?.extraction?.vision || llmConfig.tiers.FREE.extraction.vision;
+          fallbackOptions.model = visionConfig.primary;
+        }
+        const result = await fallbackExtractor.extract(buffer, fallbackOptions);
+
+        const costWeight = fallbackOptions.model
+          ? (llmConfig.models[fallbackOptions.model]?.costWeight || 0)
+          : 0;
+        const weightedTokens = Math.ceil((result.tokensUsed || 0) * costWeight);
 
         logger.info('Fallback extractor succeeded', {
           tier,
           extractor: fallbackExtractorName,
           tokensUsed: result.tokensUsed,
+          weightedTokens,
           textLength: result.text.length,
         });
 
         return {
           text: result.text,
           tokensUsed: result.tokensUsed,
+          weightedTokens,
           extractionMethod: fallbackExtractor.getExtractionMethod(),
         };
       } catch (fallbackError) {
