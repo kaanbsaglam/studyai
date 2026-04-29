@@ -8,10 +8,11 @@ import { useTimer } from '../hooks/useTimer';
 import TimerPill from '../components/timer/TimerPill';
 import HeaderMenu from '../components/HeaderMenu';
 import LanguageToggle from '../components/LanguageToggle';
+import api from '../api/axios';
 
 export default function SettingsPage() {
-  const { t } = useTranslation();
-  const { user } = useAuth();
+  const { t, i18n } = useTranslation();
+  const { user, refreshUser } = useAuth();
   const { mode: chatMode, setMode: setChatMode, canUseOrchestrator } = useChatMode();
   const { settings, settingsLoading, updateSettings } = useTimer();
 
@@ -19,6 +20,65 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // Account / password section state
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [pwSaving, setPwSaving] = useState(false);
+  const [pwError, setPwError] = useState('');
+  const [pwSuccess, setPwSuccess] = useState('');
+  const [setPwSending, setSetPwSending] = useState(false);
+  const [setPwMessage, setSetPwMessage] = useState('');
+
+  const hasPassword = user?.hasPassword !== false; // treat undefined as true for old tokens
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setPwError('');
+    setPwSuccess('');
+
+    if (newPassword.length < 8 || newPassword.length > 64) {
+      setPwError(t('account.passwordLength'));
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setPwError(t('account.passwordsNoMatch'));
+      return;
+    }
+
+    setPwSaving(true);
+    try {
+      await api.post('/auth/change-password', { currentPassword, newPassword });
+      setPwSuccess(t('account.passwordChanged'));
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+    } catch (err) {
+      setPwError(err.response?.data?.error?.message || t('account.changeFailed'));
+    } finally {
+      setPwSaving(false);
+    }
+  };
+
+  const handleSendSetPasswordEmail = async () => {
+    if (!user?.email) return;
+    setSetPwMessage('');
+    setSetPwSending(true);
+    try {
+      await api.post('/auth/forgot-password', {
+        email: user.email,
+        locale: i18n.language,
+      });
+      setSetPwMessage(t('account.setPasswordEmailSent'));
+      // After they reset, /me will reflect hasPassword: true
+      refreshUser?.().catch(() => {});
+    } catch (err) {
+      setSetPwMessage(err.response?.data?.error?.message || t('account.setPasswordFailed'));
+    } finally {
+      setSetPwSending(false);
+    }
+  };
 
   // Initialize local settings from context when loaded
   if (!localSettings && !settingsLoading) {
@@ -352,6 +412,104 @@ export default function SettingsPage() {
               <p className="mt-4 text-xs text-gray-400 italic">
                 {t('settings.chatModeSeparateHistory')}
               </p>
+            </div>
+
+            {/* Account / Security */}
+            <div className="mt-6 bg-white rounded-lg shadow p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-2xl">🔒</span>
+                <h3 className="text-lg font-semibold text-gray-900">{t('account.security')}</h3>
+              </div>
+
+              {hasPassword ? (
+                <form onSubmit={handleChangePassword} className="space-y-4">
+                  {pwError && (
+                    <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded text-sm">
+                      {pwError}
+                    </div>
+                  )}
+                  {pwSuccess && (
+                    <div className="bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded text-sm">
+                      {pwSuccess}
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {t('account.currentPassword')}
+                    </label>
+                    <input
+                      type="password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      autoComplete="current-password"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {t('account.newPassword')}
+                    </label>
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      autoComplete="new-password"
+                      minLength={8}
+                      maxLength={64}
+                      required
+                    />
+                    <p className="text-xs text-gray-500 mt-1">{t('register.passwordHint')}</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {t('account.confirmNewPassword')}
+                    </label>
+                    <input
+                      type="password"
+                      value={confirmNewPassword}
+                      onChange={(e) => setConfirmNewPassword(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      autoComplete="new-password"
+                      minLength={8}
+                      maxLength={64}
+                      required
+                    />
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={pwSaving || !currentPassword || !newPassword || !confirmNewPassword}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {pwSaving ? t('common.saving') : t('account.changePassword')}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div>
+                  <p className="text-sm text-gray-600 mb-3">
+                    {t('account.noPasswordExplanation')}
+                  </p>
+                  {setPwMessage && (
+                    <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded text-sm mb-3">
+                      {setPwMessage}
+                    </div>
+                  )}
+                  <button
+                    onClick={handleSendSetPasswordEmail}
+                    disabled={setPwSending}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {setPwSending ? t('account.sending') : t('account.sendSetPasswordEmail')}
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Future settings placeholder */}

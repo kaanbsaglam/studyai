@@ -10,10 +10,12 @@
  */
 
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { env } = require('../config/env');
 
 const SALT_ROUNDS = 12;
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 /**
  * Hash a password using bcrypt
@@ -58,9 +60,26 @@ function verifyToken(token) {
   return jwt.verify(token, env.JWT_SECRET);
 }
 
+/**
+ * Generate a password-reset token. Returns the raw token (sent in the email)
+ * and its sha256 hash (stored in the DB so a DB leak alone can't grant resets).
+ */
+function generateResetToken() {
+  const token = crypto.randomBytes(32).toString('hex');
+  const tokenHash = hashResetToken(token);
+  const expiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MS);
+  return { token, tokenHash, expiresAt };
+}
+
+function hashResetToken(token) {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+
 module.exports = {
   hashPassword,
   comparePassword,
   generateToken,
   verifyToken,
+  generateResetToken,
+  hashResetToken,
 };

@@ -50,6 +50,17 @@ const envSchema = z.object({
   // Rate Limiting
   RATE_LIMIT_WINDOW_MS: z.string().transform(Number).default('900000'), // 15 minutes
   RATE_LIMIT_MAX_REQUESTS: z.string().transform(Number).default('100'),
+
+  // Frontend URL (used for password-reset email links)
+  FRONTEND_URL: z.string().url('FRONTEND_URL must be a valid URL').default('http://localhost:5173'),
+
+  // Brevo (transactional email)
+  BREVO_API_KEY: z.string().min(1, 'BREVO_API_KEY is required'),
+  EMAIL_FROM_ADDRESS: z.string().email('EMAIL_FROM_ADDRESS must be a valid email'),
+  EMAIL_FROM_NAME: z.string().default('StudyAI'),
+
+  // Google OAuth (used to verify ID tokens from the frontend)
+  GOOGLE_CLIENT_ID: z.string().min(1, 'GOOGLE_CLIENT_ID is required'),
 });
 
 /**

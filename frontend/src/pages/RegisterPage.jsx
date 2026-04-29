@@ -2,13 +2,14 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
 import { Link, useNavigate } from 'react-router-dom';
+import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../context/AuthContext';
 import ThemeToggle from '../components/ThemeToggle';
 
 export default function RegisterPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { register } = useAuth();
+  const { register, loginWithGoogle } = useAuth();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -277,6 +278,44 @@ export default function RegisterPage() {
                 </button>
               </div>
             </form>
+
+            <div
+              className="flex items-center"
+              style={{ gap: '12px', margin: '16px 0' }}
+            >
+              <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--input-border)' }} />
+              <span style={{ color: 'var(--text-muted)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                {t('login.orContinueWith')}
+              </span>
+              <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--input-border)' }} />
+            </div>
+
+            <div className="flex justify-center">
+              <GoogleLogin
+                onSuccess={async (credentialResponse) => {
+                  setError('');
+                  if (!credentialResponse.credential) {
+                    setError(t('login.googleFailed'));
+                    return;
+                  }
+                  setLoading(true);
+                  try {
+                    await loginWithGoogle(credentialResponse.credential);
+                    navigate('/');
+                  } catch (err) {
+                    setError(err.response?.data?.error?.message || t('login.googleFailed'));
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                onError={() => setError(t('login.googleFailed'))}
+                theme="filled_blue"
+                shape="rectangular"
+                size="large"
+                width="320"
+                text="signup_with"
+              />
+            </div>
 
             <p
               style={{

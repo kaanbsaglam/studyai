@@ -44,7 +44,31 @@
     "signIn": "Sign in",
     "noAccount": "Don't have an account?",
     "signUp": "Sign up",
-    "invalidCredentials": "Invalid credentials"
+    "invalidCredentials": "Invalid credentials",
+    "orContinueWith": "or continue with",
+    "googleFailed": "Google sign-in failed. Please try again."
+  },
+  "forgotPassword": {
+    "title": "Forgot your password?",
+    "subtitle": "Enter your email and we'll send you a link to reset it.",
+    "sendLink": "Send reset link",
+    "sending": "Sending...",
+    "success": "If an account exists for that email, we've sent a reset link. Check your inbox (and spam folder).",
+    "invalidEmail": "Please enter a valid email address.",
+    "failed": "Could not send reset email. Please try again.",
+    "backToLogin": "Back to sign in"
+  },
+  "resetPassword": {
+    "title": "Reset your password",
+    "subtitle": "Enter a new password below.",
+    "newPassword": "New password",
+    "resetPassword": "Reset password",
+    "resetting": "Resetting...",
+    "success": "Your password has been reset. Redirecting to sign in...",
+    "passwordLength": "Password must be 8-64 characters.",
+    "passwordsNoMatch": "Passwords do not match.",
+    "invalidLink": "This reset link is invalid or has expired. Request a new one from the forgot password page.",
+    "failed": "Failed to reset password. The link may have expired."
   },
   "register": {
     "joinStudyAI": "Join StudyAI",
@@ -130,7 +154,21 @@
     "downgradeConfirm": "Downgrade to Free plan? You will lose Premium benefits.",
     "failedToLoad": "Failed to load usage data",
     "failedToUpgrade": "Failed to upgrade",
-    "failedToDowngrade": "Failed to downgrade"
+    "failedToDowngrade": "Failed to downgrade",
+    "security": "Account Security",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "confirmNewPassword": "Confirm new password",
+    "changePassword": "Change password",
+    "passwordChanged": "Password updated successfully.",
+    "changeFailed": "Could not update password.",
+    "passwordLength": "Password must be 8-64 characters.",
+    "passwordsNoMatch": "Passwords do not match.",
+    "noPasswordExplanation": "Your account uses Google sign-in and doesn't have a password yet. We can send you an email with a link to set one.",
+    "sendSetPasswordEmail": "Send set-password email",
+    "sending": "Sending...",
+    "setPasswordEmailSent": "If your account is eligible, an email has been sent. Check your inbox.",
+    "setPasswordFailed": "Could not send the email. Please try again."
   },
   "classroomDashboard": {
     "classroomSettings": "Classroom Settings",
