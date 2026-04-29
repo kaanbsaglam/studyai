@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider } from './context/AuthContext';
 import { TimerProvider } from './context/TimerContext';
 import { ChatModeProvider } from './context/ChatModeContext';
@@ -7,6 +8,8 @@ import AdminRoute from './components/AdminRoute';
 import ClassroomLayout from './components/ClassroomLayout';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import ClassroomsPage from './pages/ClassroomsPage';
 import ClassroomDashboard from './pages/ClassroomDashboard';
 import ClassroomDocumentsPage from './pages/ClassroomDocumentsPage';
@@ -21,83 +24,89 @@ import AdminPage from './pages/AdminPage';
 import AccountPage from './pages/AccountPage';
 import SettingsPage from './pages/SettingsPage';
 
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+
 function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <ChatModeProvider>
-          <TimerProvider>
-            <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <Navigate to="/classrooms" replace />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/classrooms"
-            element={
-              <ProtectedRoute>
-                <ClassroomsPage />
-              </ProtectedRoute>
-            }
-          />
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      <BrowserRouter>
+        <AuthProvider>
+          <ChatModeProvider>
+            <TimerProvider>
+              <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <Navigate to="/classrooms" replace />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/classrooms"
+              element={
+                <ProtectedRoute>
+                  <ClassroomsPage />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Classroom routes with shared layout */}
-          <Route
-            path="/classrooms/:id"
-            element={
-              <ProtectedRoute>
-                <ClassroomLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<ClassroomDashboard />} />
-            <Route path="documents" element={<ClassroomDocumentsPage />} />
-            <Route path="documents/:docId" element={<DocumentViewerPage />} />
-            <Route path="audio/:docId" element={<AudioDetailPage />} />
-            <Route path="chat" element={<ChatPage />} />
-            <Route path="flashcards" element={<FlashcardsPage />} />
-            <Route path="quizzes" element={<QuizPage />} />
-            <Route path="summaries" element={<SummaryPage />} />
-            <Route path="notes" element={<NotesPage />} />
-          </Route>
+            {/* Classroom routes with shared layout */}
+            <Route
+              path="/classrooms/:id"
+              element={
+                <ProtectedRoute>
+                  <ClassroomLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<ClassroomDashboard />} />
+              <Route path="documents" element={<ClassroomDocumentsPage />} />
+              <Route path="documents/:docId" element={<DocumentViewerPage />} />
+              <Route path="audio/:docId" element={<AudioDetailPage />} />
+              <Route path="chat" element={<ChatPage />} />
+              <Route path="flashcards" element={<FlashcardsPage />} />
+              <Route path="quizzes" element={<QuizPage />} />
+              <Route path="summaries" element={<SummaryPage />} />
+              <Route path="notes" element={<NotesPage />} />
+            </Route>
 
-          <Route
-            path="/admin"
-            element={
-              <AdminRoute>
-                <AdminPage />
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="/account"
-            element={
-              <ProtectedRoute>
-                <AccountPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <ProtectedRoute>
-                <SettingsPage />
-              </ProtectedRoute>
-            }
-          />
-          {/* Redirect unknown routes to classrooms */}
-          <Route path="*" element={<Navigate to="/classrooms" replace />} />
-            </Routes>
-          </TimerProvider>
-        </ChatModeProvider>
-      </AuthProvider>
-    </BrowserRouter>
+            <Route
+              path="/admin"
+              element={
+                <AdminRoute>
+                  <AdminPage />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/account"
+              element={
+                <ProtectedRoute>
+                  <AccountPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <SettingsPage />
+                </ProtectedRoute>
+              }
+            />
+            {/* Redirect unknown routes to classrooms */}
+            <Route path="*" element={<Navigate to="/classrooms" replace />} />
+              </Routes>
+            </TimerProvider>
+          </ChatModeProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </GoogleOAuthProvider>
   );
 }
 
