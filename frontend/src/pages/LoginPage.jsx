@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../context/AuthContext';
 import ThemeToggle from '../components/ThemeToggle';
 
 export default function LoginPage() {
   const { t } = useTranslation();
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('');
@@ -158,9 +159,13 @@ export default function LoginPage() {
                   <p style={{ color: 'var(--text-primary)', fontSize: '14px', fontWeight: 500 }}>
                     {t('common.password')}
                   </p>
-                  <div className="text-sm cursor-pointer p-2" style={{ color: 'var(--accent)', fontWeight: 500 }}>
+                  <Link
+                    to="/forgot-password"
+                    className="text-sm p-2"
+                    style={{ color: 'var(--accent)', fontWeight: 500, textDecoration: 'none' }}
+                  >
                     {t('login.forgotPassword')}
-                  </div>
+                  </Link>
                 </div>
                 <div className="relative">
                   <input
@@ -213,6 +218,43 @@ export default function LoginPage() {
                 </button>
               </div>
             </form>
+
+            <div
+              className="flex items-center"
+              style={{ gap: '12px', margin: '20px 0' }}
+            >
+              <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--input-border)' }} />
+              <span style={{ color: 'var(--text-muted)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                {t('login.orContinueWith')}
+              </span>
+              <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--input-border)' }} />
+            </div>
+
+            <div className="flex justify-center">
+              <GoogleLogin
+                onSuccess={async (credentialResponse) => {
+                  setError('');
+                  if (!credentialResponse.credential) {
+                    setError(t('login.googleFailed'));
+                    return;
+                  }
+                  setLoading(true);
+                  try {
+                    await loginWithGoogle(credentialResponse.credential);
+                    navigate('/');
+                  } catch (err) {
+                    setError(err.response?.data?.error?.message || t('login.googleFailed'));
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                onError={() => setError(t('login.googleFailed'))}
+                theme="filled_blue"
+                shape="rectangular"
+                size="large"
+                width="320"
+              />
+            </div>
 
             <p
               style={{
