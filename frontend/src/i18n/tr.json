@@ -44,7 +44,31 @@
     "signIn": "Giriş yap",
     "noAccount": "Hesabınız yok mu?",
     "signUp": "Kayıt ol",
-    "invalidCredentials": "Geçersiz kimlik bilgileri"
+    "invalidCredentials": "Geçersiz kimlik bilgileri",
+    "orContinueWith": "veya şununla devam et",
+    "googleFailed": "Google ile giriş başarısız. Lütfen tekrar deneyin."
+  },
+  "forgotPassword": {
+    "title": "Şifrenizi mi unuttunuz?",
+    "subtitle": "E-posta adresinizi girin, sıfırlama bağlantısını size gönderelim.",
+    "sendLink": "Sıfırlama bağlantısı gönder",
+    "sending": "Gönderiliyor...",
+    "success": "Bu e-posta adresine kayıtlı bir hesap varsa sıfırlama bağlantısı gönderildi. Gelen kutunuzu (ve spam klasörünüzü) kontrol edin.",
+    "invalidEmail": "Lütfen geçerli bir e-posta adresi girin.",
+    "failed": "Sıfırlama e-postası gönderilemedi. Lütfen tekrar deneyin.",
+    "backToLogin": "Girişe dön"
+  },
+  "resetPassword": {
+    "title": "Şifrenizi sıfırlayın",
+    "subtitle": "Aşağıya yeni bir şifre girin.",
+    "newPassword": "Yeni şifre",
+    "resetPassword": "Şifreyi sıfırla",
+    "resetting": "Sıfırlanıyor...",
+    "success": "Şifreniz sıfırlandı. Giriş sayfasına yönlendiriliyorsunuz...",
+    "passwordLength": "Şifre 8-64 karakter olmalıdır.",
+    "passwordsNoMatch": "Şifreler eşleşmiyor.",
+    "invalidLink": "Bu sıfırlama bağlantısı geçersiz veya süresi dolmuş. Şifremi unuttum sayfasından yeni bir bağlantı isteyin.",
+    "failed": "Şifre sıfırlanamadı. Bağlantının süresi dolmuş olabilir."
   },
   "register": {
     "joinStudyAI": "StudyAI'ye Katılın",
@@ -130,7 +154,21 @@
     "downgradeConfirm": "Ücretsiz plana düşürülsün mü? Premium avantajlarını kaybedeceksiniz.",
     "failedToLoad": "Kullanım verileri yüklenemedi",
     "failedToUpgrade": "Yükseltme başarısız",
-    "failedToDowngrade": "Düşürme başarısız"
+    "failedToDowngrade": "Düşürme başarısız",
+    "security": "Hesap Güvenliği",
+    "currentPassword": "Mevcut şifre",
+    "newPassword": "Yeni şifre",
+    "confirmNewPassword": "Yeni şifreyi doğrula",
+    "changePassword": "Şifreyi değiştir",
+    "passwordChanged": "Şifreniz başarıyla güncellendi.",
+    "changeFailed": "Şifre güncellenemedi.",
+    "passwordLength": "Şifre 8-64 karakter olmalıdır.",
+    "passwordsNoMatch": "Şifreler eşleşmiyor.",
+    "noPasswordExplanation": "Hesabınız Google ile giriş kullanıyor ve henüz bir şifresi yok. Şifre belirlemek için size e-posta gönderebiliriz.",
+    "sendSetPasswordEmail": "Şifre belirleme e-postası gönder",
+    "sending": "Gönderiliyor...",
+    "setPasswordEmailSent": "Hesabınız uygunsa bir e-posta gönderildi. Gelen kutunuzu kontrol edin.",
+    "setPasswordFailed": "E-posta gönderilemedi. Lütfen tekrar deneyin."
   },
   "classroomDashboard": {
     "classroomSettings": "Sınıf Ayarları",
