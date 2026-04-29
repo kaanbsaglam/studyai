@@ -15,5 +15,5 @@ Selection criteria:
 Candidate flashcards:
 {{candidates}}
 
-Respond with ONLY a valid JSON array of up to {{targetCount}} flashcards:
-[{"front": "...", "back": "..."}]
+Respond with ONLY a valid JSON object containing up to {{targetCount}} flashcards:
+{"cards": [{"front": "...", "back": "..."}]}

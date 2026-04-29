@@ -15,5 +15,5 @@ Selection criteria:
 Candidate questions:
 {{candidates}}
 
-Respond with ONLY a valid JSON array of up to {{targetCount}} questions:
-[{"question": "...", "correctAnswer": "...", "wrongAnswers": ["...", "...", "..."]}]
+Respond with ONLY a valid JSON object containing up to {{targetCount}} questions:
+{"questions": [{"question": "...", "correctAnswer": "...", "wrongAnswers": ["...", "...", "..."]}]}

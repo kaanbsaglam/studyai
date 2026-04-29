@@ -25,10 +25,12 @@ Study Material:
 {{content}}
 {{/if}}
 
-Respond with ONLY a valid JSON array of flashcards in this exact format, no other text:
-[
-  {"front": "Question 1?", "back": "Answer 1"},
-  {"front": "Question 2?", "back": "Answer 2"}
-]
+Respond with ONLY a valid JSON object in this exact format, no other text:
+{
+  "cards": [
+    {"front": "Question 1?", "back": "Answer 1"},
+    {"front": "Question 2?", "back": "Answer 2"}
+  ]
+}
 
 Generate exactly {{count}} flashcards:

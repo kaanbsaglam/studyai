@@ -510,7 +510,14 @@ async function generateWithGenerator(generatorName, content, params, options = {
 
     const contentStr = getContentString(processedContent);
     const prompt = generator.buildMapPrompt(contentStr, params, 0);
-    const models = llmConfig.tiers[tier]?.pipeline?.map || llmConfig.tiers.FREE.pipeline.map;
+    // Direct (non-chunked) processing = single LLM call, semantically the same
+    // as a study-aid generation. Use studyAid if defined, otherwise fall back
+    // to pipeline.map (so generators without a studyAid slot still work).
+    const models =
+      llmConfig.tiers[tier]?.studyAid ||
+      llmConfig.tiers[tier]?.pipeline?.map ||
+      llmConfig.tiers.FREE.studyAid ||
+      llmConfig.tiers.FREE.pipeline.map;
     const schema = generator.getSchema(0);
 
     const { text, tokensUsed, weightedTokens } = await generateWithFallback(prompt, models, { schema });

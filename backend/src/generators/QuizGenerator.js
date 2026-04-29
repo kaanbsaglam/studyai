@@ -9,20 +9,28 @@ const Generator = require('./Generator');
 const logger = require('../config/logger');
 const { loadPrompt } = require('../prompts/loader');
 
+// Wrapped in an object because OpenAI's strict json_schema mode rejects
+// top-level arrays. Gemini accepts either; we standardize on the wrapped shape.
 const QUIZ_SCHEMA = {
-  type: 'array',
-  items: {
-    type: 'object',
-    properties: {
-      question: { type: 'string' },
-      correctAnswer: { type: 'string' },
-      wrongAnswers: {
-        type: 'array',
-        items: { type: 'string' },
+  type: 'object',
+  properties: {
+    questions: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          question: { type: 'string' },
+          correctAnswer: { type: 'string' },
+          wrongAnswers: {
+            type: 'array',
+            items: { type: 'string' },
+          },
+        },
+        required: ['question', 'correctAnswer', 'wrongAnswers'],
       },
     },
-    required: ['question', 'correctAnswer', 'wrongAnswers'],
   },
+  required: ['questions'],
 };
 
 class QuizGenerator extends Generator {
@@ -85,15 +93,18 @@ class QuizGenerator extends Generator {
       throw new Error('Failed to parse quiz response. Please try again.');
     }
 
-    if (!Array.isArray(parsed)) {
+    // Accept either the wrapped {questions: [...]} shape (current) or a raw
+    // array (older Gemini outputs / lenient model responses).
+    const list = Array.isArray(parsed) ? parsed : parsed?.questions;
+    if (!Array.isArray(list)) {
       logger.error('QuizGenerator: Response is not an array', { parsed });
       throw new Error('Invalid quiz response format. Please try again.');
     }
 
     // Validate each question
     const questions = [];
-    for (let i = 0; i < parsed.length; i++) {
-      const q = parsed[i];
+    for (let i = 0; i < list.length; i++) {
+      const q = list[i];
       if (
         !q ||
         typeof q.question !== 'string' ||

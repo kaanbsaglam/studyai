@@ -25,13 +25,15 @@ Study Material:
 {{content}}
 {{/if}}
 
-Respond with ONLY a valid JSON array in this exact format, no other text:
-[
-  {
-    "question": "What is...?",
-    "correctAnswer": "The correct answer",
-    "wrongAnswers": ["Wrong answer 1", "Wrong answer 2", "Wrong answer 3"]
-  }
-]
+Respond with ONLY a valid JSON object in this exact format, no other text:
+{
+  "questions": [
+    {
+      "question": "What is...?",
+      "correctAnswer": "The correct answer",
+      "wrongAnswers": ["Wrong answer 1", "Wrong answer 2", "Wrong answer 3"]
+    }
+  ]
+}
 
 Generate exactly {{count}} questions:

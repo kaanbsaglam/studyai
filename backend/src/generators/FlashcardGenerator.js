@@ -9,16 +9,24 @@ const Generator = require('./Generator');
 const logger = require('../config/logger');
 const { loadPrompt } = require('../prompts/loader');
 
+// Wrapped in an object because OpenAI's strict json_schema mode rejects
+// top-level arrays. Gemini accepts either; we standardize on the wrapped shape.
 const FLASHCARDS_SCHEMA = {
-  type: 'array',
-  items: {
-    type: 'object',
-    properties: {
-      front: { type: 'string' },
-      back: { type: 'string' },
+  type: 'object',
+  properties: {
+    cards: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          front: { type: 'string' },
+          back: { type: 'string' },
+        },
+        required: ['front', 'back'],
+      },
     },
-    required: ['front', 'back'],
   },
+  required: ['cards'],
 };
 
 class FlashcardGenerator extends Generator {
@@ -81,15 +89,18 @@ class FlashcardGenerator extends Generator {
       throw new Error('Failed to parse flashcard response. Please try again.');
     }
 
-    if (!Array.isArray(parsed)) {
+    // Accept either the wrapped {cards: [...]} shape (current) or a raw array
+    // (older Gemini outputs / lenient model responses).
+    const list = Array.isArray(parsed) ? parsed : parsed?.cards;
+    if (!Array.isArray(list)) {
       logger.error('FlashcardGenerator: Response is not an array', { parsed });
       throw new Error('Invalid flashcard response format. Please try again.');
     }
 
     // Validate each card
     const cards = [];
-    for (let i = 0; i < parsed.length; i++) {
-      const card = parsed[i];
+    for (let i = 0; i < list.length; i++) {
+      const card = list[i];
       if (!card || typeof card.front !== 'string' || typeof card.back !== 'string') {
         logger.warn(`FlashcardGenerator: Invalid card at index ${i}`, { card });
         continue;

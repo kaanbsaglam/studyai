@@ -10,10 +10,10 @@ Requirements:
 - Each card should test ONE concept
 - Front should be a clear question or prompt
 - Back should be a concise but complete answer
-- If the content has no suitable concepts, return an empty array []
+- If the content has no suitable concepts, return {"cards": []}
 
-Respond with ONLY a valid JSON array (can be empty if no flashcards possible):
-[{"front": "Question?", "back": "Answer"}]
+Respond with ONLY a valid JSON object (cards array can be empty if no flashcards possible):
+{"cards": [{"front": "Question?", "back": "Answer"}]}
 {{else}}
 You are a study assistant that creates effective flashcards for learning.
 
@@ -26,11 +26,11 @@ Guidelines for good flashcards:
 - Answers should be concise but complete
 - Avoid yes/no questions
 - Include a mix of definitions, concepts, and applications
-- If the content has no suitable concepts, return an empty array []
+- If the content has no suitable concepts, return {"cards": []}
 
 Study Material:
 {{content}}
 
-Respond with ONLY a valid JSON array of flashcards in this exact format, no other text:
-[{"front": "Question 1?", "back": "Answer 1"}, {"front": "Question 2?", "back": "Answer 2"}]
+Respond with ONLY a valid JSON object in this exact format, no other text:
+{"cards": [{"front": "Question 1?", "back": "Answer 1"}, {"front": "Question 2?", "back": "Answer 2"}]}
 {{/if}}
