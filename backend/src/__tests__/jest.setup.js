@@ -14,6 +14,11 @@ process.env.S3_BUCKET_NAME = 'test-bucket';
 process.env.PINECONE_API_KEY = 'test-pinecone-key';
 process.env.PINECONE_INDEX_NAME = 'test-index';
 process.env.GEMINI_API_KEY = 'test-gemini-key';
+process.env.FRONTEND_URL = 'http://localhost:5173';
+process.env.BREVO_API_KEY = 'test-brevo-key';
+process.env.EMAIL_FROM_ADDRESS = 'test@example.com';
+process.env.EMAIL_FROM_NAME = 'StudyAI Test';
+process.env.GOOGLE_CLIENT_ID = 'test-google-client-id';
 
 // Increase timeout for async operations
 jest.setTimeout(30000);
