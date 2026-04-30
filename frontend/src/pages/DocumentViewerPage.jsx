@@ -296,7 +296,7 @@ export default function DocumentViewerPage() {
   ];
 
   return (
-    <div className="flex gap-2 h-[calc(100vh-9rem)]">
+    <div className="flex gap-2 h-[calc(100vh-6rem)]">
       {/* Notes Panel (Left) */}
       {notesOpen && (
         <div className="w-80 min-w-48 flex flex-col bg-white rounded-lg shadow overflow-hidden" style={{ resize: 'horizontal' }}>

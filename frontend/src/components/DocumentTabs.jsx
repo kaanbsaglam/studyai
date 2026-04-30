@@ -127,12 +127,20 @@ export default function DocumentTabs({
     return () => window.document.removeEventListener('mousedown', handleClick);
   }, [pickerOpen]);
 
-  // Position the portal dropdown right under the trigger.
+  // Position the portal dropdown right under the trigger. Flip to right-align
+  // when the dropdown would overflow the viewport (e.g. tools sidebar closed
+  // and the trigger is near the right edge).
   useLayoutEffect(() => {
     if (!pickerOpen || !triggerRef.current) return;
+    const DROPDOWN_MAX_WIDTH = 320;
+    const VIEWPORT_PADDING = 8;
     const updatePos = () => {
       const rect = triggerRef.current.getBoundingClientRect();
-      setPickerPos({ top: rect.bottom + 8, left: rect.left });
+      const overflowsRight = rect.left + DROPDOWN_MAX_WIDTH > window.innerWidth - VIEWPORT_PADDING;
+      const left = overflowsRight
+        ? Math.max(VIEWPORT_PADDING, rect.right - DROPDOWN_MAX_WIDTH)
+        : rect.left;
+      setPickerPos({ top: rect.bottom + 8, left });
     };
     updatePos();
     window.addEventListener('resize', updatePos);

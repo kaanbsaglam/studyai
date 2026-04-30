@@ -233,7 +233,7 @@ export default function SummaryPanel({
                 setActiveSummary(null);
                 setSavedAsNote(false);
               }}
-              className="text-gray-500 hover:text-gray-700"
+              className="rounded-full p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
             >
               <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -263,7 +263,7 @@ export default function SummaryPanel({
           <h3 className="text-lg font-medium text-gray-900">{t('summaryPanel.generateSummary')}</h3>
           <button
             onClick={() => setShowGenerateForm(false)}
-            className="text-gray-500 hover:text-gray-700"
+            className="rounded-full p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
           >
             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -285,7 +285,7 @@ export default function SummaryPanel({
               value={formTitle}
               onChange={(e) => setFormTitle(e.target.value)}
               placeholder="e.g., Chapter 5 Overview"
-              className={`w-full px-3 py-2 border border-gray-300 ${compact ? 'rounded-full' : 'rounded-md'} focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+              className="w-full px-3 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               required
             />
           </div>
@@ -310,7 +310,7 @@ export default function SummaryPanel({
               value={formFocusTopic}
               onChange={(e) => setFormFocusTopic(e.target.value)}
               placeholder={isGeneralKnowledge ? 'e.g., Machine Learning, World War II' : 'e.g., photosynthesis, key themes'}
-              className={`w-full px-3 py-2 border border-gray-300 ${compact ? 'rounded-full' : 'rounded-md'} focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+              className="w-full px-3 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               required={isGeneralKnowledge}
             />
             <p className="text-xs text-gray-500 mt-1">
@@ -332,7 +332,7 @@ export default function SummaryPanel({
                   key={option.value}
                   type="button"
                   onClick={() => setFormLength(option.value)}
-                  className={`p-3 ${compact ? 'rounded-full' : 'rounded-lg'} border-2 text-center transition-colors ${
+                  className={`p-3 rounded-full border-2 text-center transition-colors ${
                     formLength === option.value
                       ? 'border-blue-500 bg-blue-50 text-blue-700'
                       : 'border-gray-200 hover:border-gray-300'

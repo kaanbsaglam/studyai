@@ -180,7 +180,7 @@ export default function FlashcardsPanel({
           <h3 className="text-lg font-medium text-gray-900">{t('flashcardsPanel.generateFlashcards')}</h3>
           <button
             onClick={() => setShowGenerateForm(false)}
-            className="text-gray-500 hover:text-gray-700"
+            className="rounded-full p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
           >
             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -204,7 +204,7 @@ export default function FlashcardsPanel({
               value={formTitle}
               onChange={(e) => setFormTitle(e.target.value)}
               placeholder="e.g., Biology Chapter 5 Review"
-              className={`w-full px-3 py-2 border border-gray-300 ${compact ? 'rounded-full' : 'rounded-md'} focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+              className="w-full px-3 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               required
             />
           </div>
@@ -232,7 +232,7 @@ export default function FlashcardsPanel({
               value={formFocusTopic}
               onChange={(e) => setFormFocusTopic(e.target.value)}
               placeholder={isGeneralKnowledge ? 'e.g., World War II, Photosynthesis' : 'e.g., photosynthesis, cell division'}
-              className={`w-full px-3 py-2 border border-gray-300 ${compact ? 'rounded-full' : 'rounded-md'} focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+              className="w-full px-3 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               required={isGeneralKnowledge}
             />
             <p className="text-xs text-gray-500 mt-1">
@@ -249,7 +249,7 @@ export default function FlashcardsPanel({
             <select
               value={formCount}
               onChange={(e) => setFormCount(Number(e.target.value))}
-              className={`w-full px-3 py-2 border border-gray-300 ${compact ? 'rounded-full' : 'rounded-md'} focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+              className="w-full px-3 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             >
               <option value={5}>{`5 ${t('flashcardsPanel.cards')}`}</option>
               <option value={10}>{`10 ${t('flashcardsPanel.cards')}`}</option>

@@ -77,6 +77,10 @@ export default function ClassroomLayout() {
     );
   }
 
+  // Document viewer reclaims vertical space for the PDF/notes/tools panels —
+  // hide the classroom sub-nav while the user is reading a document.
+  const isDocumentViewer = location.pathname.includes('/documents/');
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Top Navigation */}
@@ -121,34 +125,36 @@ export default function ClassroomLayout() {
         </div>
       </nav>
 
-      {/* Sub Navigation */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex gap-1 -mb-px">
-            {navItems.map((item) => (
-              <Link
-                key={item.path}
-                to={item.path === '' ? `/classrooms/${id}` : `/classrooms/${id}/${item.path}`}
-                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                  isActive(item.path)
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
-                </svg>
-                {item.label}
-              </Link>
-            ))}
-          </nav>
+      {/* Sub Navigation — hidden on document viewer to free vertical space */}
+      {!isDocumentViewer && (
+        <div className="bg-white border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <nav className="flex gap-1 -mb-px">
+              {navItems.map((item) => (
+                <Link
+                  key={item.path}
+                  to={item.path === '' ? `/classrooms/${id}` : `/classrooms/${id}/${item.path}`}
+                  className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                    isActive(item.path)
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
+                  </svg>
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Page Content */}
       {/* Use full width for document viewer, constrained width for other pages */}
       <main className={
-        location.pathname.includes('/documents/')
+        isDocumentViewer
           ? 'py-4 px-4'
           : 'max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8'
       }>
