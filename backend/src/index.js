@@ -8,6 +8,9 @@
 // Load environment variables first (before anything else)
 require('dotenv').config();
 
+// Identify this process for structured logs (must be set before logger is required)
+process.env.LOG_PROCESS_NAME = process.env.LOG_PROCESS_NAME || 'api';
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -17,6 +20,7 @@ const rateLimit = require('express-rate-limit');
 const { env } = require('./config/env');
 const logger = require('./config/logger');
 const { errorHandler } = require('./middleware/errorHandler');
+const traceIdMiddleware = require('./middleware/traceId.middleware');
 
 // Initialize Express
 const app = express();
@@ -41,6 +45,10 @@ app.use(express.json({ limit: '10mb' }));
 
 // Parse URL-encoded bodies (form data)
 app.use(express.urlencoded({ extended: true }));
+
+// Trace ID — assigns a request-scoped UUID stored in AsyncLocalStorage so
+// every log line emitted while handling this request shares one ID.
+app.use(traceIdMiddleware);
 
 // Rate limiting (global)
 const limiter = rateLimit({

@@ -70,16 +70,31 @@ async function generateSessionTitle(sessionId, question, answer, tier = 'FREE') 
       question,
       answerPreview: answer.slice(0, 500),
     });
-    const { text } = await generateText(prompt, { model });
+    const { text } = await generateText(prompt, {
+      model,
+      tag: 'chat',
+      event: 'title_call_completed',
+      extra: { sessionId },
+    });
     const title = text.trim().replace(/^["']|["']$/g, '').slice(0, 100);
     await prisma.chatSession.update({
       where: { id: sessionId },
       data: { title },
     });
-    logger.info(`Generated title for session ${sessionId}: "${title}"`);
+    logger.logEvent('info', {
+      tag: 'chat',
+      event: 'session_title_generated',
+      sessionId,
+      title,
+    });
     return title;
   } catch (err) {
-    logger.error(`Failed to generate session title: ${err.message}`);
+    logger.logEvent('error', {
+      tag: 'chat',
+      event: 'session_title_generation_failed',
+      sessionId,
+      error: err.message,
+    });
     return null;
   }
 }
@@ -208,7 +223,6 @@ const sendMessage = asyncHandler(async (req, res) => {
   // Record token usage
   if (result.tokensUsed > 0) {
     await recordTokenUsage(req.user.id, result.tokensUsed, result.weightedTokens);
-    logger.info(`Recorded ${result.weightedTokens ?? result.tokensUsed} weighted tokens for user ${req.user.id}`);
   }
 
   // Generate title for new sessions (awaited so frontend gets it immediately)
@@ -497,7 +511,12 @@ const sendMessageStream = async (req, res) => {
     }
 
     if (clientDisconnected) {
-      logger.info('Client disconnected during streaming');
+      logger.logEvent('warn', {
+        tag: 'chat',
+        event: 'chat_stream_aborted',
+        sessionId: session.id,
+        reason: 'client_disconnected',
+      });
       return;
     }
 
@@ -531,7 +550,6 @@ const sendMessageStream = async (req, res) => {
     // Record token usage
     if (stats.tokensUsed > 0) {
       await recordTokenUsage(req.user.id, stats.tokensUsed, stats.weightedTokens);
-      logger.info(`Recorded ${stats.weightedTokens ?? stats.tokensUsed} weighted tokens for user ${req.user.id}`);
     }
 
     // Generate title for new sessions (fire-and-forget, don't block stream end)
@@ -553,7 +571,12 @@ const sendMessageStream = async (req, res) => {
 
     res.end();
   } catch (error) {
-    logger.error('sendMessageStream error', { error: error.message, stack: error.stack });
+    logger.logEvent('error', {
+      tag: 'chat',
+      event: 'chat_stream_failed',
+      error: error.message,
+      stack: error.stack,
+    });
 
     // If headers haven't been sent yet, respond normally
     if (!res.headersSent) {

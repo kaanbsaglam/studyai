@@ -120,13 +120,18 @@ async function plannerNode(state) {
 
   const { text, tokensUsed, weightedTokens } = await generateWithFallback(prompt, scenario, {
     schema: PLANNER_SCHEMA,
+    tag: 'orchestrator',
+    event: 'planner_call_completed',
+    extra: { node: 'planner' },
   });
 
   let parsed;
   try {
     parsed = JSON.parse(text);
   } catch (err) {
-    logger.error('Orchestrator planner JSON parse failed', {
+    logger.logEvent('error', {
+      tag: 'orchestrator',
+      event: 'planner_parse_failed',
       error: err.message,
       textPreview: text.slice(0, 300),
     });
@@ -154,7 +159,9 @@ async function plannerNode(state) {
   const directResponse =
     typeof parsed.directResponse === 'string' ? parsed.directResponse.trim() : '';
 
-  logger.info('Orchestrator planner decision', {
+  logger.logEvent('info', {
+    tag: 'orchestrator',
+    event: 'planner_decided',
     taskCount: tasks.length,
     hasDirectResponse: !!directResponse,
     tokensUsed,
@@ -207,11 +214,18 @@ async function retrieverNode(state) {
         .filter(Boolean);
     }
   } catch (err) {
-    logger.error('Retriever Pinecone lookup failed', { error: err.message, query });
+    logger.logEvent('error', {
+      tag: 'orchestrator',
+      event: 'retriever_failed',
+      error: err.message,
+      query,
+    });
   }
 
   if (chunks.length === 0) {
-    logger.info('Retriever found no chunks above threshold', {
+    logger.logEvent('info', {
+      tag: 'orchestrator',
+      event: 'retriever_no_chunks',
       query,
       documentIds,
     });
@@ -232,9 +246,15 @@ async function retrieverNode(state) {
     documentChunks: chunksText,
   });
 
-  const { text, tokensUsed, weightedTokens } = await generateWithFallback(prompt, scenario);
+  const { text, tokensUsed, weightedTokens } = await generateWithFallback(prompt, scenario, {
+    tag: 'orchestrator',
+    event: 'retriever_call_completed',
+    extra: { node: 'retriever' },
+  });
 
-  logger.info('Retriever completed', {
+  logger.logEvent('info', {
+    tag: 'orchestrator',
+    event: 'retriever_completed',
     query,
     docCount: documentIds.length,
     chunkCount: chunks.length,
@@ -283,7 +303,10 @@ function getGraph() {
     .addConditionalEdges('planner', routeAfterPlanner, ['retriever', END])
     .addEdge('retriever', END)
     .compile({ checkpointer });
-  logger.info('Orchestrator graph compiled');
+  logger.logEvent('info', {
+    tag: 'orchestrator',
+    event: 'orchestrator_graph_compiled',
+  });
   return compiledGraph;
 }
 

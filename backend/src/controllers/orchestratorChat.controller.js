@@ -60,16 +60,31 @@ async function generateSessionTitle(sessionId, question, answer, tier) {
       question,
       answerPreview: answer.slice(0, 500),
     });
-    const { text } = await generateText(prompt, { model });
+    const { text } = await generateText(prompt, {
+      model,
+      tag: 'orchestrator',
+      event: 'title_call_completed',
+      extra: { node: 'title' },
+    });
     const title = text.trim().replace(/^["']|["']$/g, '').slice(0, 100);
     await prisma.orchestratorSession.update({
       where: { id: sessionId },
       data: { title },
     });
-    logger.info(`Generated orchestrator session title ${sessionId}: "${title}"`);
+    logger.logEvent('info', {
+      tag: 'orchestrator',
+      event: 'session_title_generated',
+      sessionId,
+      title,
+    });
     return title;
   } catch (err) {
-    logger.error(`Failed to generate orchestrator session title: ${err.message}`);
+    logger.logEvent('error', {
+      tag: 'orchestrator',
+      event: 'session_title_generation_failed',
+      sessionId,
+      error: err.message,
+    });
     return null;
   }
 }
@@ -92,11 +107,21 @@ function sseWrite(res, payload) {
  *   { type: 'error', message }
  */
 const sendOrchestratorMessageStream = async (req, res) => {
+  const turnStartMs = Date.now();
   try {
     const { classroomId } = req.params;
     const data = sendOrchestratorMessageSchema.parse(req.body);
 
     await verifyClassroomAccess(classroomId, req.user.id);
+
+    logger.logEvent('info', {
+      tag: 'orchestrator',
+      event: 'orchestrator_turn_started',
+      userId: req.user.id,
+      classroomId,
+      sessionId: data.sessionId || null,
+      questionLength: data.question?.length || 0,
+    });
 
     const tierCheck = await canUseChat(req.user.id, req.user.tier);
     if (!tierCheck.allowed) {
@@ -194,8 +219,11 @@ const sendOrchestratorMessageStream = async (req, res) => {
     }
 
     if (clientDisconnected || !graphDone) {
-      logger.info('Orchestrator stream: client disconnected or graph did not finish', {
+      logger.logEvent('warn', {
+        tag: 'orchestrator',
+        event: 'orchestrator_turn_aborted',
         sessionId: session.id,
+        reason: clientDisconnected ? 'client_disconnected' : 'graph_incomplete',
       });
       return;
     }
@@ -236,6 +264,11 @@ const sendOrchestratorMessageStream = async (req, res) => {
         getSynthesisScenario(),
         (stats) => {
           synthStats = stats;
+        },
+        {
+          tag: 'orchestrator',
+          event: 'synthesis_call_completed',
+          extra: { node: 'synthesis' },
         },
       );
 
@@ -298,13 +331,6 @@ const sendOrchestratorMessageStream = async (req, res) => {
 
     if (totalWeightedTokens > 0) {
       await recordTokenUsage(req.user.id, totalTokensUsed || totalWeightedTokens, totalWeightedTokens);
-      logger.info('Orchestrator chat token usage recorded', {
-        userId: req.user.id,
-        planner: finalState.plannerTokens,
-        retrievers: finalState.retrieverTokens,
-        synthesis: synthWeightedTokens,
-        total: totalWeightedTokens,
-      });
     }
 
     let sessionTitle = null;
@@ -326,11 +352,27 @@ const sendOrchestratorMessageStream = async (req, res) => {
       tokensRemaining: Math.max(0, tierCheck.remaining - totalWeightedTokens),
     });
 
+    logger.logEvent('info', {
+      tag: 'orchestrator',
+      event: 'orchestrator_turn_completed',
+      sessionId: session.id,
+      taskCount: finalState.tasks.length,
+      hasDirectResponse: !!finalState.directResponse,
+      plannerWeightedTokens: finalState.plannerTokens || 0,
+      retrieverWeightedTokens: finalState.retrieverTokens || 0,
+      synthesisWeightedTokens: synthWeightedTokens,
+      totalWeightedTokens,
+      durationMs: Date.now() - turnStartMs,
+    });
+
     res.end();
   } catch (error) {
-    logger.error('sendOrchestratorMessageStream error', {
+    logger.logEvent('error', {
+      tag: 'orchestrator',
+      event: 'orchestrator_turn_failed',
       error: error.message,
       stack: error.stack,
+      durationMs: Date.now() - turnStartMs,
     });
 
     if (!res.headersSent) {

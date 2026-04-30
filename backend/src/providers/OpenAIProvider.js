@@ -88,11 +88,14 @@ class OpenAIProvider extends LLMProvider {
       });
 
       const text = response.choices[0]?.message?.content || '';
-      const tokensUsed = response.usage?.total_tokens || 0;
+      const usage = response.usage || {};
+      const tokensIn = usage.prompt_tokens || 0;
+      const tokensOut = usage.completion_tokens || 0;
+      const tokensUsed = usage.total_tokens || (tokensIn + tokensOut);
 
       logger.debug('OpenAI response received', { model, tokensUsed, textLength: text.length });
 
-      return { text, tokensUsed };
+      return { text, tokensUsed, tokensIn, tokensOut };
     } catch (error) {
       logger.error('OpenAI generateText failed', {
         model,
@@ -138,6 +141,8 @@ class OpenAIProvider extends LLMProvider {
       });
 
       let tokensUsed = 0;
+      let tokensIn = 0;
+      let tokensOut = 0;
 
       for await (const chunk of stream) {
         const delta = chunk.choices?.[0]?.delta?.content;
@@ -146,13 +151,15 @@ class OpenAIProvider extends LLMProvider {
         }
         // The final chunk includes usage info
         if (chunk.usage) {
-          tokensUsed = chunk.usage.total_tokens || 0;
+          tokensIn = chunk.usage.prompt_tokens || 0;
+          tokensOut = chunk.usage.completion_tokens || 0;
+          tokensUsed = chunk.usage.total_tokens || (tokensIn + tokensOut);
         }
       }
 
       logger.debug('OpenAI streaming completed', { model, tokensUsed });
 
-      return { tokensUsed };
+      return { tokensUsed, tokensIn, tokensOut };
     } catch (error) {
       logger.error('OpenAI generateTextStream failed', {
         model,

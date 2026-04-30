@@ -36,9 +36,13 @@ const {
  * @returns {Promise<{answer: string, sources: object[], hasRelevantContext: boolean, tokensUsed: number}>}
  */
 async function queryAndAnswer({ question, classroomId, documentIds = [], conversationHistory = [], tier = 'FREE' }) {
-  logger.info(`RAG query: "${question}" in classroom ${classroomId}`, {
+  logger.logEvent('info', {
+    tag: 'chat',
+    event: 'rag_query_started',
+    classroomId,
     selectedDocs: documentIds.length,
     historyLength: conversationHistory.length,
+    questionLength: question.length,
   });
 
   // Gather all context
@@ -58,7 +62,11 @@ async function queryAndAnswer({ question, classroomId, documentIds = [], convers
 
   // Generate answer using LLM abstraction
   const models = llmConfig.tiers[tier]?.chat || llmConfig.tiers.FREE.chat;
-  const { text: answer, tokensUsed, weightedTokens } = await generateWithFallback(prompt, models);
+  const { text: answer, tokensUsed, weightedTokens } = await generateWithFallback(prompt, models, {
+    tag: 'chat',
+    event: 'chat_call_completed',
+    extra: { mode: 'non_streaming' },
+  });
 
   // Combine sources (selected docs first, then RAG)
   const allSources = [...selectedDocsSources, ...ragSources];
@@ -73,7 +81,9 @@ async function queryAndAnswer({ question, classroomId, documentIds = [], convers
 
   const hasRelevantContext = selectedDocsContext.length > 0 || ragContext.length > 0;
 
-  logger.info(`Generated answer`, {
+  logger.logEvent('info', {
+    tag: 'chat',
+    event: 'rag_answer_generated',
     tokensUsed,
     weightedTokens,
     sourcesCount: uniqueSources.length,
@@ -119,7 +129,12 @@ async function getSelectedDocumentsContext(documentIds) {
     isSelected: true,
   }));
 
-  logger.info(`Selected documents context: ${documents.length} docs, ${selectedDocsContext.length} chars`);
+  logger.logEvent('info', {
+    tag: 'chat',
+    event: 'selected_documents_loaded',
+    documentCount: documents.length,
+    chars: selectedDocsContext.length,
+  });
 
   return { selectedDocsContext, selectedDocsSources };
 }
@@ -148,7 +163,14 @@ async function getRAGContext(question, classroomId, excludeDocumentIds = []) {
     const topMatches = relevantMatches.slice(0, RAG_TOP_K);
 
     if (topMatches.length === 0) {
-      logger.info('No supplementary RAG context found');
+      logger.logEvent('info', {
+        tag: 'chat',
+        event: 'rag_retrieval_completed',
+        topK: RAG_TOP_K,
+        threshold: SIMILARITY_THRESHOLD,
+        matchCount: matches.length,
+        relevantCount: 0,
+      });
       return { ragContext: '', ragSources: [] };
     }
 
@@ -189,11 +211,23 @@ async function getRAGContext(question, classroomId, excludeDocumentIds = []) {
         };
       });
 
-    logger.info(`RAG supplementary context: ${ragSources.length} chunks from ${new Set(ragSources.map(s => s.documentId)).size} docs`);
+    logger.logEvent('info', {
+      tag: 'chat',
+      event: 'rag_retrieval_completed',
+      topK: RAG_TOP_K,
+      threshold: SIMILARITY_THRESHOLD,
+      matchCount: matches.length,
+      relevantCount: ragSources.length,
+      uniqueDocCount: new Set(ragSources.map(s => s.documentId)).size,
+    });
 
     return { ragContext, ragSources };
   } catch (error) {
-    logger.error('RAG context retrieval failed', { error: error.message });
+    logger.logEvent('error', {
+      tag: 'chat',
+      event: 'rag_retrieval_failed',
+      error: error.message,
+    });
     return { ragContext: '', ragSources: [] };
   }
 }
@@ -232,9 +266,13 @@ module.exports = {
  * @returns {Promise<{stream: AsyncGenerator, sources: object[], hasRelevantContext: boolean, getStats: function}>}
  */
 async function queryAndStream({ question, classroomId, documentIds = [], conversationHistory = [], tier = 'FREE' }) {
-  logger.info(`RAG stream query: "${question}" in classroom ${classroomId}`, {
+  logger.logEvent('info', {
+    tag: 'chat',
+    event: 'rag_stream_started',
+    classroomId,
     selectedDocs: documentIds.length,
     historyLength: conversationHistory.length,
+    questionLength: question.length,
   });
 
   // Gather all context (same as queryAndAnswer)
@@ -270,6 +308,10 @@ async function queryAndStream({ question, classroomId, documentIds = [], convers
   let stats = { text: '', tokensUsed: 0, weightedTokens: 0 };
   const stream = generateStreamWithFallback(prompt, models, (finalStats) => {
     stats = finalStats;
+  }, {
+    tag: 'chat',
+    event: 'chat_stream_call_completed',
+    extra: { mode: 'streaming' },
   });
 
   return {
