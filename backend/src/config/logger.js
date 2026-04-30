@@ -71,11 +71,31 @@ const prodFormat = winston.format.combine(
   winston.format.json()
 );
 
+const transports = [new winston.transports.Console()];
+
+// Axiom HTTPS ingest. Stdout transport stays untouched so docker logs and
+// local dev still work. The per-transport format filter ships only lines
+// that carry a `tag` (untagged noise — heartbeats, route hits, prisma chatter
+// — never leaves the host), which keeps free-tier ingest under control.
+if (process.env.AXIOM_TOKEN && process.env.AXIOM_DATASET) {
+  // eslint-disable-next-line global-require
+  const { WinstonTransport: AxiomTransport } = require('@axiomhq/winston');
+  transports.push(
+    new AxiomTransport({
+      token: process.env.AXIOM_TOKEN,
+      dataset: process.env.AXIOM_DATASET,
+      // EU datasets need https://api.eu.axiom.co; US is the default.
+      ...(process.env.AXIOM_URL ? { url: process.env.AXIOM_URL } : {}),
+      format: winston.format((info) => (info.tag ? info : false))(),
+    }),
+  );
+}
+
 const logger = winston.createLogger({
   level: isDevelopment ? 'debug' : 'info',
   format: isDevelopment ? devFormat : prodFormat,
   defaultMeta: { process: processName },
-  transports: [new winston.transports.Console()],
+  transports,
 });
 
 /**

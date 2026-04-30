@@ -22,8 +22,8 @@ module.exports = {
       parallelLimit: 10, // concurrent chunk processing limit
     },
     PREMIUM: {
-      threshold: 10000, // keep it low for easier testing, later change it to 40000 10000 or 60000 15000
-      chunkSize: 4000,
+      threshold: 40000,
+      chunkSize: 10000,
       maxDepth: 1,
       maxChunks: 50,
       parallelLimit: 10,
