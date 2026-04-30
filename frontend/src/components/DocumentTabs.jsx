@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { isCodeFileByName } from './CodeViewer';
 import { isNotebookFileByName } from './IpynbViewer';
@@ -57,11 +58,31 @@ function CloseIcon() {
   );
 }
 
+function DocPlusIcon() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      style={{ display: 'block' }}
+    >
+      <path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z" />
+      <path d="M14 3v5h5" />
+    </svg>
+  );
+}
+
 function PlusIcon() {
   return (
     <svg
-      width="16"
-      height="16"
+      width="20"
+      height="20"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -87,12 +108,18 @@ export default function DocumentTabs({
 }) {
   const { t } = useTranslation();
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerPos, setPickerPos] = useState(null);
   const pickerRef = useRef(null);
+  const triggerRef = useRef(null);
+  const dropdownRef = useRef(null);
 
   useEffect(() => {
     if (!pickerOpen) return;
     const handleClick = (e) => {
-      if (pickerRef.current && !pickerRef.current.contains(e.target)) {
+      if (
+        pickerRef.current && !pickerRef.current.contains(e.target) &&
+        dropdownRef.current && !dropdownRef.current.contains(e.target)
+      ) {
         setPickerOpen(false);
       }
     };
@@ -100,11 +127,27 @@ export default function DocumentTabs({
     return () => window.document.removeEventListener('mousedown', handleClick);
   }, [pickerOpen]);
 
+  // Position the portal dropdown right under the trigger.
+  useLayoutEffect(() => {
+    if (!pickerOpen || !triggerRef.current) return;
+    const updatePos = () => {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setPickerPos({ top: rect.bottom + 8, left: rect.left });
+    };
+    updatePos();
+    window.addEventListener('resize', updatePos);
+    window.addEventListener('scroll', updatePos, true);
+    return () => {
+      window.removeEventListener('resize', updatePos);
+      window.removeEventListener('scroll', updatePos, true);
+    };
+  }, [pickerOpen]);
+
   const canAdd = !maxReached && availableDocs.length > 0;
 
   return (
-    <div className="flex items-end gap-1 min-w-0 -mb-[9px]">
-      <div className="flex items-end gap-0.5 min-w-0">
+    <div className="flex items-end min-w-0 flex-1 -mb-[9px]">
+      <div className="flex items-end gap-0.5 min-w-0 flex-1 overflow-x-auto overflow-y-hidden [scrollbar-width:thin]">
         {tabs.map((doc) => {
           const isActive = doc.id === activeId;
           return (
@@ -112,7 +155,7 @@ export default function DocumentTabs({
               key={doc.id}
               onClick={() => onSelect(doc.id)}
               title={doc.originalName}
-              className={`group relative flex items-center gap-2 h-10 pl-4 pr-2 rounded-t-2xl text-sm font-medium cursor-pointer max-w-[240px] select-none transition-colors ${
+              className={`group relative flex items-center gap-2 h-10 pl-4 pr-2 rounded-t-2xl text-sm font-medium cursor-pointer flex-shrink-0 max-w-[240px] select-none transition-colors ${
                 isActive
                   ? 'doc-tab-active shadow-[0_-1px_3px_rgba(0,0,0,0.06)]'
                   : 'doc-tab-inactive'
@@ -147,6 +190,7 @@ export default function DocumentTabs({
 
       <div className="relative flex-shrink-0 self-center ml-2" ref={pickerRef}>
         <span
+          ref={triggerRef}
           role="button"
           tabIndex={canAdd ? 0 : -1}
           onClick={() => canAdd && setPickerOpen((v) => !v)}
@@ -157,7 +201,7 @@ export default function DocumentTabs({
             }
           }}
           aria-disabled={!canAdd}
-          className={`inline-block rounded-full p-1 doc-tab-add ${
+          className={`inline-flex items-center gap-1 rounded-full px-2 py-1 doc-tab-add ${
             canAdd ? 'cursor-pointer' : 'cursor-not-allowed opacity-40'
           }`}
           title={
@@ -169,13 +213,17 @@ export default function DocumentTabs({
           }
           aria-label={t('documentTabs.addTab', 'Open another document')}
         >
+          <DocPlusIcon />
           <PlusIcon />
         </span>
 
-        {pickerOpen && canAdd && (
+        {pickerOpen && canAdd && pickerPos && createPortal(
           <div
-            className="absolute left-0 top-full mt-2 z-30 min-w-[240px] max-w-[320px] rounded-xl border overflow-hidden max-h-72 overflow-y-auto"
+            ref={dropdownRef}
+            className="fixed z-50 min-w-[240px] max-w-[320px] rounded-xl border overflow-hidden max-h-72 overflow-y-auto"
             style={{
+              top: pickerPos.top,
+              left: pickerPos.left,
               backgroundColor: 'var(--card-bg)',
               borderColor: 'var(--card-border)',
               boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
@@ -197,7 +245,8 @@ export default function DocumentTabs({
                 <span className="truncate">{doc.originalName}</span>
               </button>
             ))}
-          </div>
+          </div>,
+          window.document.body
         )}
       </div>
     </div>

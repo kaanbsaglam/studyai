@@ -110,9 +110,24 @@ export default function DocumentViewerPage() {
       navigate(`/classrooms/${classroomId}/documents`);
       return;
     }
+
+    // Figure out what becomes the active doc so we can keep chat context valid.
+    let nextActive = docId;
     if (id === docId) {
       const idx = openTabIds.indexOf(id);
-      const nextActive = remaining[Math.max(idx - 1, 0)];
+      nextActive = remaining[Math.max(idx - 1, 0)];
+    }
+
+    // Prune the closed doc from chat context + locks. If pruning empties
+    // selectedDocIds, fall back to whatever the new active tab is so the
+    // chat panel always has at least one doc as context.
+    setSelectedDocIds((prev) => {
+      const pruned = prev.filter((d) => d !== id);
+      return pruned.length > 0 ? pruned : [nextActive];
+    });
+    setLockedDocIds((prev) => prev.filter((d) => d !== id));
+
+    if (id === docId) {
       navigateToDoc(nextActive, remaining);
     } else {
       const next = new URLSearchParams(searchParams);
@@ -121,13 +136,18 @@ export default function DocumentViewerPage() {
     }
   };
 
+  // Initial chat state — runs once for the doc the user lands on. Subsequent
+  // tab switches keep the existing chat session/locks so a mid-conversation
+  // student can flip between tabs without losing context.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    setSelectedDocIds([docId]);
+  }, []);
+
+  // Fetch the document whenever the active tab changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchDocument();
-    // Pre-select current document when docId changes
-    setSelectedDocIds([docId]);
-    setActiveSessionId(null);
-    setDocsLocked(false);
-    setLockedDocIds([]);
   }, [docId]);
 
   // Fetch chat sessions when chat tab is active
@@ -165,28 +185,50 @@ export default function DocumentViewerPage() {
   const isCodeDoc = (doc) => isCodeFileByName(doc?.originalName);
   const isNotebookDoc = (doc) => isNotebookFileByName(doc?.originalName);
 
+  // Per-doc cache so flipping between tabs doesn't re-hit the API + S3.
+  // Presigned PDF URLs typically live ~1h, so we time-box cache entries to be safe.
+  const docCacheRef = useRef(new Map());
+  const DOC_CACHE_TTL_MS = 30 * 60 * 1000;
+
+  const applyDocState = (entry) => {
+    setDocument(entry.document);
+    setContent(entry.content || '');
+    setCodeContent(entry.codeContent || null);
+    setPdfUrl(entry.pdfUrl || null);
+  };
+
   const fetchDocument = async () => {
+    const cached = docCacheRef.current.get(docId);
+    if (cached && Date.now() - cached.timestamp < DOC_CACHE_TTL_MS) {
+      applyDocState(cached);
+      setError('');
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
+      // Reset stale state from a different doc while the new one loads.
+      setPdfUrl(null);
+      setCodeContent(null);
+      setContent('');
+
       const response = await api.get(`/documents/${docId}`);
       const doc = response.data.data.document;
-      setDocument(doc);
+      const entry = { document: doc, content: '', codeContent: null, pdfUrl: null, timestamp: Date.now() };
 
       if (doc.mimeType === 'application/pdf') {
-        // Get presigned URL for PDF
         const downloadResponse = await api.get(`/documents/${docId}/download`);
-        setPdfUrl(downloadResponse.data.data.url);
+        entry.pdfUrl = downloadResponse.data.data.url;
       } else if (isCodeDoc(doc) || isNotebookDoc(doc)) {
-        // For code files & notebooks, fetch raw content from S3 to preserve formatting
         const downloadResponse = await api.get(`/documents/${docId}/download`);
-        const rawText = await fetch(downloadResponse.data.data.url).then((r) => r.text());
-        setCodeContent(rawText);
+        entry.codeContent = await fetch(downloadResponse.data.data.url).then((r) => r.text());
       } else {
-        // For text files, fetch content from chunks
-        const chunksContent = doc.chunks?.map((c) => c.content).join('\n\n') || '';
-        setContent(chunksContent);
+        entry.content = doc.chunks?.map((c) => c.content).join('\n\n') || '';
       }
 
+      docCacheRef.current.set(docId, entry);
+      applyDocState(entry);
       setError('');
     } catch {
       setError('Failed to load document');
@@ -269,11 +311,11 @@ export default function DocumentViewerPage() {
       {/* Document Viewer (Center) */}
       <div className="flex-1 bg-white rounded-lg shadow flex flex-col overflow-hidden">
         {/* Document Header */}
-        <div className="px-3 py-2 border-b border-gray-200 flex justify-between items-center bg-gray-50">
-          <div className="flex items-center gap-2">
+        <div className="px-3 py-2 border-b border-gray-200 flex justify-between items-center gap-2 bg-gray-50 min-w-0">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
             <Link
               to={`/classrooms/${classroomId}/documents`}
-              className="h-7 px-2 rounded-full text-xs font-medium text-gray-600 bg-gray-200 border border-gray-300 hover:bg-gray-300 inline-flex items-center gap-1"
+              className="flex-shrink-0 h-7 px-2 rounded-full text-xs font-medium text-gray-600 bg-gray-200 border border-gray-300 hover:bg-gray-300 inline-flex items-center gap-1"
             >
               <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -283,7 +325,7 @@ export default function DocumentViewerPage() {
             {/* Notes toggle - with label */}
             <button
               onClick={() => setNotesOpen(!notesOpen)}
-              className={`h-7 px-2 rounded-full text-xs font-medium flex items-center gap-1 ${
+              className={`flex-shrink-0 h-7 px-2 rounded-full text-xs font-medium flex items-center gap-1 ${
                 notesOpen
                   ? 'text-blue-700 bg-blue-100'
                   : 'text-gray-600 bg-gray-200 hover:bg-gray-300'
@@ -304,7 +346,7 @@ export default function DocumentViewerPage() {
               onClose={handleCloseTab}
             />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
             {document?.mimeType === 'application/pdf' && numPages && (
               <>
                 <button
