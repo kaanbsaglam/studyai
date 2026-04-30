@@ -38,38 +38,21 @@ async function extractPdf(buffer, options = {}) {
   const primaryExtractorName = tierConfig.primary;
   const fallbackExtractorName = tierConfig.fallback;
 
-  logger.info('Extractor extractPdf', {
-    tier,
-    primary: primaryExtractorName,
-    fallback: fallbackExtractorName,
-    bufferSize: buffer.length,
-  });
-
   // Try primary extractor
   try {
     const extractor = getExtractor(primaryExtractorName);
-    // Pass vision model from central config if using gemini-vision
+    // Pass vision model + costWeight from central config if using gemini-vision
     const extractOptions = { ...options };
     if (primaryExtractorName === 'gemini-vision') {
       const visionConfig = llmConfig.tiers[tier]?.extraction?.vision || llmConfig.tiers.FREE.extraction.vision;
       extractOptions.model = visionConfig.primary;
+      extractOptions.costWeight = llmConfig.models[visionConfig.primary]?.costWeight || 0;
     }
     const result = await extractor.extract(buffer, extractOptions);
 
-    // Apply costWeight so daily quota tracks the model's actual price.
     // pdf-parse uses 0 tokens, so weightedTokens collapses to 0.
-    const costWeight = extractOptions.model
-      ? (llmConfig.models[extractOptions.model]?.costWeight || 0)
-      : 0;
+    const costWeight = extractOptions.costWeight || 0;
     const weightedTokens = Math.ceil((result.tokensUsed || 0) * costWeight);
-
-    logger.info('Extractor extractPdf completed', {
-      tier,
-      extractor: primaryExtractorName,
-      tokensUsed: result.tokensUsed,
-      weightedTokens,
-      textLength: result.text.length,
-    });
 
     return {
       text: result.text,
@@ -78,7 +61,9 @@ async function extractPdf(buffer, options = {}) {
       extractionMethod: extractor.getExtractionMethod(),
     };
   } catch (error) {
-    logger.warn('Primary extractor failed', {
+    logger.logEvent('warn', {
+      tag: 'extractor',
+      event: 'extractor_primary_failed',
       tier,
       extractor: primaryExtractorName,
       error: error.message,
@@ -86,9 +71,12 @@ async function extractPdf(buffer, options = {}) {
 
     // Try fallback if configured
     if (fallbackExtractorName && fallbackExtractorName !== primaryExtractorName) {
-      logger.info('Trying fallback extractor', {
+      logger.logEvent('info', {
+        tag: 'extractor',
+        event: 'extraction_fallback_used',
         tier,
-        fallback: fallbackExtractorName,
+        from: primaryExtractorName,
+        to: fallbackExtractorName,
       });
 
       try {
@@ -97,21 +85,12 @@ async function extractPdf(buffer, options = {}) {
         if (fallbackExtractorName === 'gemini-vision') {
           const visionConfig = llmConfig.tiers[tier]?.extraction?.vision || llmConfig.tiers.FREE.extraction.vision;
           fallbackOptions.model = visionConfig.primary;
+          fallbackOptions.costWeight = llmConfig.models[visionConfig.primary]?.costWeight || 0;
         }
         const result = await fallbackExtractor.extract(buffer, fallbackOptions);
 
-        const costWeight = fallbackOptions.model
-          ? (llmConfig.models[fallbackOptions.model]?.costWeight || 0)
-          : 0;
+        const costWeight = fallbackOptions.costWeight || 0;
         const weightedTokens = Math.ceil((result.tokensUsed || 0) * costWeight);
-
-        logger.info('Fallback extractor succeeded', {
-          tier,
-          extractor: fallbackExtractorName,
-          tokensUsed: result.tokensUsed,
-          weightedTokens,
-          textLength: result.text.length,
-        });
 
         return {
           text: result.text,
@@ -120,7 +99,9 @@ async function extractPdf(buffer, options = {}) {
           extractionMethod: fallbackExtractor.getExtractionMethod(),
         };
       } catch (fallbackError) {
-        logger.error('Fallback extractor also failed', {
+        logger.logEvent('error', {
+          tag: 'extractor',
+          event: 'extractor_fallback_failed',
           tier,
           extractor: fallbackExtractorName,
           error: fallbackError.message,

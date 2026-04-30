@@ -56,6 +56,12 @@ const register = asyncHandler(async (req, res) => {
   });
 
   if (existingUser) {
+    logger.logEvent('warn', {
+      tag: 'auth',
+      event: 'user_register_failed',
+      reason: 'email_in_use',
+      email: data.email,
+    });
     throw new ValidationError('Email already registered');
   }
 
@@ -70,6 +76,13 @@ const register = asyncHandler(async (req, res) => {
   });
 
   const token = generateToken(user.id);
+
+  logger.logEvent('info', {
+    tag: 'auth',
+    event: 'user_registered',
+    userId: user.id,
+    email: user.email,
+  });
 
   res.status(201).json({
     success: true,
@@ -90,16 +103,36 @@ const login = asyncHandler(async (req, res) => {
 
   if (!user || !user.passwordHash) {
     // No user, or a Google-only user with no password set yet.
+    logger.logEvent('warn', {
+      tag: 'auth',
+      event: 'user_login_failed',
+      reason: user ? 'no_password_set' : 'unknown_email',
+      email: data.email,
+    });
     throw new AuthenticationError('Invalid email or password');
   }
 
   const isValidPassword = await comparePassword(data.password, user.passwordHash);
 
   if (!isValidPassword) {
+    logger.logEvent('warn', {
+      tag: 'auth',
+      event: 'user_login_failed',
+      reason: 'wrong_password',
+      userId: user.id,
+      email: data.email,
+    });
     throw new AuthenticationError('Invalid email or password');
   }
 
   const token = generateToken(user.id);
+
+  logger.logEvent('info', {
+    tag: 'auth',
+    event: 'user_login_succeeded',
+    userId: user.id,
+    email: user.email,
+  });
 
   res.json({
     success: true,
@@ -163,10 +196,18 @@ const forgotPassword = asyncHandler(async (req, res) => {
     });
 
     sendEmail({ to: user.email, subject, html, text }).catch((err) => {
-      logger.error('Failed to send password reset email', {
+      logger.logEvent('error', {
+        tag: 'auth',
+        event: 'password_reset_email_failed',
         userId: user.id,
         error: err.message,
       });
+    });
+
+    logger.logEvent('info', {
+      tag: 'auth',
+      event: 'password_reset_requested',
+      userId: user.id,
     });
   }
 
@@ -205,6 +246,12 @@ const resetPassword = asyncHandler(async (req, res) => {
       passwordResetTokenHash: null,
       passwordResetExpiresAt: null,
     },
+  });
+
+  logger.logEvent('info', {
+    tag: 'auth',
+    event: 'password_reset_completed',
+    userId: user.id,
   });
 
   res.json({
@@ -246,6 +293,12 @@ const changePassword = asyncHandler(async (req, res) => {
     data: { passwordHash },
   });
 
+  logger.logEvent('info', {
+    tag: 'auth',
+    event: 'password_changed',
+    userId: user.id,
+  });
+
   res.json({ success: true, message: 'Password updated' });
 });
 
@@ -261,7 +314,11 @@ const googleAuth = asyncHandler(async (req, res) => {
   try {
     claims = await verifyGoogleIdToken(data.idToken);
   } catch (err) {
-    logger.warn('Google ID token verification failed', { error: err.message });
+    logger.logEvent('warn', {
+      tag: 'auth',
+      event: 'google_token_verification_failed',
+      error: err.message,
+    });
     throw new AuthenticationError('Invalid Google credential');
   }
 
@@ -287,6 +344,7 @@ const googleAuth = asyncHandler(async (req, res) => {
   }
 
   // 3) Brand new user — create
+  let isNewUser = false;
   if (!user) {
     user = await prisma.user.create({
       data: {
@@ -296,9 +354,18 @@ const googleAuth = asyncHandler(async (req, res) => {
         passwordHash: null,
       },
     });
+    isNewUser = true;
   }
 
   const token = generateToken(user.id);
+
+  logger.logEvent('info', {
+    tag: 'auth',
+    event: isNewUser ? 'user_registered' : 'user_login_succeeded',
+    userId: user.id,
+    email: user.email,
+    method: 'google',
+  });
 
   res.json({
     success: true,

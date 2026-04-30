@@ -175,20 +175,37 @@ async function summarizeOversizedContent(content, generator, depth, tier, tierCo
 
   // If we've exceeded max depth, just truncate and warn
   if (depth > maxDepth) {
-    logger.warn(`summarizeOversizedContent: Max depth ${maxDepth} exceeded, truncating content`);
+    logger.logEvent('warn', {
+      tag: 'pipeline',
+      event: 'summarize_max_depth_exceeded',
+      maxDepth,
+      depth,
+      contentTokens,
+    });
     const { charsPerToken } = pipelineConfig.tokenEstimation;
     const truncated = content.slice(0, chunkSize * charsPerToken);
     return { content: truncated, tokensUsed: 0, weightedTokens: 0 };
   }
 
-  logger.info(`summarizeOversizedContent: Content (${contentTokens} tokens) exceeds chunkSize (${chunkSize}), summarizing at depth ${depth}`);
+  logger.logEvent('info', {
+    tag: 'pipeline',
+    event: 'summarize_oversized_started',
+    contentTokens,
+    chunkSize,
+    depth,
+  });
 
   // Split into chunks
   const chunks = chunkByTokens(content, chunkSize);
 
   // Limit chunks
   if (chunks.length > maxChunks) {
-    logger.warn(`summarizeOversizedContent: Truncating from ${chunks.length} to ${maxChunks} chunks`);
+    logger.logEvent('warn', {
+      tag: 'pipeline',
+      event: 'summarize_chunks_truncated',
+      from: chunks.length,
+      to: maxChunks,
+    });
     chunks.length = maxChunks;
   }
 
@@ -205,12 +222,21 @@ async function summarizeOversizedContent(content, generator, depth, tier, tierCo
     const prompt = buildSummarizationPrompt(chunk, focus);
 
     try {
-      const { text, tokensUsed, weightedTokens } = await generateWithFallback(prompt, models);
+      const { text, tokensUsed, weightedTokens } = await generateWithFallback(prompt, models, {
+        tag: 'pipeline',
+        event: 'summarize_call_completed',
+        extra: { phase: 'summarize', depth },
+      });
       summaries.push(text.trim());
       totalTokensUsed += tokensUsed;
       totalWeightedTokens += weightedTokens;
     } catch (error) {
-      logger.error('summarizeOversizedContent: Chunk summarization failed', { error: error.message });
+      logger.logEvent('error', {
+        tag: 'pipeline',
+        event: 'summarize_chunk_failed',
+        depth,
+        error: error.message,
+      });
       // Use truncated original as fallback
       const { charsPerToken } = pipelineConfig.tokenEstimation;
       summaries.push(chunk.slice(0, chunkSize * charsPerToken * 0.5));
@@ -223,7 +249,13 @@ async function summarizeOversizedContent(content, generator, depth, tier, tierCo
 
   // If combined still exceeds chunk size, recurse
   if (combinedTokens > chunkSize) {
-    logger.info(`summarizeOversizedContent: Combined (${combinedTokens} tokens) still exceeds chunkSize, recursing`);
+    logger.logEvent('info', {
+      tag: 'pipeline',
+      event: 'summarize_recursing',
+      combinedTokens,
+      chunkSize,
+      depth,
+    });
     const recurseResult = await summarizeOversizedContent(combined, generator, depth + 1, tier, tierConfig);
     return {
       content: recurseResult.content,
@@ -254,7 +286,13 @@ async function preprocessOversizedDocuments(documents, generator, tier, tierConf
     const docTokens = estimateTokens(doc.content);
 
     if (docTokens > chunkSize) {
-      logger.info(`preprocessOversizedDocuments: Document "${doc.name}" (${docTokens} tokens) exceeds chunkSize, summarizing`);
+      logger.logEvent('info', {
+        tag: 'pipeline',
+        event: 'document_oversized_summarizing',
+        documentName: doc.name,
+        documentTokens: docTokens,
+        chunkSize,
+      });
 
       const { content: summarized, tokensUsed, weightedTokens } = await summarizeOversizedContent(
         doc.content,
@@ -298,12 +336,20 @@ async function processChunk(generator, chunk, params, tier) {
   const schema = generator.getSchema(0);
 
   try {
-    const { text, tokensUsed, weightedTokens } = await generateWithFallback(prompt, models, { schema });
+    const { text, tokensUsed, weightedTokens } = await generateWithFallback(prompt, models, {
+      schema,
+      tag: 'pipeline',
+      event: 'map_call_completed',
+      extra: { phase: 'map', generator: generator.getName() },
+    });
     const result = generator.parseResponse(text, 0);
 
     return { result, tokensUsed, weightedTokens, failed: false };
   } catch (error) {
-    logger.error(`processChunk: Failed`, {
+    logger.logEvent('error', {
+      tag: 'pipeline',
+      event: 'chunk_processing_failed',
+      generator: generator.getName(),
       error: error.message,
     });
 
@@ -353,9 +399,12 @@ async function processChunksParallel(generator, chunks, params, tier, tierConfig
       }
     }
 
-    logger.info(`processChunksParallel: Batch ${Math.floor(i / parallelLimit) + 1} complete`, {
+    logger.logEvent('info', {
+      tag: 'pipeline',
+      event: 'batch_completed',
+      batchNumber: Math.floor(i / parallelLimit) + 1,
       processed: Math.min(i + parallelLimit, chunks.length),
-      total: chunks.length,
+      totalChunks: chunks.length,
       failures,
     });
   }
@@ -447,7 +496,10 @@ async function generateWithGenerator(generatorName, content, params, options = {
   const tokenEstimate = estimateTokens(content);
   const maxProcessable = calculateMaxProcessableTokens(tierConfig);
 
-  logger.info(`generateWithGenerator: Starting`, {
+  const pipelineStartMs = Date.now();
+  logger.logEvent('info', {
+    tag: 'pipeline',
+    event: 'pipeline_started',
     generator: generatorName,
     tier,
     estimatedTokens: tokenEstimate,
@@ -484,7 +536,11 @@ async function generateWithGenerator(generatorName, content, params, options = {
 
     if (summarizedDocs.length > 0) {
       warnings.push(`${summarizedDocs.length} document(s) were summarized before processing due to size`);
-      logger.info(`generateWithGenerator: Summarized ${summarizedDocs.length} oversized documents`);
+      logger.logEvent('info', {
+        tag: 'pipeline',
+        event: 'oversized_preprocessing_completed',
+        summarizedCount: summarizedDocs.length,
+      });
     }
   } else if (typeof content === 'string' && estimateTokens(content) > tierConfig.chunkSize) {
     // String content that's oversized - summarize it
@@ -506,7 +562,12 @@ async function generateWithGenerator(generatorName, content, params, options = {
 
   // If under threshold after preprocessing, process directly
   if (processedTokens <= tierConfig.threshold) {
-    logger.info(`generateWithGenerator: Direct processing (${processedTokens} tokens under threshold)`);
+    logger.logEvent('info', {
+      tag: 'pipeline',
+      event: 'pipeline_direct_processing',
+      processedTokens,
+      threshold: tierConfig.threshold,
+    });
 
     const contentStr = getContentString(processedContent);
     const prompt = generator.buildMapPrompt(contentStr, params, 0);
@@ -520,12 +581,27 @@ async function generateWithGenerator(generatorName, content, params, options = {
       llmConfig.tiers.FREE.pipeline.map;
     const schema = generator.getSchema(0);
 
-    const { text, tokensUsed, weightedTokens } = await generateWithFallback(prompt, models, { schema });
+    const { text, tokensUsed, weightedTokens } = await generateWithFallback(prompt, models, {
+      schema,
+      tag: 'pipeline',
+      event: 'direct_call_completed',
+      extra: { phase: 'direct', generator: generatorName },
+    });
     totalTokensUsed += tokensUsed;
     totalWeightedTokens += weightedTokens;
 
     const result = generator.parseResponse(text, 0);
     const validated = generator.validateResult(result, params);
+
+    logger.logEvent('info', {
+      tag: 'pipeline',
+      event: 'pipeline_completed',
+      generator: generatorName,
+      mode: 'direct',
+      tokensUsed: totalTokensUsed,
+      weightedTokens: totalWeightedTokens,
+      durationMs: Date.now() - pipelineStartMs,
+    });
 
     return {
       result: validated,
@@ -537,7 +613,12 @@ async function generateWithGenerator(generatorName, content, params, options = {
   }
 
   // Over threshold - use map-reduce
-  logger.info(`generateWithGenerator: Map-reduce processing (${processedTokens} tokens over threshold)`);
+  logger.logEvent('info', {
+    tag: 'pipeline',
+    event: 'map_reduce_started',
+    processedTokens,
+    threshold: tierConfig.threshold,
+  });
 
   // Chunk the content
   let chunks;
@@ -550,12 +631,22 @@ async function generateWithGenerator(generatorName, content, params, options = {
 
   // Limit chunks if necessary
   if (chunks.length > tierConfig.maxChunks) {
-    logger.warn(`generateWithGenerator: Truncating chunks from ${chunks.length} to ${tierConfig.maxChunks}`);
+    logger.logEvent('warn', {
+      tag: 'pipeline',
+      event: 'chunks_truncated',
+      from: chunks.length,
+      to: tierConfig.maxChunks,
+    });
     warnings.push(`Content truncated from ${chunks.length} to ${tierConfig.maxChunks} chunks`);
     chunks = chunks.slice(0, tierConfig.maxChunks);
   }
 
-  logger.info(`generateWithGenerator: Created ${chunks.length} chunks`);
+  logger.logEvent('info', {
+    tag: 'pipeline',
+    event: 'chunks_created',
+    chunkCount: chunks.length,
+    chunkingMode,
+  });
 
   // Map phase - process all chunks
   const { results, tokensUsed: mapTokens, weightedTokens: mapWeightedTokens, failures } = await processChunksParallel(
@@ -576,6 +667,16 @@ async function generateWithGenerator(generatorName, content, params, options = {
   if (results.length === 0) {
     // All chunks failed or returned empty - return empty result
     const emptyResult = generator.validateResult([], params);
+    logger.logEvent('warn', {
+      tag: 'pipeline',
+      event: 'pipeline_completed',
+      generator: generatorName,
+      mode: 'map_reduce',
+      outcome: 'empty',
+      tokensUsed: totalTokensUsed,
+      weightedTokens: totalWeightedTokens,
+      durationMs: Date.now() - pipelineStartMs,
+    });
     return {
       result: emptyResult,
       tokensUsed: totalTokensUsed,
@@ -594,6 +695,15 @@ async function generateWithGenerator(generatorName, content, params, options = {
   // If buildReducePrompt returns null, skip reduce phase
   if (reducePrompt === null) {
     const validated = generator.validateResult(combined, params);
+    logger.logEvent('info', {
+      tag: 'pipeline',
+      event: 'pipeline_completed',
+      generator: generatorName,
+      mode: 'map_only',
+      tokensUsed: totalTokensUsed,
+      weightedTokens: totalWeightedTokens,
+      durationMs: Date.now() - pipelineStartMs,
+    });
     return {
       result: validated,
       tokensUsed: totalTokensUsed,
@@ -605,13 +715,30 @@ async function generateWithGenerator(generatorName, content, params, options = {
 
   const reduceModels = llmConfig.tiers[tier]?.pipeline?.reduce || llmConfig.tiers.FREE.pipeline.reduce;
   const reduceSchema = generator.getSchema(0);
-  const { text: reduceText, tokensUsed: reduceTokens, weightedTokens: reduceWeightedTokens } = await generateWithFallback(reducePrompt, reduceModels, { schema: reduceSchema });
+  const { text: reduceText, tokensUsed: reduceTokens, weightedTokens: reduceWeightedTokens } = await generateWithFallback(reducePrompt, reduceModels, {
+    schema: reduceSchema,
+    tag: 'pipeline',
+    event: 'reduce_call_completed',
+    extra: { phase: 'reduce', generator: generatorName },
+  });
 
   totalTokensUsed += reduceTokens;
   totalWeightedTokens += reduceWeightedTokens;
 
   const finalResult = generator.parseResponse(reduceText, 0);
   const validated = generator.validateResult(finalResult, params);
+
+  logger.logEvent('info', {
+    tag: 'pipeline',
+    event: 'pipeline_completed',
+    generator: generatorName,
+    mode: 'map_reduce',
+    chunkCount: chunks.length,
+    failures,
+    tokensUsed: totalTokensUsed,
+    weightedTokens: totalWeightedTokens,
+    durationMs: Date.now() - pipelineStartMs,
+  });
 
   return {
     result: validated,

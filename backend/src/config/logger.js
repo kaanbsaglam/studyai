@@ -18,7 +18,10 @@
 const winston = require('winston');
 const { currentTraceId } = require('../lib/traceContext');
 
-const isDevelopment = process.env.NODE_ENV !== 'production';
+// LOG_FORCE_JSON=1 emits prod JSON format even in development. Useful for
+// piping stdout to a structured-logs validator without changing NODE_ENV.
+const useJsonFormat = process.env.NODE_ENV === 'production' || process.env.LOG_FORCE_JSON === '1';
+const isDevelopment = !useJsonFormat;
 const processName = process.env.LOG_PROCESS_NAME || 'api';
 
 const attachTraceId = winston.format((info) => {
@@ -53,8 +56,11 @@ const devFormat = winston.format.combine(
     const headStr = head ? `[${head}] ` : '';
     const evStr = event ? `${event} ` : '';
     const idStr = traceId ? `<${String(traceId).slice(0, 8)}> ` : '';
+    // Suppress the message when it's identical to the event name (logEvent
+    // defaults message to event; rendering both is redundant).
+    const msgStr = message && message !== event ? message : '';
     const metaStr = Object.keys(meta).length ? ' ' + JSON.stringify(meta) : '';
-    return `${timestamp} ${level}: ${headStr}${evStr}${idStr}${message || ''}${metaStr}`;
+    return `${timestamp} ${level}: ${headStr}${evStr}${idStr}${msgStr}${metaStr}`;
   })
 );
 

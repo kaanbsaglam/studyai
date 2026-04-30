@@ -59,24 +59,19 @@ class GeminiVisionExtractor extends Extractor {
     }
 
     const model = options.model;
+    const costWeight = options.costWeight || 0;
 
     // Load PDF to get page count
     const pdfDoc = await PDFDocument.load(buffer);
     const totalPages = pdfDoc.getPageCount();
 
-    logger.debug('GeminiVisionExtractor: PDF loaded', {
-      totalPages,
-      bufferSize: buffer.length,
-      model,
-    });
-
     // Decide whether to chunk
     const shouldChunk = this.chunkingEnabled && totalPages > this.thresholdPages;
 
     if (shouldChunk) {
-      return this._extractWithChunking(buffer, pdfDoc, totalPages, model);
+      return this._extractWithChunking(buffer, pdfDoc, totalPages, model, costWeight);
     } else {
-      return this._extractWholePdf(buffer, model);
+      return this._extractWholePdf(buffer, model, costWeight);
     }
   }
 
@@ -84,9 +79,8 @@ class GeminiVisionExtractor extends Extractor {
    * Extract entire PDF in one API call (for small PDFs)
    * @private
    */
-  async _extractWholePdf(buffer, model) {
-    logger.debug('GeminiVisionExtractor: Extracting whole PDF');
-
+  async _extractWholePdf(buffer, model, costWeight) {
+    const startMs = Date.now();
     try {
       const genModel = this.genAI.getGenerativeModel({ model });
       const base64Pdf = buffer.toString('base64');
@@ -102,19 +96,33 @@ class GeminiVisionExtractor extends Extractor {
       ]);
 
       const text = result.response.text();
-      const tokensUsed = result.response.usageMetadata?.totalTokenCount || 0;
+      const usage = result.response.usageMetadata || {};
+      const tokensIn = usage.promptTokenCount || 0;
+      const tokensOut = usage.candidatesTokenCount || 0;
+      const tokensUsed = usage.totalTokenCount || (tokensIn + tokensOut);
+      const weightedTokens = Math.ceil(tokensUsed * (costWeight || 0));
 
-      logger.debug('GeminiVisionExtractor: Extraction complete', {
+      logger.logLLMCall({
+        tag: 'extractor',
+        event: 'extraction_call_completed',
         model,
+        costWeight,
+        tokensIn,
+        tokensOut,
         tokensUsed,
+        weightedTokens,
+        durationMs: Date.now() - startMs,
         textLength: text.length,
       });
 
       return { text, tokensUsed };
     } catch (error) {
-      logger.error('GeminiVisionExtractor: Extraction failed', {
+      logger.logEvent('error', {
+        tag: 'extractor',
+        event: 'extraction_call_failed',
         model,
         error: error.message,
+        durationMs: Date.now() - startMs,
       });
       throw error;
     }
@@ -124,10 +132,12 @@ class GeminiVisionExtractor extends Extractor {
    * Extract PDF in chunks for large documents
    * @private
    */
-  async _extractWithChunking(originalBuffer, pdfDoc, totalPages, model) {
+  async _extractWithChunking(originalBuffer, pdfDoc, totalPages, model, costWeight) {
     const chunks = this._calculateChunks(totalPages);
 
-    logger.info('GeminiVisionExtractor: Extracting with chunking', {
+    logger.logEvent('info', {
+      tag: 'extractor',
+      event: 'extraction_chunking_started',
       totalPages,
       chunkCount: chunks.length,
       pagesPerChunk: this.pagesPerChunk,
@@ -138,29 +148,23 @@ class GeminiVisionExtractor extends Extractor {
 
     for (let i = 0; i < chunks.length; i++) {
       const chunk = chunks[i];
-      logger.debug(`GeminiVisionExtractor: Processing chunk ${i + 1}/${chunks.length}`, {
-        startPage: chunk.startPage + 1,
-        endPage: chunk.endPage + 1,
-      });
 
       try {
         // Extract the page range as a new PDF
         const chunkBuffer = await this._extractPageRange(originalBuffer, chunk.startPage, chunk.endPage);
 
-        // Send to Gemini
-        const { text, tokensUsed } = await this._extractWholePdf(chunkBuffer, model);
+        // Send to Gemini (emits its own structured log line)
+        const { text, tokensUsed } = await this._extractWholePdf(chunkBuffer, model, costWeight);
 
         // Add page markers and store result
         const markedText = this._addPageMarkers(text, chunk.startPage, chunk.endPage);
         results.push(markedText);
         totalTokensUsed += tokensUsed;
-
-        logger.debug(`GeminiVisionExtractor: Chunk ${i + 1} complete`, {
-          tokensUsed,
-          textLength: text.length,
-        });
       } catch (error) {
-        logger.error(`GeminiVisionExtractor: Chunk ${i + 1} failed`, {
+        logger.logEvent('error', {
+          tag: 'extractor',
+          event: 'extraction_chunk_failed',
+          chunkIndex: i + 1,
           startPage: chunk.startPage + 1,
           endPage: chunk.endPage + 1,
           error: error.message,
@@ -172,7 +176,9 @@ class GeminiVisionExtractor extends Extractor {
 
     const combinedText = results.join('\n');
 
-    logger.info('GeminiVisionExtractor: Chunked extraction complete', {
+    logger.logEvent('info', {
+      tag: 'extractor',
+      event: 'extraction_chunking_completed',
       totalPages,
       chunkCount: chunks.length,
       totalTokensUsed,

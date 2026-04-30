@@ -53,11 +53,14 @@ class GeminiProvider extends LLMProvider {
       const result = await genModel.generateContent(prompt);
 
       const text = result.response.text();
-      const tokensUsed = result.response.usageMetadata?.totalTokenCount || 0;
+      const usage = result.response.usageMetadata || {};
+      const tokensIn = usage.promptTokenCount || 0;
+      const tokensOut = usage.candidatesTokenCount || 0;
+      const tokensUsed = usage.totalTokenCount || (tokensIn + tokensOut);
 
       logger.debug('Gemini response received', { model, tokensUsed, textLength: text.length });
 
-      return { text, tokensUsed };
+      return { text, tokensUsed, tokensIn, tokensOut };
     } catch (error) {
       logger.error('Gemini generateText failed', {
         model,
@@ -101,11 +104,14 @@ class GeminiProvider extends LLMProvider {
 
       // Get final aggregated response for token usage
       const aggregated = await result.response;
-      const tokensUsed = aggregated.usageMetadata?.totalTokenCount || 0;
+      const usage = aggregated.usageMetadata || {};
+      const tokensIn = usage.promptTokenCount || 0;
+      const tokensOut = usage.candidatesTokenCount || 0;
+      const tokensUsed = usage.totalTokenCount || (tokensIn + tokensOut);
 
       logger.debug('Gemini streaming completed', { model, tokensUsed });
 
-      return { tokensUsed };
+      return { tokensUsed, tokensIn, tokensOut };
     } catch (error) {
       logger.error('Gemini generateTextStream failed', {
         model,

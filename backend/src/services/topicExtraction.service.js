@@ -65,6 +65,9 @@ async function extractTopicMetadata(documentText, tier) {
   const { text, tokensUsed, weightedTokens } = await generateText(prompt, {
     model: scenario.primary,
     schema: TOPIC_METADATA_SCHEMA,
+    tag: 'pipeline',
+    event: 'topic_extraction_call_completed',
+    extra: { phase: 'topic_extraction' },
   });
 
   let parsed;
@@ -76,7 +79,9 @@ async function extractTopicMetadata(documentText, tier) {
 
   validateShape(parsed);
 
-  logger.info('Topic extraction succeeded', {
+  logger.logEvent('info', {
+    tag: 'pipeline',
+    event: 'topic_extraction_succeeded',
     summaryLength: parsed.summary.length,
     topicsCount: parsed.topics.length,
     tokensUsed,

@@ -9,6 +9,9 @@
 
 require('dotenv').config();
 
+// Identify this process for structured logs (must be set before logger is required)
+process.env.LOG_PROCESS_NAME = process.env.LOG_PROCESS_NAME || 'worker';
+
 const { Worker } = require('bullmq');
 const logger = require('./config/logger');
 const prisma = require('./lib/prisma');
@@ -22,16 +25,23 @@ const { generateEmbeddings, upsertVectors, deleteVectorsByDocument } = require('
 const { extractTopicMetadata } = require('./services/topicExtraction.service');
 const llmConfig = require('./config/llm.config');
 const { v4: uuidv4 } = require('uuid');
+const { runWithTrace, newTraceId } = require('./lib/traceContext');
 
-logger.info('🔧 Worker starting...');
-logger.info(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
+logger.info('Worker starting...');
+logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
 
 /**
  * Process a document: extract text, chunk, embed, store in Pinecone
  */
 async function processDocument(job) {
+  const startMs = Date.now();
   const { documentId } = job.data;
-  logger.info(`Processing document: ${documentId}`);
+  logger.logEvent('info', {
+    tag: 'pipeline',
+    event: 'document_processing_started',
+    documentId,
+    jobId: job.id,
+  });
 
   // Get document from database with user for tier-based extraction
   const document = await prisma.document.findUnique({
@@ -56,11 +66,24 @@ async function processDocument(job) {
 
   try {
     // Step 1: Download file from S3
-    logger.info(`Downloading file from S3: ${document.s3Key}`);
+    logger.logEvent('info', {
+      tag: 'pipeline',
+      event: 'document_s3_download_started',
+      documentId,
+      filename: document.originalName,
+      s3Key: document.s3Key,
+    });
     const fileBuffer = await getFile(document.s3Key);
 
     // Step 2: Extract text (tier-based for PDFs and audio)
-    logger.info(`Extracting text from ${document.mimeType}`, { tier: userTier });
+    logger.logEvent('info', {
+      tag: 'extractor',
+      event: 'extraction_started',
+      documentId,
+      filename: document.originalName,
+      mimeType: document.mimeType,
+      tier: userTier,
+    });
     const { text, tokensUsed, weightedTokens, extractionMethod } = await extractTextWithTier(
       fileBuffer,
       document.mimeType,
@@ -72,32 +95,44 @@ async function processDocument(job) {
       throw new Error('No text could be extracted from the document');
     }
 
-    logger.info(`Extracted ${text.length} characters`, {
+    logger.logEvent('info', {
+      tag: 'extractor',
+      event: 'extraction_completed',
+      documentId,
+      filename: document.originalName,
+      extractionMethod,
+      chars: text.length,
       tokensUsed,
       weightedTokens,
-      extractionMethod,
     });
 
     // Record token usage if any tokens were used (Whisper duration or Gemini
     // Vision tokens). Pass weightedTokens so cost-weighting is honored.
     if (tokensUsed > 0) {
       await recordTokenUsage(document.userId, tokensUsed, weightedTokens);
-      logger.info(`Recorded ${weightedTokens ?? tokensUsed} weighted tokens for extraction`);
     }
 
     // Step 3: Chunk text
-    logger.info('Chunking text...');
     const chunks = chunkText(text);
-    logger.info(`Created ${chunks.length} chunks`);
+    logger.logEvent('info', {
+      tag: 'pipeline',
+      event: 'chunking_completed',
+      documentId,
+      chunkCount: chunks.length,
+    });
 
     if (chunks.length === 0) {
       throw new Error('No chunks created from document');
     }
 
     // Step 4: Generate embeddings
-    logger.info('Generating embeddings...');
     const embeddings = await generateEmbeddings(chunks);
-    logger.info(`Generated ${embeddings.length} embeddings`);
+    logger.logEvent('info', {
+      tag: 'pipeline',
+      event: 'embeddings_generated',
+      documentId,
+      embeddingCount: embeddings.length,
+    });
 
     // Step 5: Prepare vectors for Pinecone
     const vectors = chunks.map((chunk, index) => {
@@ -117,11 +152,15 @@ async function processDocument(job) {
     });
 
     // Step 6: Upsert to Pinecone
-    logger.info('Upserting vectors to Pinecone...');
     await upsertVectors(vectors);
+    logger.logEvent('info', {
+      tag: 'pipeline',
+      event: 'pinecone_upsert_completed',
+      documentId,
+      vectorCount: vectors.length,
+    });
 
     // Step 7: Store chunk references in database
-    logger.info('Storing chunk references in database...');
     await prisma.documentChunk.createMany({
       data: chunks.map((chunk, index) => ({
         documentId: document.id,
@@ -141,9 +180,20 @@ async function processDocument(job) {
         topicMetadata = result.metadata;
         metadataExtractedAt = new Date();
         await recordTokenUsage(document.userId, result.tokensUsed, result.weightedTokens);
-        logger.info(`Topic metadata extracted for document ${documentId}`);
+        logger.logEvent('info', {
+          tag: 'pipeline',
+          event: 'topic_metadata_extracted',
+          documentId,
+          tokensUsed: result.tokensUsed,
+          weightedTokens: result.weightedTokens,
+        });
       } catch (err) {
-        logger.warn(`Topic extraction failed for document ${documentId}: ${err.message}`);
+        logger.logEvent('warn', {
+          tag: 'pipeline',
+          event: 'topic_extraction_failed',
+          documentId,
+          error: err.message,
+        });
         // Intentionally swallow — doc still transitions to READY below.
       }
     }
@@ -162,13 +212,25 @@ async function processDocument(job) {
       },
     });
 
-    logger.info(`✅ Document processed successfully: ${documentId}`);
+    logger.logEvent('info', {
+      tag: 'pipeline',
+      event: 'document_processing_completed',
+      documentId,
+      filename: document.originalName,
+      chunkCount: chunks.length,
+      durationMs: Date.now() - startMs,
+    });
     return { success: true, chunks: chunks.length };
 
   } catch (error) {
-    logger.error(`❌ Document processing failed: ${documentId}`, {
+    logger.logEvent('error', {
+      tag: 'pipeline',
+      event: 'document_processing_failed',
+      documentId,
+      filename: document.originalName,
       error: error.message,
       stack: error.stack,
+      durationMs: Date.now() - startMs,
     });
 
     // For audio files, keep the S3 file and DB record so users can still listen
@@ -177,7 +239,6 @@ async function processDocument(job) {
         where: { id: documentId },
         data: { status: 'FAILED', errorMessage: error.message },
       });
-      logger.info(`Audio file kept with FAILED status: ${documentId}`);
     } else {
       // Clean up everything on failure - transactional approach
       await cleanupFailedDocument(document);
@@ -191,21 +252,29 @@ async function processDocument(job) {
  * Clean up a failed document - delete from S3, Pinecone, and DB
  */
 async function cleanupFailedDocument(document) {
-  logger.info(`Cleaning up failed document: ${document.id}`);
-
   // 1. Delete vectors from Pinecone (if any exist)
   try {
     await deleteVectorsByDocument(document.id);
   } catch (err) {
-    logger.warn(`Failed to delete vectors from Pinecone: ${err.message}`);
+    logger.logEvent('warn', {
+      tag: 'pipeline',
+      event: 'cleanup_pinecone_failed',
+      documentId: document.id,
+      error: err.message,
+    });
   }
 
   // 2. Delete file from S3
   try {
     await deleteFile(document.s3Key);
-    logger.info(`Deleted S3 file: ${document.s3Key}`);
   } catch (err) {
-    logger.warn(`Failed to delete S3 file: ${err.message}`);
+    logger.logEvent('warn', {
+      tag: 'pipeline',
+      event: 'cleanup_s3_failed',
+      documentId: document.id,
+      s3Key: document.s3Key,
+      error: err.message,
+    });
   }
 
   // 3. Delete document from DB (cascades to chunks)
@@ -213,9 +282,13 @@ async function cleanupFailedDocument(document) {
     await prisma.document.delete({
       where: { id: document.id },
     });
-    logger.info(`Deleted document record: ${document.id}`);
   } catch (err) {
-    logger.warn(`Failed to delete document record: ${err.message}`);
+    logger.logEvent('warn', {
+      tag: 'pipeline',
+      event: 'cleanup_db_failed',
+      documentId: document.id,
+      error: err.message,
+    });
   }
 }
 
@@ -223,7 +296,9 @@ async function cleanupFailedDocument(document) {
 const worker = new Worker(
   'document-processing',
   async (job) => {
-    return processDocument(job);
+    // Each job runs in its own trace context so all log lines emitted while
+    // processing the job (including from imported services) share one ID.
+    return runWithTrace(newTraceId(), () => processDocument(job));
   },
   {
     connection,
@@ -233,19 +308,28 @@ const worker = new Worker(
 );
 
 // Worker event handlers
-worker.on('completed', (job, result) => {
-  logger.info(`Job completed: ${job.id}`, result);
+worker.on('completed', (job) => {
+  logger.logEvent('info', {
+    tag: 'pipeline',
+    event: 'job_completed',
+    jobId: job.id,
+  });
 });
 
 worker.on('failed', (job, error) => {
-  logger.error(`Job failed: ${job?.id}`, { error: error.message });
+  logger.logEvent('error', {
+    tag: 'pipeline',
+    event: 'job_failed',
+    jobId: job?.id,
+    error: error.message,
+  });
 });
 
 worker.on('error', (error) => {
   logger.error('Worker error', { error: error.message });
 });
 
-logger.info('⏳ Worker ready, waiting for jobs...');
+logger.info('Worker ready, waiting for jobs...');
 
 // Graceful shutdown
 const gracefulShutdown = async (signal) => {
