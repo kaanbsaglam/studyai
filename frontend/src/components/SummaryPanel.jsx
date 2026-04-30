@@ -5,6 +5,7 @@ import DocumentSelector from './DocumentSelector';
 import ManualSummaryModal from './ManualSummaryModal';
 import ThreeDotMenu from './ThreeDotMenu';
 import SummaryPdfDocument from './pdf/SummaryPdfDocument';
+import MarkdownRenderer from './MarkdownRenderer';
 import { downloadPdf } from '../utils/exportHelpers';
 
 export default function SummaryPanel({
@@ -248,13 +249,7 @@ export default function SummaryPanel({
         )}
 
         <div className="p-6 flex-1 overflow-auto">
-          <div className="prose prose-sm max-w-none">
-            {activeSummary.content.split('\n').map((paragraph, idx) => (
-              paragraph.trim() ? (
-                <p key={idx} className="text-gray-700 mb-4">{paragraph}</p>
-              ) : null
-            ))}
-          </div>
+          <MarkdownRenderer>{activeSummary.content}</MarkdownRenderer>
         </div>
       </div>
     );
