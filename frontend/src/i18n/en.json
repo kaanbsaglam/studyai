@@ -252,6 +252,13 @@
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out"
   },
+  "documentTabs": {
+    "close": "Close tab",
+    "addTab": "Open another document",
+    "noMore": "No more documents to open",
+    "maxReached": "Maximum {{max}} tabs",
+    "pickerTitle": "Open in new tab"
+  },
   "chatSessions": {
     "newChat": "New Chat",
     "sessions": "Sessions",

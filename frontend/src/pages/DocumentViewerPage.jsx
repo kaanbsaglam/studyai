@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, Link, useOutletContext } from 'react-router-dom';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useParams, Link, useOutletContext, useSearchParams, useNavigate } from 'react-router-dom';
 import { Document, Page, pdfjs } from 'react-pdf';
 import api from '../api/axios';
 import ChatPanel from '../components/ChatPanel';
@@ -9,6 +9,7 @@ import SummaryPanel from '../components/SummaryPanel';
 import NotesPanel from '../components/NotesPanel';
 import CodeViewer, { isCodeFileByName } from '../components/CodeViewer';
 import IpynbViewer, { isNotebookFileByName } from '../components/IpynbViewer';
+import DocumentTabs, { MAX_OPEN_TABS } from '../components/DocumentTabs';
 import { useStudyTracker } from '../hooks/useStudyTracker';
 import { useTranslation } from 'react-i18next';
 
@@ -22,6 +23,8 @@ export default function DocumentViewerPage() {
   const { id: classroomId, docId } = useParams();
   const { classroom } = useOutletContext();
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // Track study time for this document
   useStudyTracker(classroomId, 'DOCUMENT', docId);
@@ -55,6 +58,68 @@ export default function DocumentViewerPage() {
 
   const allDocuments = classroom?.documents?.filter((d) => d.status === 'READY') || [];
   const selectedDocuments = allDocuments.filter((d) => selectedDocIds.includes(d.id));
+
+  // Open tabs are tracked via the `tabs` query param (comma-separated doc ids).
+  // The active tab always equals the path :docId; we ensure it's present in
+  // the list and dedupe/cap to MAX_OPEN_TABS.
+  const tabsParam = searchParams.get('tabs');
+  const openTabIds = useMemo(() => {
+    const fromUrl = tabsParam ? tabsParam.split(',').filter(Boolean) : [];
+    const deduped = [];
+    for (const id of fromUrl) {
+      if (!deduped.includes(id)) deduped.push(id);
+    }
+    if (!deduped.includes(docId)) deduped.unshift(docId);
+    return deduped.slice(0, MAX_OPEN_TABS);
+  }, [tabsParam, docId]);
+
+  // If the URL got out of sync (e.g. landed without ?tabs= or with stale ids),
+  // normalize it. replace:true so we don't pollute history.
+  useEffect(() => {
+    const desired = openTabIds.join(',');
+    if (tabsParam !== desired) {
+      const next = new URLSearchParams(searchParams);
+      next.set('tabs', desired);
+      setSearchParams(next, { replace: true });
+    }
+  }, [openTabIds, tabsParam, searchParams, setSearchParams]);
+
+  // Tab metadata pulled from the classroom doc list (which already has names).
+  const tabDocuments = openTabIds
+    .map((id) => allDocuments.find((d) => d.id === id))
+    .filter(Boolean);
+  const availableTabDocs = allDocuments.filter((d) => !openTabIds.includes(d.id));
+
+  const navigateToDoc = (id, tabIds) => {
+    navigate(`/classrooms/${classroomId}/documents/${id}?tabs=${tabIds.join(',')}`);
+  };
+
+  const handleSelectTab = (id) => {
+    if (id === docId) return;
+    navigateToDoc(id, openTabIds);
+  };
+
+  const handleAddTab = (id) => {
+    if (openTabIds.includes(id) || openTabIds.length >= MAX_OPEN_TABS) return;
+    navigateToDoc(id, [...openTabIds, id]);
+  };
+
+  const handleCloseTab = (id) => {
+    const remaining = openTabIds.filter((t) => t !== id);
+    if (remaining.length === 0) {
+      navigate(`/classrooms/${classroomId}/documents`);
+      return;
+    }
+    if (id === docId) {
+      const idx = openTabIds.indexOf(id);
+      const nextActive = remaining[Math.max(idx - 1, 0)];
+      navigateToDoc(nextActive, remaining);
+    } else {
+      const next = new URLSearchParams(searchParams);
+      next.set('tabs', remaining.join(','));
+      setSearchParams(next, { replace: true });
+    }
+  };
 
   useEffect(() => {
     fetchDocument();
@@ -188,30 +253,6 @@ export default function DocumentViewerPage() {
     { id: 'summaries', label: t('documentViewer.summary') },
   ];
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">{t('documentViewer.loadingDocument')}</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">{error}</p>
-          <Link to={`/classrooms/${classroomId}`} className="text-blue-600 hover:text-blue-800">
-            {t('documentViewer.backToClassroom')}
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex gap-2 h-[calc(100vh-9rem)]">
       {/* Notes Panel (Left) */}
@@ -253,8 +294,15 @@ export default function DocumentViewerPage() {
               </svg>
               {t('documentViewer.notes')}
             </button>
-            <span className="mx-0.5 h-6 w-1 rounded-full bg-gray-300" aria-hidden="true"></span>
-            <h2 className="font-medium text-gray-900 truncate max-w-sm text-sm">{document?.originalName}</h2>
+            <DocumentTabs
+              tabs={tabDocuments}
+              activeId={docId}
+              availableDocs={availableTabDocs}
+              maxReached={openTabIds.length >= MAX_OPEN_TABS}
+              onSelect={handleSelectTab}
+              onAdd={handleAddTab}
+              onClose={handleCloseTab}
+            />
           </div>
           <div className="flex items-center gap-2">
             {document?.mimeType === 'application/pdf' && numPages && (
@@ -300,7 +348,23 @@ export default function DocumentViewerPage() {
 
         {/* Document Content */}
         <div ref={pdfContainerRef} className="flex-1 overflow-auto bg-white p-2">
-          {document?.mimeType === 'application/pdf' && pdfUrl ? (
+          {loading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="mt-4 text-gray-600">{t('documentViewer.loadingDocument')}</p>
+              </div>
+            </div>
+          ) : error ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <p className="text-red-600 mb-4">{error}</p>
+                <Link to={`/classrooms/${classroomId}`} className="text-blue-600 hover:text-blue-800">
+                  {t('documentViewer.backToClassroom')}
+                </Link>
+              </div>
+            </div>
+          ) : document?.mimeType === 'application/pdf' && pdfUrl ? (
             <div className="flex flex-col items-center">
               <Document
                 file={pdfUrl}
