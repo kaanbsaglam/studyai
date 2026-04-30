@@ -8,6 +8,7 @@ import QuizPanel from '../components/QuizPanel';
 import SummaryPanel from '../components/SummaryPanel';
 import NotesPanel from '../components/NotesPanel';
 import CodeViewer, { isCodeFileByName } from '../components/CodeViewer';
+import IpynbViewer, { isNotebookFileByName } from '../components/IpynbViewer';
 import { useStudyTracker } from '../hooks/useStudyTracker';
 import { useTranslation } from 'react-i18next';
 
@@ -97,6 +98,7 @@ export default function DocumentViewerPage() {
   }, [pdfUrl]); // Re-attach when PDF loads
 
   const isCodeDoc = (doc) => isCodeFileByName(doc?.originalName);
+  const isNotebookDoc = (doc) => isNotebookFileByName(doc?.originalName);
 
   const fetchDocument = async () => {
     try {
@@ -109,8 +111,8 @@ export default function DocumentViewerPage() {
         // Get presigned URL for PDF
         const downloadResponse = await api.get(`/documents/${docId}/download`);
         setPdfUrl(downloadResponse.data.data.url);
-      } else if (isCodeDoc(doc)) {
-        // For code files, fetch raw content from S3 to preserve formatting
+      } else if (isCodeDoc(doc) || isNotebookDoc(doc)) {
+        // For code files & notebooks, fetch raw content from S3 to preserve formatting
         const downloadResponse = await api.get(`/documents/${docId}/download`);
         const rawText = await fetch(downloadResponse.data.data.url).then((r) => r.text());
         setCodeContent(rawText);
@@ -349,6 +351,10 @@ export default function DocumentViewerPage() {
                   </button>
                 </div>
               )}
+            </div>
+          ) : isNotebookDoc(document) && codeContent ? (
+            <div className="max-w-5xl mx-auto w-full">
+              <IpynbViewer rawContent={codeContent} filename={document?.originalName} />
             </div>
           ) : isCodeDoc(document) && codeContent ? (
             <div className="max-w-5xl mx-auto w-full">

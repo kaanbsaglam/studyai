@@ -42,6 +42,11 @@ async function extractText(buffer, mimeType, filename) {
       if (mimeType.startsWith('audio/')) {
         throw new Error('Audio extraction must go through extractTextWithTier');
       }
+      // Jupyter notebooks: extract cell sources so embeddings/summaries see
+      // meaningful text rather than JSON syntax.
+      if (filename && filename.toLowerCase().endsWith('.ipynb')) {
+        return extractFromIpynb(buffer);
+      }
       // Check if it's a code file — read as plain text
       if (isCodeFile(mimeType, filename)) {
         return buffer.toString('utf-8');
@@ -77,6 +82,37 @@ async function extractFromDocx(buffer) {
   } catch (error) {
     logger.error('DOCX extraction failed', { error: error.message });
     throw new Error('Failed to extract text from DOCX');
+  }
+}
+
+/**
+ * Extract text from a Jupyter Notebook (.ipynb).
+ * Concatenates source from markdown and code cells, labelling code blocks
+ * with the notebook's kernel language for downstream LLM context.
+ * @param {Buffer} buffer
+ * @returns {string}
+ */
+function extractFromIpynb(buffer) {
+  try {
+    const nb = JSON.parse(buffer.toString('utf-8'));
+    const language =
+      nb?.metadata?.kernelspec?.language ||
+      nb?.metadata?.language_info?.name ||
+      '';
+    const cells = Array.isArray(nb.cells) ? nb.cells : [];
+    const parts = cells.map((cell) => {
+      const source = Array.isArray(cell.source)
+        ? cell.source.join('')
+        : (cell.source || '');
+      if (cell.cell_type === 'code') {
+        return '```' + language + '\n' + source + '\n```';
+      }
+      return source;
+    });
+    return parts.filter((p) => p && p.trim()).join('\n\n');
+  } catch (error) {
+    logger.error('IPYNB extraction failed', { error: error.message });
+    throw new Error('Failed to extract text from notebook');
   }
 }
 

@@ -83,6 +83,7 @@ const CODE_FILE_EXTENSIONS = new Set([
   'makefile',
   'gradle',
   'cmake',
+  'ipynb',
 ]);
 
 const { maxFileSizeBytes: MAX_FILE_SIZE } = require('../config/document.config');

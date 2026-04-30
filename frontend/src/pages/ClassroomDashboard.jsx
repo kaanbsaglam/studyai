@@ -49,7 +49,8 @@ export default function ClassroomDashboard() {
       'audio/x-m4a',
     ];
 
-    if (!allowedTypes.includes(file.type) && !isCodeFileByName(file.name)) {
+    const isNotebook = file.name?.toLowerCase().endsWith('.ipynb');
+    if (!allowedTypes.includes(file.type) && !isCodeFileByName(file.name) && !isNotebook) {
       setError(t('classroomDashboard.invalidFileType'));
       return;
     }
@@ -158,7 +159,7 @@ export default function ClassroomDashboard() {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".pdf,.docx,.txt,.js,.mjs,.jsx,.ts,.tsx,.py,.java,.c,.cpp,.h,.hpp,.cs,.go,.rs,.rb,.php,.swift,.kt,.html,.htm,.css,.scss,.json,.xml,.yaml,.yml,.md,.sh,.sql,.r,.lua,.dart,.toml,.mp3,.wav,.m4a,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,audio/mpeg,audio/wav,audio/mp4"
+              accept=".pdf,.docx,.txt,.js,.mjs,.jsx,.ts,.tsx,.py,.java,.c,.cpp,.h,.hpp,.cs,.go,.rs,.rb,.php,.swift,.kt,.html,.htm,.css,.scss,.json,.xml,.yaml,.yml,.md,.sh,.sql,.r,.lua,.dart,.toml,.ipynb,.mp3,.wav,.m4a,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,audio/mpeg,audio/wav,audio/mp4"
               onChange={handleFileSelect}
               className="hidden"
               id="file-upload"
