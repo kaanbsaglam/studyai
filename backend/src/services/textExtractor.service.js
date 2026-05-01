@@ -93,8 +93,9 @@ async function extractFromDocx(buffer) {
  * @returns {string}
  */
 function extractFromIpynb(buffer) {
+  const raw = buffer.toString('utf-8');
   try {
-    const nb = JSON.parse(buffer.toString('utf-8'));
+    const nb = JSON.parse(raw);
     const language =
       nb?.metadata?.kernelspec?.language ||
       nb?.metadata?.language_info?.name ||
@@ -111,8 +112,10 @@ function extractFromIpynb(buffer) {
     });
     return parts.filter((p) => p && p.trim()).join('\n\n');
   } catch (error) {
-    logger.error('IPYNB extraction failed', { error: error.message });
-    throw new Error('Failed to extract text from notebook');
+    // Malformed notebook — keep the upload usable by treating it as raw text
+    // rather than failing the whole document.
+    logger.warn('IPYNB parse failed, falling back to raw text', { error: error.message });
+    return raw;
   }
 }
 

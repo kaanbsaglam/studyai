@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, Link, useOutletContext } from 'react-router-dom';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useParams, Link, useOutletContext, useSearchParams, useNavigate } from 'react-router-dom';
 import { Document, Page, pdfjs } from 'react-pdf';
 import api from '../api/axios';
 import ChatPanel from '../components/ChatPanel';
@@ -9,6 +9,7 @@ import SummaryPanel from '../components/SummaryPanel';
 import NotesPanel from '../components/NotesPanel';
 import CodeViewer, { isCodeFileByName } from '../components/CodeViewer';
 import IpynbViewer, { isNotebookFileByName } from '../components/IpynbViewer';
+import DocumentTabs, { MAX_OPEN_TABS } from '../components/DocumentTabs';
 import { useStudyTracker } from '../hooks/useStudyTracker';
 import { useTranslation } from 'react-i18next';
 
@@ -22,6 +23,8 @@ export default function DocumentViewerPage() {
   const { id: classroomId, docId } = useParams();
   const { classroom } = useOutletContext();
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // Track study time for this document
   useStudyTracker(classroomId, 'DOCUMENT', docId);
@@ -56,13 +59,95 @@ export default function DocumentViewerPage() {
   const allDocuments = classroom?.documents?.filter((d) => d.status === 'READY') || [];
   const selectedDocuments = allDocuments.filter((d) => selectedDocIds.includes(d.id));
 
+  // Open tabs are tracked via the `tabs` query param (comma-separated doc ids).
+  // The active tab always equals the path :docId; we ensure it's present in
+  // the list and dedupe/cap to MAX_OPEN_TABS.
+  const tabsParam = searchParams.get('tabs');
+  const openTabIds = useMemo(() => {
+    const fromUrl = tabsParam ? tabsParam.split(',').filter(Boolean) : [];
+    const deduped = [];
+    for (const id of fromUrl) {
+      if (!deduped.includes(id)) deduped.push(id);
+    }
+    if (!deduped.includes(docId)) deduped.unshift(docId);
+    return deduped.slice(0, MAX_OPEN_TABS);
+  }, [tabsParam, docId]);
+
+  // If the URL got out of sync (e.g. landed without ?tabs= or with stale ids),
+  // normalize it. replace:true so we don't pollute history.
+  useEffect(() => {
+    const desired = openTabIds.join(',');
+    if (tabsParam !== desired) {
+      const next = new URLSearchParams(searchParams);
+      next.set('tabs', desired);
+      setSearchParams(next, { replace: true });
+    }
+  }, [openTabIds, tabsParam, searchParams, setSearchParams]);
+
+  // Tab metadata pulled from the classroom doc list (which already has names).
+  const tabDocuments = openTabIds
+    .map((id) => allDocuments.find((d) => d.id === id))
+    .filter(Boolean);
+  const availableTabDocs = allDocuments.filter((d) => !openTabIds.includes(d.id));
+
+  const navigateToDoc = (id, tabIds) => {
+    navigate(`/classrooms/${classroomId}/documents/${id}?tabs=${tabIds.join(',')}`);
+  };
+
+  const handleSelectTab = (id) => {
+    if (id === docId) return;
+    navigateToDoc(id, openTabIds);
+  };
+
+  const handleAddTab = (id) => {
+    if (openTabIds.includes(id) || openTabIds.length >= MAX_OPEN_TABS) return;
+    navigateToDoc(id, [...openTabIds, id]);
+  };
+
+  const handleCloseTab = (id) => {
+    const remaining = openTabIds.filter((t) => t !== id);
+    if (remaining.length === 0) {
+      navigate(`/classrooms/${classroomId}/documents`);
+      return;
+    }
+
+    // Figure out what becomes the active doc so we can keep chat context valid.
+    let nextActive = docId;
+    if (id === docId) {
+      const idx = openTabIds.indexOf(id);
+      nextActive = remaining[Math.max(idx - 1, 0)];
+    }
+
+    // Prune the closed doc from chat context + locks. If pruning empties
+    // selectedDocIds, fall back to whatever the new active tab is so the
+    // chat panel always has at least one doc as context.
+    setSelectedDocIds((prev) => {
+      const pruned = prev.filter((d) => d !== id);
+      return pruned.length > 0 ? pruned : [nextActive];
+    });
+    setLockedDocIds((prev) => prev.filter((d) => d !== id));
+
+    if (id === docId) {
+      navigateToDoc(nextActive, remaining);
+    } else {
+      const next = new URLSearchParams(searchParams);
+      next.set('tabs', remaining.join(','));
+      setSearchParams(next, { replace: true });
+    }
+  };
+
+  // Initial chat state — runs once for the doc the user lands on. Subsequent
+  // tab switches keep the existing chat session/locks so a mid-conversation
+  // student can flip between tabs without losing context.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    setSelectedDocIds([docId]);
+  }, []);
+
+  // Fetch the document whenever the active tab changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchDocument();
-    // Pre-select current document when docId changes
-    setSelectedDocIds([docId]);
-    setActiveSessionId(null);
-    setDocsLocked(false);
-    setLockedDocIds([]);
   }, [docId]);
 
   // Fetch chat sessions when chat tab is active
@@ -100,28 +185,50 @@ export default function DocumentViewerPage() {
   const isCodeDoc = (doc) => isCodeFileByName(doc?.originalName);
   const isNotebookDoc = (doc) => isNotebookFileByName(doc?.originalName);
 
+  // Per-doc cache so flipping between tabs doesn't re-hit the API + S3.
+  // Presigned PDF URLs typically live ~1h, so we time-box cache entries to be safe.
+  const docCacheRef = useRef(new Map());
+  const DOC_CACHE_TTL_MS = 30 * 60 * 1000;
+
+  const applyDocState = (entry) => {
+    setDocument(entry.document);
+    setContent(entry.content || '');
+    setCodeContent(entry.codeContent || null);
+    setPdfUrl(entry.pdfUrl || null);
+  };
+
   const fetchDocument = async () => {
+    const cached = docCacheRef.current.get(docId);
+    if (cached && Date.now() - cached.timestamp < DOC_CACHE_TTL_MS) {
+      applyDocState(cached);
+      setError('');
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
+      // Reset stale state from a different doc while the new one loads.
+      setPdfUrl(null);
+      setCodeContent(null);
+      setContent('');
+
       const response = await api.get(`/documents/${docId}`);
       const doc = response.data.data.document;
-      setDocument(doc);
+      const entry = { document: doc, content: '', codeContent: null, pdfUrl: null, timestamp: Date.now() };
 
       if (doc.mimeType === 'application/pdf') {
-        // Get presigned URL for PDF
         const downloadResponse = await api.get(`/documents/${docId}/download`);
-        setPdfUrl(downloadResponse.data.data.url);
+        entry.pdfUrl = downloadResponse.data.data.url;
       } else if (isCodeDoc(doc) || isNotebookDoc(doc)) {
-        // For code files & notebooks, fetch raw content from S3 to preserve formatting
         const downloadResponse = await api.get(`/documents/${docId}/download`);
-        const rawText = await fetch(downloadResponse.data.data.url).then((r) => r.text());
-        setCodeContent(rawText);
+        entry.codeContent = await fetch(downloadResponse.data.data.url).then((r) => r.text());
       } else {
-        // For text files, fetch content from chunks
-        const chunksContent = doc.chunks?.map((c) => c.content).join('\n\n') || '';
-        setContent(chunksContent);
+        entry.content = doc.chunks?.map((c) => c.content).join('\n\n') || '';
       }
 
+      docCacheRef.current.set(docId, entry);
+      applyDocState(entry);
       setError('');
     } catch {
       setError('Failed to load document');
@@ -188,32 +295,8 @@ export default function DocumentViewerPage() {
     { id: 'summaries', label: t('documentViewer.summary') },
   ];
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">{t('documentViewer.loadingDocument')}</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">{error}</p>
-          <Link to={`/classrooms/${classroomId}`} className="text-blue-600 hover:text-blue-800">
-            {t('documentViewer.backToClassroom')}
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex gap-2 h-[calc(100vh-9rem)]">
+    <div className="flex gap-2 h-[calc(100vh-6rem)]">
       {/* Notes Panel (Left) */}
       {notesOpen && (
         <div className="w-80 min-w-48 flex flex-col bg-white rounded-lg shadow overflow-hidden" style={{ resize: 'horizontal' }}>
@@ -228,11 +311,11 @@ export default function DocumentViewerPage() {
       {/* Document Viewer (Center) */}
       <div className="flex-1 bg-white rounded-lg shadow flex flex-col overflow-hidden">
         {/* Document Header */}
-        <div className="px-3 py-2 border-b border-gray-200 flex justify-between items-center bg-gray-50">
-          <div className="flex items-center gap-2">
+        <div className="px-3 py-2 border-b border-gray-200 flex justify-between items-center gap-2 bg-gray-50 min-w-0">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
             <Link
               to={`/classrooms/${classroomId}/documents`}
-              className="h-7 px-2 rounded-full text-xs font-medium text-gray-600 bg-gray-200 border border-gray-300 hover:bg-gray-300 inline-flex items-center gap-1"
+              className="flex-shrink-0 h-7 px-2 rounded-full text-xs font-medium text-gray-600 bg-gray-200 border border-gray-300 hover:bg-gray-300 inline-flex items-center gap-1"
             >
               <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -242,7 +325,7 @@ export default function DocumentViewerPage() {
             {/* Notes toggle - with label */}
             <button
               onClick={() => setNotesOpen(!notesOpen)}
-              className={`h-7 px-2 rounded-full text-xs font-medium flex items-center gap-1 ${
+              className={`flex-shrink-0 h-7 px-2 rounded-full text-xs font-medium flex items-center gap-1 ${
                 notesOpen
                   ? 'text-blue-700 bg-blue-100'
                   : 'text-gray-600 bg-gray-200 hover:bg-gray-300'
@@ -253,10 +336,17 @@ export default function DocumentViewerPage() {
               </svg>
               {t('documentViewer.notes')}
             </button>
-            <span className="mx-0.5 h-6 w-1 rounded-full bg-gray-300" aria-hidden="true"></span>
-            <h2 className="font-medium text-gray-900 truncate max-w-sm text-sm">{document?.originalName}</h2>
+            <DocumentTabs
+              tabs={tabDocuments}
+              activeId={docId}
+              availableDocs={availableTabDocs}
+              maxReached={openTabIds.length >= MAX_OPEN_TABS}
+              onSelect={handleSelectTab}
+              onAdd={handleAddTab}
+              onClose={handleCloseTab}
+            />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
             {document?.mimeType === 'application/pdf' && numPages && (
               <>
                 <button
@@ -300,7 +390,23 @@ export default function DocumentViewerPage() {
 
         {/* Document Content */}
         <div ref={pdfContainerRef} className="flex-1 overflow-auto bg-white p-2">
-          {document?.mimeType === 'application/pdf' && pdfUrl ? (
+          {loading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="mt-4 text-gray-600">{t('documentViewer.loadingDocument')}</p>
+              </div>
+            </div>
+          ) : error ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <p className="text-red-600 mb-4">{error}</p>
+                <Link to={`/classrooms/${classroomId}`} className="text-blue-600 hover:text-blue-800">
+                  {t('documentViewer.backToClassroom')}
+                </Link>
+              </div>
+            </div>
+          ) : document?.mimeType === 'application/pdf' && pdfUrl ? (
             <div className="flex flex-col items-center">
               <Document
                 file={pdfUrl}

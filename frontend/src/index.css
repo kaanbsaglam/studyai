@@ -416,6 +416,10 @@
 	--btn-primary-shadow: none;
 	--btn-primary-shadow-hover: 0 1px 4px rgba(43, 108, 238, 0.2);
 	--btn-radius: 10px;
+	/* Document tab strip */
+	--tab-inactive-bg: #e5e7eb;
+	--tab-inactive-bg-hover: #d1d5db;
+	--tab-inactive-text: #4b5563;
 	font-synthesis: none;
 	text-rendering: optimizeLegibility;
 	-webkit-font-smoothing: antialiased;
@@ -454,6 +458,10 @@
 	--btn-primary-shadow: none;
 	--btn-primary-shadow-hover: 0 1px 4px rgba(123, 201, 254, 0.3);
 	--btn-radius: 10px;
+	/* Document tab strip */
+	--tab-inactive-bg: #2C2C2C;
+	--tab-inactive-bg-hover: #383838;
+	--tab-inactive-text: #B0B0B0;
 }
 
 [data-theme="earth"] {
@@ -488,6 +496,37 @@
 	--btn-primary-shadow: none;
 	--btn-primary-shadow-hover: 0 1px 4px rgba(139, 94, 52, 0.2);
 	--btn-radius: 10px;
+	/* Document tab strip */
+	--tab-inactive-bg: #e8ddc6;
+	--tab-inactive-bg-hover: #ddcfb0;
+	--tab-inactive-text: #6f5b45;
+}
+
+.doc-tab-active {
+	background-color: var(--card-bg);
+	color: var(--text-primary);
+}
+.doc-tab-inactive {
+	background-color: var(--tab-inactive-bg);
+	color: var(--tab-inactive-text);
+}
+.doc-tab-inactive:hover {
+	background-color: var(--tab-inactive-bg-hover);
+}
+.doc-tab-icon {
+	color: var(--text-secondary);
+}
+.doc-tab-icon:hover {
+	background-color: var(--tab-inactive-bg-hover);
+	color: var(--text-primary);
+}
+.doc-tab-add {
+	background-color: transparent;
+	color: var(--text-secondary);
+}
+.doc-tab-add:hover {
+	background-color: var(--tab-inactive-bg-hover);
+	color: var(--text-primary);
 }
 
 @layer base {

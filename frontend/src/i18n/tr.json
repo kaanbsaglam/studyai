@@ -252,6 +252,13 @@
     "zoomIn": "Yakınlaştır",
     "zoomOut": "Uzaklaştır"
   },
+  "documentTabs": {
+    "close": "Sekmeyi kapat",
+    "addTab": "Başka bir doküman aç",
+    "noMore": "Açılacak başka doküman yok",
+    "maxReached": "En fazla {{max}} sekme",
+    "pickerTitle": "Yeni sekmede aç"
+  },
   "chatSessions": {
     "newChat": "Yeni Sohbet",
     "sessions": "Oturumlar",

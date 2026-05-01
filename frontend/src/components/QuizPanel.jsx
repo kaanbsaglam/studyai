@@ -259,7 +259,7 @@ export default function QuizPanel({
       <div className={compact ? 'flex flex-col h-full' : 'bg-white rounded-lg shadow'}>
         <div className="px-6 py-4 border-b border-gray-200 dark:border-transparent flex justify-between items-center">
           <h3 className="text-lg font-medium text-gray-900">{t('quizPanel.quizComplete')}</h3>
-          <button onClick={() => setActiveQuiz(null)} className="text-gray-500 hover:text-gray-700">
+          <button onClick={() => setActiveQuiz(null)} className="rounded-full p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700">
             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -342,7 +342,7 @@ export default function QuizPanel({
               {activeQuiz.focusTopic && ` - ${activeQuiz.focusTopic}`}
             </p>
           </div>
-          <button onClick={() => setActiveQuiz(null)} className="text-gray-500 hover:text-gray-700">
+          <button onClick={() => setActiveQuiz(null)} className="rounded-full p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700">
             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -374,7 +374,7 @@ export default function QuizPanel({
                   key={idx}
                   onClick={() => handleAnswerSelect(answer)}
                   disabled={showResult}
-                  className={`w-full text-left px-4 py-3 rounded-lg border-2 transition-colors ${
+                  className={`w-full text-left px-4 py-3 rounded-full border-2 transition-colors ${
                     showCorrect
                       ? 'border-green-500 bg-green-50 text-green-800'
                       : showWrong
@@ -434,7 +434,7 @@ export default function QuizPanel({
       <div className={compact ? 'flex flex-col h-full' : 'bg-white rounded-lg shadow'}>
         <div className="px-6 py-4 border-b border-gray-200 dark:border-transparent flex justify-between items-center">
           <h3 className="text-lg font-medium text-gray-900">{t('quizPanel.generateQuiz')}</h3>
-          <button onClick={() => setShowGenerateForm(false)} className="text-gray-500 hover:text-gray-700">
+          <button onClick={() => setShowGenerateForm(false)} className="rounded-full p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700">
             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -455,7 +455,7 @@ export default function QuizPanel({
               value={formTitle}
               onChange={(e) => setFormTitle(e.target.value)}
               placeholder="e.g., Chapter 5 Review Quiz"
-              className={`w-full px-3 py-2 border border-gray-300 ${compact ? 'rounded-full' : 'rounded-md'} focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+              className="w-full px-3 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               required
             />
           </div>
@@ -480,7 +480,7 @@ export default function QuizPanel({
               value={formFocusTopic}
               onChange={(e) => setFormFocusTopic(e.target.value)}
               placeholder={isGeneralKnowledge ? 'e.g., World War II, Photosynthesis' : 'e.g., photosynthesis'}
-              className={`w-full px-3 py-2 border border-gray-300 ${compact ? 'rounded-full' : 'rounded-md'} focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+              className="w-full px-3 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               required={isGeneralKnowledge}
             />
             <p className="text-xs text-gray-500 mt-1">
@@ -495,7 +495,7 @@ export default function QuizPanel({
             <select
               value={formCount}
               onChange={(e) => setFormCount(Number(e.target.value))}
-              className={`w-full px-3 py-2 border border-gray-300 ${compact ? 'rounded-full' : 'rounded-md'} focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+              className="w-full px-3 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             >
               <option value={5}>5 {t('quizPanel.questions')}</option>
               <option value={10}>10 {t('quizPanel.questions')}</option>

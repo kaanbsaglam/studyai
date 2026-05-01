@@ -252,7 +252,7 @@ export default function OrchestratorChatPanel({
         {(messages.length > 0 || sessionId) && (
           <button
             onClick={handleNewChat}
-            className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+            className="min-w-[110px] text-center text-sm text-blue-600 hover:text-blue-800 font-medium whitespace-nowrap"
           >
             {t('chatSessions.newChat')}
           </button>
