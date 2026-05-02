@@ -1,11 +1,13 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { TimerProvider } from './context/TimerContext';
 import { ChatModeProvider } from './context/ChatModeContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import PageTransition from './components/PageTransition';
 import AdminRoute from './components/AdminRoute';
 import ClassroomLayout from './components/ClassroomLayout';
+import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
@@ -26,26 +28,22 @@ import SettingsPage from './pages/SettingsPage';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
-function App() {
+// Must render inside AuthProvider
+function GuestRoute({ children }) {
+  const { isAuthenticated, loading } = useAuth();
+  if (loading) return null;
+  if (isAuthenticated) return <Navigate to="/classrooms" replace />;
+  return children;
+}
+
+function AppRoutes() {
   return (
-    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-      <BrowserRouter>
-        <AuthProvider>
-          <ChatModeProvider>
-            <TimerProvider>
-              <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
+    <Routes>
+            <Route path="/" element={<GuestRoute><PageTransition><LandingPage /></PageTransition></GuestRoute>} />
+            <Route path="/login" element={<GuestRoute><PageTransition><LoginPage /></PageTransition></GuestRoute>} />
+            <Route path="/register" element={<GuestRoute><PageTransition><RegisterPage /></PageTransition></GuestRoute>} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <Navigate to="/classrooms" replace />
-                </ProtectedRoute>
-              }
-            />
             <Route
               path="/classrooms"
               element={
@@ -99,9 +97,20 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            {/* Redirect unknown routes to classrooms */}
-            <Route path="*" element={<Navigate to="/classrooms" replace />} />
-              </Routes>
+            {/* Redirect unknown routes */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
+
+function App() {
+  return (
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      <BrowserRouter>
+        <AuthProvider>
+          <ChatModeProvider>
+            <TimerProvider>
+              <AppRoutes />
             </TimerProvider>
           </ChatModeProvider>
         </AuthProvider>
