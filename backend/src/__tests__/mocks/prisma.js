@@ -10,6 +10,7 @@ const mockPrisma = {
   // User model
   user: {
     findUnique: jest.fn(),
+    findFirst: jest.fn(),
     findMany: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
@@ -30,6 +31,7 @@ const mockPrisma = {
   // Document model
   document: {
     findUnique: jest.fn(),
+    findFirst: jest.fn(),
     findMany: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
@@ -41,6 +43,7 @@ const mockPrisma = {
   // DocumentChunk model
   documentChunk: {
     findMany: jest.fn(),
+    create: jest.fn(),
     createMany: jest.fn(),
     deleteMany: jest.fn(),
   },
@@ -56,6 +59,7 @@ const mockPrisma = {
     findUnique: jest.fn(),
     findMany: jest.fn(),
     create: jest.fn(),
+    update: jest.fn(),
     delete: jest.fn(),
   },
 
@@ -64,6 +68,7 @@ const mockPrisma = {
     findUnique: jest.fn(),
     findMany: jest.fn(),
     create: jest.fn(),
+    update: jest.fn(),
     delete: jest.fn(),
   },
 
@@ -84,6 +89,7 @@ const mockPrisma = {
   // Note model
   note: {
     findUnique: jest.fn(),
+    findFirst: jest.fn(),
     findMany: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
@@ -103,6 +109,37 @@ const mockPrisma = {
   pomodoroSettings: {
     findUnique: jest.fn(),
     upsert: jest.fn(),
+  },
+
+  // ChatSession model
+  chatSession: {
+    findUnique: jest.fn(),
+    findMany: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+  },
+
+  // ChatMessage model
+  chatMessage: {
+    create: jest.fn(),
+    findMany: jest.fn(),
+    deleteMany: jest.fn(),
+  },
+
+  // OrchestratorSession model
+  orchestratorSession: {
+    findUnique: jest.fn(),
+    findMany: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+  },
+
+  // OrchestratorMessage model
+  orchestratorMessage: {
+    create: jest.fn(),
+    findMany: jest.fn(),
   },
 
   // Transaction support

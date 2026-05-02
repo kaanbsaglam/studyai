@@ -29,6 +29,9 @@ jest.mock('../config/logger', () => ({
   error: jest.fn(),
   warn: jest.fn(),
   debug: jest.fn(),
+  log: jest.fn(),
+  logEvent: jest.fn(),
+  logLLMCall: jest.fn(),
 }));
 
 // Mock Prisma to prevent database connections during unit tests
