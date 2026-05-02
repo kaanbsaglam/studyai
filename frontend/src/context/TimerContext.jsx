@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import api from '../api/axios';
+import { useAuth } from './AuthContext';
 
 const TimerContext = createContext(null);
 
@@ -22,6 +23,8 @@ const DEFAULT_SETTINGS = {
 };
 
 export function TimerProvider({ children }) {
+  const { isAuthenticated } = useAuth();
+
   // Timer state
   const [phase, setPhase] = useState(PHASES.IDLE);
   const [timeRemaining, setTimeRemaining] = useState(0);
@@ -48,10 +51,15 @@ export function TimerProvider({ children }) {
     };
   }, []);
 
-  // Fetch settings on mount
+  // Fetch settings only when authenticated; reset to defaults on logout
   useEffect(() => {
-    fetchSettings();
-  }, []);
+    if (isAuthenticated) {
+      fetchSettings();
+    } else {
+      setSettings(DEFAULT_SETTINGS);
+      setSettingsLoading(false);
+    }
+  }, [isAuthenticated]);
 
   const fetchSettings = async () => {
     try {
