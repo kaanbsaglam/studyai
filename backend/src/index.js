@@ -36,7 +36,7 @@ app.use(helmet());
 app.use(cors({
   origin: env.NODE_ENV === 'production' 
     ? process.env.FRONTEND_URL // Set this in production
-    : ['http://localhost:5173', 'http://localhost:3001'], // Vite default + alternative
+    : ['http://localhost:5173', 'http://localhost:3001', 'http://localhost:8081'], // Vite default + alternative + Expo web
   credentials: true,
 }));
 
