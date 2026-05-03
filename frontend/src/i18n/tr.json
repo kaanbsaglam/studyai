@@ -372,6 +372,8 @@
     "query": "Sorgu",
     "documents": "Belgeler",
     "retrieverResult": "Sonuç özeti",
+    "modeFull": "tam belge",
+    "modeChunks": "parçalar",
     "failedToGetAnswer": "Orkestratör yanıt veremedi. Lütfen tekrar deneyin."
   },
   "flashcardsPanel": {

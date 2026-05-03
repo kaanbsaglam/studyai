@@ -372,6 +372,8 @@
     "query": "Query",
     "documents": "Documents",
     "retrieverResult": "Result excerpt",
+    "modeFull": "full doc",
+    "modeChunks": "chunks",
     "failedToGetAnswer": "Orchestrator failed to answer. Please try again."
   },
   "flashcardsPanel": {

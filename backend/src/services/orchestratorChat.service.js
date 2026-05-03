@@ -27,6 +27,10 @@ const MAX_TASKS = 10;
 const RETRIEVER_CHUNK_TOP_K = 15;
 const RETRIEVER_SIMILARITY_THRESHOLD = 0.4;
 const MAX_HISTORY_MESSAGES = 20;
+// Hard cap on concatenated full-doc content per retriever task. Exceeding
+// this triggers a transparent fallback to chunks mode so the retriever LLM
+// stays well inside its context window and PREMIUM quotas don't burn.
+const MAX_FULL_MODE_CHARS = 200000;
 
 const PLANNER_SCHEMA = {
   type: 'object',
@@ -41,8 +45,9 @@ const PLANNER_SCHEMA = {
             type: 'array',
             items: { type: 'string' },
           },
+          mode: { type: 'string', enum: ['chunks', 'full'] },
         },
-        required: ['query', 'documentIds'],
+        required: ['query', 'documentIds', 'mode'],
       },
     },
     directResponse: { type: 'string' },
@@ -87,7 +92,9 @@ function formatSummaries(summaries) {
         s.summary && s.summary.trim().length > 0
           ? s.summary
           : '(no summary available — use the filename as a weak signal)';
-      return `- "${s.name}" (id: ${s.docId})\n  Summary: ${summary}\n  Topics: ${topics}`;
+      const sizeHint =
+        typeof s.chunkCount === 'number' ? ` [${s.chunkCount} chunks]` : '';
+      return `- "${s.name}" (id: ${s.docId})${sizeHint}\n  Summary: ${summary}\n  Topics: ${topics}`;
     })
     .join('\n');
 }
@@ -153,6 +160,7 @@ async function plannerNode(state) {
       documentIds: Array.isArray(t.documentIds)
         ? [...new Set(t.documentIds.filter((id) => validDocIds.has(id)))]
         : [],
+      mode: t.mode === 'full' ? 'full' : 'chunks',
     }))
     .filter((t) => t.query.length > 0 && t.documentIds.length > 0);
 
@@ -177,7 +185,10 @@ async function plannerNode(state) {
 
 async function retrieverNode(state) {
   const scenario = llmConfig.tiers.PREMIUM.orchestrator.retriever;
-  const { query, documentIds } = state;
+  const { query, documentIds, mode } = state;
+  // Mode is set by the planner per task. We re-default defensively here in
+  // case the planner output bypassed sanitization (or a future caller).
+  let effectiveMode = mode === 'full' ? 'full' : 'chunks';
 
   if (!query || !Array.isArray(documentIds) || documentIds.length === 0) {
     return {
@@ -186,40 +197,82 @@ async function retrieverNode(state) {
           query: query || '',
           result: 'NO RELEVANT INFORMATION FOUND',
           documentIds: documentIds || [],
+          mode: effectiveMode,
         },
       ],
       retrieverTokens: 0,
     };
   }
 
-  // Chunk-level retrieval: embed the sub-query, filter Pinecone to this
-  // retriever's assigned documents, take top-K relevant chunks.
   let chunks = [];
-  try {
-    const queryEmbedding = await generateEmbedding(query);
-    const matches = await querySimilar(queryEmbedding, {
-      topK: RETRIEVER_CHUNK_TOP_K,
-      documentIds,
-    });
-    const relevant = matches.filter((m) => m.score >= RETRIEVER_SIMILARITY_THRESHOLD);
 
-    if (relevant.length > 0) {
-      const chunkRows = await prisma.documentChunk.findMany({
-        where: { pineconeId: { in: relevant.map((m) => m.id) } },
+  if (effectiveMode === 'full') {
+    // Full-doc mode: load every chunk for the assigned docs, ordered by
+    // (documentId, position) so concatenation reconstructs each doc in
+    // reading order. If the result busts the size cap, transparently fall
+    // back to chunks mode — the LLM context window and PREMIUM cost both
+    // benefit from the bound.
+    try {
+      const allChunks = await prisma.documentChunk.findMany({
+        where: { documentId: { in: documentIds } },
+        orderBy: [{ documentId: 'asc' }, { position: 'asc' }],
         include: { document: { select: { id: true, originalName: true } } },
       });
-      const rowMap = new Map(chunkRows.map((c) => [c.pineconeId, c]));
-      chunks = relevant
-        .map((m) => rowMap.get(m.id))
-        .filter(Boolean);
+      const totalChars = allChunks.reduce((s, c) => s + (c.content?.length || 0), 0);
+      if (totalChars > MAX_FULL_MODE_CHARS) {
+        logger.logEvent('warn', {
+          tag: 'orchestrator',
+          event: 'retriever_full_mode_oversized_fallback',
+          query,
+          documentIds,
+          totalChars,
+          cap: MAX_FULL_MODE_CHARS,
+        });
+        effectiveMode = 'chunks';
+      } else {
+        chunks = allChunks;
+      }
+    } catch (err) {
+      logger.logEvent('error', {
+        tag: 'orchestrator',
+        event: 'retriever_full_mode_load_failed',
+        error: err.message,
+        query,
+        documentIds,
+      });
+      effectiveMode = 'chunks';
     }
-  } catch (err) {
-    logger.logEvent('error', {
-      tag: 'orchestrator',
-      event: 'retriever_failed',
-      error: err.message,
-      query,
-    });
+  }
+
+  if (effectiveMode === 'chunks') {
+    // Chunk-level retrieval: embed the sub-query, filter Pinecone to this
+    // retriever's assigned documents, take top-K relevant chunks.
+    try {
+      const queryEmbedding = await generateEmbedding(query);
+      const matches = await querySimilar(queryEmbedding, {
+        topK: RETRIEVER_CHUNK_TOP_K,
+        documentIds,
+      });
+      const relevant = matches.filter((m) => m.score >= RETRIEVER_SIMILARITY_THRESHOLD);
+
+      if (relevant.length > 0) {
+        const chunkRows = await prisma.documentChunk.findMany({
+          where: { pineconeId: { in: relevant.map((m) => m.id) } },
+          include: { document: { select: { id: true, originalName: true } } },
+        });
+        const rowMap = new Map(chunkRows.map((c) => [c.pineconeId, c]));
+        chunks = relevant
+          .map((m) => rowMap.get(m.id))
+          .filter(Boolean);
+      }
+    } catch (err) {
+      logger.logEvent('error', {
+        tag: 'orchestrator',
+        event: 'retriever_failed',
+        error: err.message,
+        query,
+      });
+    }
   }
 
   if (chunks.length === 0) {
@@ -228,10 +281,11 @@ async function retrieverNode(state) {
       event: 'retriever_no_chunks',
       query,
       documentIds,
+      mode: effectiveMode,
     });
     return {
       retrievedContexts: [
-        { query, result: 'NO RELEVANT INFORMATION FOUND', documentIds },
+        { query, result: 'NO RELEVANT INFORMATION FOUND', documentIds, mode: effectiveMode },
       ],
       retrieverTokens: 0,
     };
@@ -249,7 +303,7 @@ async function retrieverNode(state) {
   const { text, tokensUsed, weightedTokens } = await generateWithFallback(prompt, scenario, {
     tag: 'orchestrator',
     event: 'retriever_call_completed',
-    extra: { node: 'retriever' },
+    extra: { node: 'retriever', mode: effectiveMode },
   });
 
   logger.logEvent('info', {
@@ -258,6 +312,7 @@ async function retrieverNode(state) {
     query,
     docCount: documentIds.length,
     chunkCount: chunks.length,
+    mode: effectiveMode,
     tokensUsed,
     weightedTokens,
   });
@@ -268,6 +323,7 @@ async function retrieverNode(state) {
         query,
         result: text.trim(),
         documentIds,
+        mode: effectiveMode,
       },
     ],
     retrieverTokens: weightedTokens,
@@ -285,6 +341,7 @@ function routeAfterPlanner(state) {
       new Send('retriever', {
         query: task.query,
         documentIds: task.documentIds,
+        mode: task.mode,
       }),
   );
 }
@@ -332,6 +389,7 @@ async function buildClassroomDocumentSummaries(classroomId) {
       id: true,
       originalName: true,
       topicMetadata: true,
+      _count: { select: { chunks: true } },
     },
   });
   return docs.map((d) => ({
@@ -339,6 +397,7 @@ async function buildClassroomDocumentSummaries(classroomId) {
     name: d.originalName,
     summary: d.topicMetadata?.summary || '',
     topics: d.topicMetadata?.topics || [],
+    chunkCount: d._count?.chunks ?? 0,
   }));
 }
 
@@ -395,6 +454,7 @@ async function* runOrchestratorGraph({
             query: ctx.query,
             resultExcerpt: (ctx.result || '').slice(0, 200),
             documentIds: ctx.documentIds,
+            mode: ctx.mode,
             tokens: update.retrieverTokens || 0,
           };
         }

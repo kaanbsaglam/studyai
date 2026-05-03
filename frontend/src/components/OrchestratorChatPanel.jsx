@@ -141,6 +141,7 @@ export default function OrchestratorChatPanel({
                     {
                       query: event.query,
                       documentIds: event.documentIds,
+                      mode: event.mode,
                       resultExcerpt: event.resultExcerpt,
                     },
                   ],
@@ -436,10 +437,22 @@ function TraceView({ trace, t }) {
           <ul className="space-y-2">
             {trace.tasks.map((task, idx) => {
               const retriever = trace.retrievers?.find((r) => r.query === task.query);
+              const plannedMode = task.mode || 'chunks';
+              // Retriever may have downgraded full→chunks if the doc(s) busted
+              // the size cap. Show both labels in that case so the trace is honest.
+              const effectiveMode = retriever?.mode || plannedMode;
+              const fellBack = plannedMode === 'full' && effectiveMode === 'chunks';
               return (
                 <li key={idx} className="text-xs bg-white p-2 rounded border border-gray-200">
-                  <p className="font-medium text-gray-800">
-                    {t('orchestratorChat.task', { index: idx + 1 })}
+                  <p className="font-medium text-gray-800 flex items-center gap-1.5 flex-wrap">
+                    <span>{t('orchestratorChat.task', { index: idx + 1 })}</span>
+                    <ModeBadge mode={plannedMode} t={t} />
+                    {fellBack && (
+                      <>
+                        <span className="text-gray-400">→</span>
+                        <ModeBadge mode="chunks" t={t} />
+                      </>
+                    )}
                   </p>
                   <p className="text-gray-700 mt-0.5">
                     <span className="text-gray-500">{t('orchestratorChat.query')}:</span>{' '}
@@ -468,6 +481,21 @@ function TraceView({ trace, t }) {
         <p className="text-xs text-gray-500 italic">{t('orchestratorChat.noTasks')}</p>
       )}
     </div>
+  );
+}
+
+function ModeBadge({ mode, t }) {
+  if (mode === 'full') {
+    return (
+      <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium uppercase tracking-wide">
+        {t('orchestratorChat.modeFull')}
+      </span>
+    );
+  }
+  return (
+    <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium uppercase tracking-wide">
+      {t('orchestratorChat.modeChunks')}
+    </span>
   );
 }
 

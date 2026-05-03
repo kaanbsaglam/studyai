@@ -211,6 +211,7 @@ const sendOrchestratorMessageStream = async (req, res) => {
           type: 'retriever_done',
           query: evt.query,
           documentIds: evt.documentIds,
+          mode: evt.mode,
           resultExcerpt: evt.resultExcerpt,
         });
       } else if (evt.type === 'graph_done') {
