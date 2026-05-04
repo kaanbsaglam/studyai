@@ -397,22 +397,6 @@ function MessageBubble({ message, t }) {
           </div>
         )}
 
-        {/* Sources */}
-        {!message.isStreaming && message.sources?.length > 0 && (
-          <div className="mt-2 pt-2 border-t border-gray-200">
-            <p className="text-xs text-gray-500 mb-1">{t('chatPanel.sources')}</p>
-            <div className="flex flex-wrap gap-1">
-              {message.sources.map((source, idx) => (
-                <span
-                  key={idx}
-                  className="text-xs px-2 py-0.5 rounded bg-purple-100 text-purple-700"
-                >
-                  {source.filename}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

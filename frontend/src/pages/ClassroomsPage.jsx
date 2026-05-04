@@ -122,7 +122,7 @@ export default function ClassroomsPage() {
           <h2 className="text-2xl font-semibold text-gray-900">{t('classrooms.myClassrooms')}</h2>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
+            className="px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 font-medium"
           >
             {t('classrooms.newClassroom')}
           </button>
@@ -178,7 +178,7 @@ export default function ClassroomsPage() {
             <p className="mt-1 text-gray-500">{t('classrooms.createFirst')}</p>
             <button
               onClick={() => setShowCreateModal(true)}
-              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 font-medium"
             >
               {t('classrooms.newClassroom')}
             </button>
@@ -429,14 +429,14 @@ function CreateClassroomModal({ onClose, onCreate }) {
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md font-medium"
+              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-full font-medium"
             >
               {t('common.cancel')}
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium disabled:opacity-50"
+              className="px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 font-medium disabled:opacity-50"
             >
               {loading ? t('common.creating') : t('common.create')}
             </button>
