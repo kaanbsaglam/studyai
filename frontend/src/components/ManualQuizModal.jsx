@@ -41,6 +41,7 @@ export default function ManualQuizModal({ classroomId, existingQuiz, onClose, on
   }, [existingQuiz]);
 
   const addQuestion = () => {
+    if (questions.length >= 20) return;
     setQuestions((prev) => [
       ...prev,
       { question: '', correctAnswer: '', wrongAnswers: ['', '', ''] },
@@ -189,7 +190,8 @@ export default function ManualQuizModal({ classroomId, existingQuiz, onClose, on
               <button
                 type="button"
                 onClick={addQuestion}
-                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                disabled={questions.length >= 20}
+                className="text-sm text-blue-600 hover:text-blue-800 font-medium disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 + {t('manualQuiz.addQuestion')}
               </button>

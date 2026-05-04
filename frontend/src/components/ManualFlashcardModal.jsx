@@ -34,6 +34,7 @@ export default function ManualFlashcardModal({ classroomId, existingSet, onClose
   }, [existingSet]);
 
   const addCard = () => {
+    if (cards.length >= 20) return;
     setCards((prev) => [...prev, { front: '', back: '' }]);
   };
 
@@ -152,7 +153,8 @@ export default function ManualFlashcardModal({ classroomId, existingSet, onClose
               <button
                 type="button"
                 onClick={addCard}
-                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                disabled={cards.length >= 20}
+                className="text-sm text-blue-600 hover:text-blue-800 font-medium disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 + {t('manualFlashcard.addCard')}
               </button>

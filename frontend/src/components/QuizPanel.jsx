@@ -501,7 +501,6 @@ export default function QuizPanel({
               <option value={10}>10 {t('quizPanel.questions')}</option>
               <option value={15}>15 {t('quizPanel.questions')}</option>
               <option value={20}>20 {t('quizPanel.questions')}</option>
-              <option value={30}>30 {t('quizPanel.questions')}</option>
             </select>
           </div>
 

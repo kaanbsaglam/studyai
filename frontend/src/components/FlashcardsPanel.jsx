@@ -255,8 +255,6 @@ export default function FlashcardsPanel({
               <option value={10}>{`10 ${t('flashcardsPanel.cards')}`}</option>
               <option value={15}>{`15 ${t('flashcardsPanel.cards')}`}</option>
               <option value={20}>{`20 ${t('flashcardsPanel.cards')}`}</option>
-              <option value={30}>{`30 ${t('flashcardsPanel.cards')}`}</option>
-              <option value={50}>{`50 ${t('flashcardsPanel.cards')}`}</option>
             </select>
           </div>
 
