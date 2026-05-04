@@ -246,16 +246,21 @@ export default function FlashcardsPanel({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               {t('flashcardsPanel.numberOfCards')}
             </label>
-            <select
-              value={formCount}
-              onChange={(e) => setFormCount(Number(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value={5}>{`5 ${t('flashcardsPanel.cards')}`}</option>
-              <option value={10}>{`10 ${t('flashcardsPanel.cards')}`}</option>
-              <option value={15}>{`15 ${t('flashcardsPanel.cards')}`}</option>
-              <option value={20}>{`20 ${t('flashcardsPanel.cards')}`}</option>
-            </select>
+            <div className="relative">
+              <select
+                value={formCount}
+                onChange={(e) => setFormCount(Number(e.target.value))}
+                className="w-full px-4 py-2 text-left text-gray-700 bg-white border border-gray-300 rounded-full appearance-none hover:bg-gray-50 focus:outline-none focus-visible:outline-none focus:ring-0"
+              >
+                <option value={5}>{`5 ${t('flashcardsPanel.cards')}`}</option>
+                <option value={10}>{`10 ${t('flashcardsPanel.cards')}`}</option>
+                <option value={15}>{`15 ${t('flashcardsPanel.cards')}`}</option>
+                <option value={20}>{`20 ${t('flashcardsPanel.cards')}`}</option>
+              </select>
+              <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
           </div>
 
           <div className="pt-4">

@@ -49,7 +49,7 @@ export default function DocumentSelector({
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         disabled={disabled}
-        className="w-full px-4 py-2 text-left bg-white border border-gray-300 focus:ring-0 rounded-lg hover:bg-gray-50 focus:outline-none focus-visible:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+        className="w-full px-4 py-2 text-left bg-white border border-gray-300 focus:ring-0 rounded-full hover:bg-gray-50 focus:outline-none focus-visible:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
       >
         <div className="flex justify-between items-center">
           <span className="text-gray-700">
