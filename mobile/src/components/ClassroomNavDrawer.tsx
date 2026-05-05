@@ -16,6 +16,7 @@ import type { RootStackParamList } from '../app/RootNavigator';
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 const NAV_ITEMS = [
+  { key: 'overview',   label: 'Overview',   icon: '🏠', screen: 'ClassroomDetail' as keyof RootStackParamList | null },
   { key: 'documents',  label: 'Documents',  icon: '📄', screen: 'Documents'  as keyof RootStackParamList | null },
   { key: 'chat',       label: 'Chat',       icon: '💬', screen: 'Chat' as keyof RootStackParamList | null },
   { key: 'flashcards', label: 'Flashcards', icon: '🃏', screen: 'Flashcards' as keyof RootStackParamList | null },
@@ -25,6 +26,7 @@ const NAV_ITEMS = [
 ] as const;
 
 interface Props {
+  classroom?: { id: string; name: string; [key: string]: any } | null;
   classroomId: string;
   classroomName: string;
   activeKey?: string;
@@ -40,6 +42,7 @@ interface Props {
 }
 
 export default function ClassroomNavDrawer({
+  classroom,
   classroomId,
   classroomName,
   activeKey,
@@ -93,7 +96,7 @@ export default function ClassroomNavDrawer({
                   Navigation
                 </Text>
                 <Text style={{ fontSize: 15, fontWeight: '700', color: tokens.textPrimary, marginTop: 4 }} numberOfLines={1}>
-                  {classroomName}
+                  {classroom?.name || classroomName}
                 </Text>
               </View>
 
@@ -107,7 +110,10 @@ export default function ClassroomNavDrawer({
                     onPress={() => {
                       if (!item.screen) return;
                       onClose();
-                      navigation.navigate(item.screen as any, p);
+                      const navParams = item.screen === 'ClassroomDetail' && classroom
+                        ? { classroom }
+                        : p;
+                      navigation.navigate(item.screen as any, navParams);
                     }}
                   >
                     {({ pressed }) => (

@@ -101,7 +101,10 @@ export default function SummariesScreen({ route, navigation }: Props) {
             </View>
           }
           renderItem={({ item }) => (
-            <Pressable style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1, marginBottom: 8 })}>
+            <Pressable
+              onPress={() => navigation.navigate('SummaryReader', { summaryId: item.id, summaryTitle: item.title })}
+              style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1, marginBottom: 8 })}
+            >
               <View style={{
                 backgroundColor: tokens.cardBg, borderColor: tokens.cardBorder, borderWidth: 1,
                 borderRadius: 10, padding: 14,

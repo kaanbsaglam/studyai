@@ -56,10 +56,14 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 export default function ClassroomDetailScreen({ route, navigation }: Props) {
-  const { classroom } = route.params;
+  const params = route.params;
+  let initialClassroomId = params.classroom?.id || params.classroomId || '';
+  let initialClassroomName = params.classroom?.name || params.classroomName || '';
+  
   const { tokens } = useTheme();
   const insets = useSafeAreaInsets();
 
+  const [classroom, setClassroom]   = useState(params.classroom || null);
   const [stats, setStats]           = useState<ClassroomStats | null>(null);
   const [counts, setCounts]         = useState<ClassroomCounts | null>(null);
   const [documents, setDocuments]   = useState<Document[]>([]);
@@ -72,12 +76,30 @@ export default function ClassroomDetailScreen({ route, navigation }: Props) {
   const statsFetchedAtRef = useRef(Date.now());
   const statsBaseRef      = useRef(0);
 
-  useStudyTracker(classroom.id, 'DOCUMENT');
+  useStudyTracker(initialClassroomId, 'DOCUMENT');
 
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 1000);
     return () => clearInterval(id);
   }, []);
+
+  // Fetch classroom data if not provided
+  useEffect(() => {
+    if (classroom) return; // Already have classroom data
+    if (!initialClassroomId) return;
+    
+    const fetchClassroom = async () => {
+      try {
+        const res = await api.get<Env<{ classroom: any }>>(`/classrooms/${initialClassroomId}`);
+        if (res.data.success && res.data.data.classroom) {
+          setClassroom(res.data.data.classroom);
+        }
+      } catch (err) {
+        console.error('Failed to fetch classroom:', err);
+      }
+    };
+    fetchClassroom();
+  }, [initialClassroomId, classroom]);
 
   const applyStats = (s: ClassroomStats) => {
     statsBaseRef.current      = s.totalSeconds;
@@ -86,12 +108,13 @@ export default function ClassroomDetailScreen({ route, navigation }: Props) {
   };
 
   const fetchAll = useCallback(async () => {
+    if (!initialClassroomId) return;
     try {
       const tzOffset = new Date().getTimezoneOffset();
       const [classroomRes, statsRes, docsRes] = await Promise.all([
-        api.get<Env<{ classroom: { _count: ClassroomCounts } }>>(`/classrooms/${classroom.id}`),
-        api.get<Env<ClassroomStats>>(`/classrooms/${classroom.id}/study-stats?days=84&tzOffset=${-tzOffset}`),
-        api.get<Env<{ documents: Document[] }>>(`/classrooms/${classroom.id}/documents`),
+        api.get<Env<{ classroom: { _count: ClassroomCounts } }>>(`/classrooms/${initialClassroomId}`),
+        api.get<Env<ClassroomStats>>(`/classrooms/${initialClassroomId}/study-stats?days=84&tzOffset=${-tzOffset}`),
+        api.get<Env<{ documents: Document[] }>>(`/classrooms/${initialClassroomId}/documents`),
       ]);
       setCounts(classroomRes.data.data.classroom._count);
       applyStats(statsRes.data.data);
@@ -103,7 +126,7 @@ export default function ClassroomDetailScreen({ route, navigation }: Props) {
     } catch (e: any) {
       setError(e.message ?? 'Failed to load.');
     }
-  }, [classroom.id]);
+  }, [initialClassroomId]);
 
   useEffect(() => {
     fetchAll().finally(() => setLoading(false));
@@ -114,13 +137,13 @@ export default function ClassroomDetailScreen({ route, navigation }: Props) {
       try {
         const tzOffset = new Date().getTimezoneOffset();
         const res = await api.get<Env<ClassroomStats>>(
-          `/classrooms/${classroom.id}/study-stats?days=84&tzOffset=${-tzOffset}`,
+          `/classrooms/${initialClassroomId}/study-stats?days=84&tzOffset=${-tzOffset}`,
         );
         applyStats(res.data.data);
       } catch { }
     }, 60_000);
     return () => clearInterval(id);
-  }, [classroom.id]);
+  }, [initialClassroomId]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -134,7 +157,7 @@ export default function ClassroomDetailScreen({ route, navigation }: Props) {
   const liveToday = todayBase + Math.floor((Date.now() - statsFetchedAtRef.current) / 1000);
   void tick;
 
-  const p = { classroomId: classroom.id, classroomName: classroom.name };
+  const p = { classroomId: initialClassroomId, classroomName: initialClassroomName };
 
   return (
     <View style={{ flex: 1, backgroundColor: tokens.pageBg }}>
@@ -149,7 +172,7 @@ export default function ClassroomDetailScreen({ route, navigation }: Props) {
           )}
         </Pressable>
         <Text style={{ fontSize: 20, fontWeight: '700', color: tokens.textPrimary, flex: 1 }} numberOfLines={1}>
-          {classroom.name}
+          {classroom?.name || initialClassroomName}
         </Text>
         <Pressable onPress={() => setNavOpen(true)} hitSlop={8}>
           {({ pressed }) => (
@@ -245,41 +268,50 @@ export default function ClassroomDetailScreen({ route, navigation }: Props) {
             </View>
           ) : (
             documents.map((doc, i) => (
-              <View
+              <Pressable
                 key={doc.id}
-                style={{
+                onPress={() => navigation.navigate('DocumentReader', {
+                  documentId: doc.id,
+                  documentName: doc.originalName,
+                })}
+                style={({ pressed }) => ({
+                  opacity: pressed ? 0.8 : 1,
+                  marginBottom: i < documents.length - 1 ? 8 : 0,
+                })}
+              >
+                <View style={{
                   backgroundColor: tokens.cardBg, borderColor: tokens.cardBorder, borderWidth: 1,
                   borderRadius: 10, padding: 14,
-                  marginBottom: i < documents.length - 1 ? 8 : 0,
                   flexDirection: 'row', alignItems: 'center', gap: 12,
-                }}
-              >
-                <Text style={{ fontSize: 22 }}>📄</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 14, fontWeight: '600', color: tokens.textPrimary }} numberOfLines={1}>
-                    {doc.originalName}
-                  </Text>
-                  <Text style={{ fontSize: 12, color: tokens.textMuted, marginTop: 2 }}>
-                    {formatBytes(doc.size)} · {new Date(doc.createdAt).toLocaleDateString()}
-                  </Text>
-                </View>
-                <View style={{
-                  backgroundColor: tokens.accentSoft, borderRadius: 6,
-                  paddingHorizontal: 8, paddingVertical: 3,
                 }}>
-                  <Text style={{ fontSize: 11, fontWeight: '600', color: STATUS_COLOR[doc.status] ?? tokens.textMuted }}>
-                    {doc.status.charAt(0) + doc.status.slice(1).toLowerCase()}
-                  </Text>
+                  <Text style={{ fontSize: 22 }}>📄</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '600', color: tokens.textPrimary }} numberOfLines={1}>
+                      {doc.originalName}
+                    </Text>
+                    <Text style={{ fontSize: 12, color: tokens.textMuted, marginTop: 2 }}>
+                      {formatBytes(doc.size)} · {new Date(doc.createdAt).toLocaleDateString()}
+                    </Text>
+                  </View>
+                  <View style={{
+                    backgroundColor: tokens.accentSoft, borderRadius: 6,
+                    paddingHorizontal: 8, paddingVertical: 3,
+                  }}>
+                    <Text style={{ fontSize: 11, fontWeight: '600', color: STATUS_COLOR[doc.status] ?? tokens.textMuted }}>
+                      {doc.status.charAt(0) + doc.status.slice(1).toLowerCase()}
+                    </Text>
+                  </View>
                 </View>
-              </View>
+              </Pressable>
             ))
           )}
         </ScrollView>
       )}
 
       <ClassroomNavDrawer
-        classroomId={classroom.id}
-        classroomName={classroom.name}
+        classroom={classroom || undefined}
+        classroomId={classroom?.id || initialClassroomId}
+        classroomName={classroom?.name || initialClassroomName}
         counts={counts}
         visible={navOpen}
         onClose={() => setNavOpen(false)}

@@ -28,16 +28,10 @@ interface Document {
 }
 
 const STATUS_LABEL: Record<string, string> = {
-  READY: 'Ready',
-  PROCESSING: 'Processing',
-  PENDING: 'Pending',
-  FAILED: 'Failed',
+  READY: 'Ready', PROCESSING: 'Processing', PENDING: 'Pending', FAILED: 'Failed',
 };
 const STATUS_COLOR: Record<string, string> = {
-  READY: '#6f5b45',
-  PROCESSING: '#a67c52',
-  PENDING: '#a67c52',
-  FAILED: '#ef4444',
+  READY: '#6f5b45', PROCESSING: '#a67c52', PENDING: '#a67c52', FAILED: '#ef4444',
 };
 
 function formatBytes(bytes: number): string {
@@ -46,21 +40,28 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function isAudioMime(mimeType: string) {
+  return mimeType.startsWith('audio/');
+}
+
+type Tab = 'docs' | 'audio';
+
 export default function DocumentsScreen({ route, navigation }: Props) {
   const { classroomId, classroomName } = route.params;
   const { tokens } = useTheme();
   const insets = useSafeAreaInsets();
 
-  const [documents, setDocuments] = useState<Document[]>([]);
-  const [loading, setLoading]     = useState(true);
+  const [all, setAll]           = useState<Document[]>([]);
+  const [loading, setLoading]   = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError]         = useState('');
-  const [navOpen, setNavOpen]     = useState(false);
+  const [error, setError]       = useState('');
+  const [navOpen, setNavOpen]   = useState(false);
+  const [tab, setTab]           = useState<Tab>('docs');
 
   const fetch = useCallback(async () => {
     try {
       const res = await api.get<Env<{ documents: Document[] }>>(`/classrooms/${classroomId}/documents`);
-      setDocuments(res.data.data.documents);
+      setAll(res.data.data.documents);
       setError('');
     } catch (e: any) {
       setError(e.message ?? 'Failed to load documents.');
@@ -71,8 +72,13 @@ export default function DocumentsScreen({ route, navigation }: Props) {
 
   const onRefresh = async () => { setRefreshing(true); await fetch(); setRefreshing(false); };
 
+  const docs  = all.filter(d => !isAudioMime(d.mimeType));
+  const audio = all.filter(d => isAudioMime(d.mimeType));
+  const items = tab === 'docs' ? docs : audio;
+
   return (
     <View style={{ flex: 1, backgroundColor: tokens.pageBg }}>
+      {/* Header */}
       <View style={{
         paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 12,
         flexDirection: 'row', alignItems: 'center', gap: 10,
@@ -86,17 +92,6 @@ export default function DocumentsScreen({ route, navigation }: Props) {
           <Text style={{ fontSize: 18, fontWeight: '700', color: tokens.textPrimary }}>Documents</Text>
           <Text style={{ fontSize: 12, color: tokens.textMuted }}>{classroomName}</Text>
         </View>
-        <Pressable onPress={() => {}}>
-          {({ pressed }) => (
-            <View style={{
-              backgroundColor: tokens.btnPrimaryBg, borderRadius: 8,
-              paddingHorizontal: 12, height: 32, justifyContent: 'center',
-              opacity: pressed ? 0.8 : 1,
-            }}>
-              <Text style={{ fontSize: 13, fontWeight: '600', color: tokens.btnPrimaryText }}>+ Upload</Text>
-            </View>
-          )}
-        </Pressable>
         <Pressable onPress={() => setNavOpen(true)} hitSlop={8}>
           {({ pressed }) => (
             <View style={{ gap: 4, opacity: pressed ? 0.6 : 1, paddingLeft: 4 }}>
@@ -108,6 +103,34 @@ export default function DocumentsScreen({ route, navigation }: Props) {
         </Pressable>
       </View>
 
+      {/* Tabs */}
+      <View style={{
+        flexDirection: 'row', marginHorizontal: 20, marginBottom: 12,
+        backgroundColor: tokens.btnBgPressed, borderRadius: 10, padding: 3,
+      }}>
+        {(['docs', 'audio'] as Tab[]).map((t) => {
+          const active = tab === t;
+          const label = t === 'docs' ? `Documents${docs.length ? ` (${docs.length})` : ''}` : `Audio${audio.length ? ` (${audio.length})` : ''}`;
+          return (
+            <Pressable
+              key={t}
+              onPress={() => setTab(t)}
+              style={{ flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center',
+                backgroundColor: active ? tokens.cardBg : 'transparent',
+              }}
+            >
+              <Text style={{
+                fontSize: 13, fontWeight: active ? '700' : '500',
+                color: active ? tokens.textPrimary : tokens.textMuted,
+              }}>
+                {label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      {/* Content */}
       {loading ? (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <ActivityIndicator color={tokens.accent} />
@@ -116,45 +139,55 @@ export default function DocumentsScreen({ route, navigation }: Props) {
         <Text style={{ color: '#ef4444', textAlign: 'center', marginTop: 32, paddingHorizontal: 24 }}>{error}</Text>
       ) : (
         <FlatList
-          data={documents}
+          data={items}
           keyExtractor={d => d.id}
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: insets.bottom + 24, flexGrow: 1 }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={tokens.accent} />}
           ListEmptyComponent={
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80 }}>
-              <Text style={{ fontSize: 36, marginBottom: 12 }}>📄</Text>
-              <Text style={{ fontSize: 15, color: tokens.textSecondary }}>No documents yet.</Text>
+              <Text style={{ fontSize: 36, marginBottom: 12 }}>{tab === 'docs' ? '📄' : '🎵'}</Text>
+              <Text style={{ fontSize: 15, color: tokens.textSecondary }}>
+                {tab === 'docs' ? 'No documents yet.' : 'No audio files yet.'}
+              </Text>
             </View>
           }
           renderItem={({ item }) => (
-            <View style={{
-              backgroundColor: tokens.cardBg, borderColor: tokens.cardBorder, borderWidth: 1,
-              borderRadius: 10, padding: 14, marginBottom: 8,
-              flexDirection: 'row', alignItems: 'center', gap: 12,
-            }}>
-              <Text style={{ fontSize: 24 }}>📄</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 14, fontWeight: '600', color: tokens.textPrimary }} numberOfLines={1}>
-                  {item.originalName}
-                </Text>
-                <Text style={{ fontSize: 12, color: tokens.textMuted, marginTop: 2 }}>
-                  {formatBytes(item.size)} · {new Date(item.createdAt).toLocaleDateString()}
-                </Text>
-                {item.status === 'FAILED' && item.errorMessage && (
-                  <Text style={{ fontSize: 11, color: '#ef4444', marginTop: 2 }} numberOfLines={1}>
-                    {item.errorMessage}
-                  </Text>
-                )}
-              </View>
+            <Pressable
+              onPress={() => navigation.navigate('DocumentReader', {
+                documentId: item.id,
+                documentName: item.originalName,
+              })}
+              style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1, marginBottom: 8 })}
+            >
               <View style={{
-                backgroundColor: tokens.accentSoft, borderRadius: 6,
-                paddingHorizontal: 8, paddingVertical: 3,
+                backgroundColor: tokens.cardBg, borderColor: tokens.cardBorder, borderWidth: 1,
+                borderRadius: 10, padding: 14,
+                flexDirection: 'row', alignItems: 'center', gap: 12,
               }}>
-                <Text style={{ fontSize: 11, fontWeight: '600', color: STATUS_COLOR[item.status] ?? tokens.textMuted }}>
-                  {STATUS_LABEL[item.status] ?? item.status}
-                </Text>
+                <Text style={{ fontSize: 22 }}>{isAudioMime(item.mimeType) ? '🎵' : '📄'}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: tokens.textPrimary }} numberOfLines={1}>
+                    {item.originalName}
+                  </Text>
+                  <Text style={{ fontSize: 12, color: tokens.textMuted, marginTop: 2 }}>
+                    {formatBytes(item.size)} · {new Date(item.createdAt).toLocaleDateString()}
+                  </Text>
+                  {item.status === 'FAILED' && item.errorMessage && (
+                    <Text style={{ fontSize: 11, color: '#ef4444', marginTop: 2 }} numberOfLines={1}>
+                      {item.errorMessage}
+                    </Text>
+                  )}
+                </View>
+                <View style={{
+                  backgroundColor: tokens.accentSoft, borderRadius: 6,
+                  paddingHorizontal: 8, paddingVertical: 3,
+                }}>
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: STATUS_COLOR[item.status] ?? tokens.textMuted }}>
+                    {STATUS_LABEL[item.status] ?? item.status}
+                  </Text>
+                </View>
               </View>
-            </View>
+            </Pressable>
           )}
         />
       )}

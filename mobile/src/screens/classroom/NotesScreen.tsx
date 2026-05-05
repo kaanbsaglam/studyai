@@ -110,7 +110,10 @@ export default function NotesScreen({ route, navigation }: Props) {
           renderItem={({ item }) => {
             const isAudio = !!item.mimeType;
             return (
-              <Pressable style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1, marginBottom: 8 })}>
+              <Pressable
+                onPress={() => navigation.navigate('NoteReader', { noteId: item.id, noteTitle: item.title })}
+                style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1, marginBottom: 8 })}
+              >
                 <View style={{
                   backgroundColor: tokens.cardBg, borderColor: tokens.cardBorder, borderWidth: 1,
                   borderRadius: 10, padding: 14,
