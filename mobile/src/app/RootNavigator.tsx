@@ -6,10 +6,25 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import AuthStack from './AuthStack';
 import MainTabs from './MainTabs';
+import ClassroomDetailScreen from '../screens/main/ClassroomDetailScreen';
+import DocumentsScreen from '../screens/classroom/DocumentsScreen';
+import NotesScreen from '../screens/classroom/NotesScreen';
+import SummariesScreen from '../screens/classroom/SummariesScreen';
+import ChatScreen from '../screens/classroom/ChatScreen';
+import FlashcardsScreen from '../screens/classroom/FlashcardsScreen';
+import QuizzesScreen from '../screens/classroom/QuizzesScreen';
+import type { Classroom } from '../types';
 
 export type RootStackParamList = {
   Auth: undefined;
-  Main: undefined;
+  MainTabs: undefined;
+  ClassroomDetail: { classroom: Classroom };
+  Documents:  { classroomId: string; classroomName: string };
+  Notes:      { classroomId: string; classroomName: string };
+  Summaries:  { classroomId: string; classroomName: string };
+  Chat:       { classroomId: string; classroomName: string };
+  Flashcards: { classroomId: string; classroomName: string };
+  Quizzes:    { classroomId: string; classroomName: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -30,7 +45,16 @@ export default function RootNavigator() {
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {user ? (
-          <Stack.Screen name="Main" component={MainTabs} />
+          <>
+            <Stack.Screen name="MainTabs" component={MainTabs} />
+            <Stack.Screen name="ClassroomDetail" component={ClassroomDetailScreen} />
+            <Stack.Screen name="Documents"  component={DocumentsScreen} />
+            <Stack.Screen name="Notes"      component={NotesScreen} />
+            <Stack.Screen name="Summaries"  component={SummariesScreen} />
+            <Stack.Screen name="Chat"       component={ChatScreen} />
+            <Stack.Screen name="Flashcards" component={FlashcardsScreen} />
+            <Stack.Screen name="Quizzes"    component={QuizzesScreen} />
+          </>
         ) : (
           <Stack.Screen name="Auth" component={AuthStack} />
         )}

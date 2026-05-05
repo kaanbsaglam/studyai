@@ -1,5 +1,3 @@
-export type Theme = 'light' | 'dark' | 'earth';
-
 export interface User {
   id: string;
   email: string;
@@ -19,13 +17,25 @@ export interface Classroom {
   description?: string;
   createdAt: string;
   updatedAt: string;
+  _count?: { documents: number };
+}
+
+export interface GlobalStudyStats {
+  todaySeconds: number;
+  weekSeconds: number;
+  streak: number;
+  dailyData: { date: string; seconds: number }[];
 }
 
 export interface Document {
   id: string;
   classroomId: string;
-  name: string;
-  status: 'processing' | 'ready' | 'error';
+  filename: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  status: 'PENDING' | 'PROCESSING' | 'READY' | 'FAILED';
+  errorMessage?: string;
   createdAt: string;
 }
 
@@ -42,6 +52,14 @@ export interface QuizSet {
   classroomId: string;
   title: string;
   questionCount: number;
+  createdAt: string;
+}
+
+export interface Summary {
+  id: string;
+  classroomId: string;
+  title: string;
+  content: string;
   createdAt: string;
 }
 

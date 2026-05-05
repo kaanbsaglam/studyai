@@ -2,7 +2,7 @@ import axios from 'axios';
 import { getItem } from './storage';
 
 // Update this to your backend URL (use LAN IP for physical device testing)
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://10.0.2.2:3000/api/v1';
+export const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://10.0.2.2:3000/api/v1';
 
 export const TOKEN_KEY = 'studyai_access_token';
 

@@ -125,23 +125,24 @@ export default function LoginScreen({ navigation }: Props) {
         )}
 
         {/* Primary button */}
-        <Pressable
-          onPress={handleLogin}
-          disabled={loading}
-          style={({ pressed }) => ({
-            backgroundColor: tokens.btnPrimaryBg,
-            borderRadius: 10,
-            height: 44,
-            alignItems: 'center',
-            justifyContent: 'center',
-            opacity: pressed || loading ? 0.8 : 1,
-            marginBottom: 20,
-          })}
-        >
-          {loading
-            ? <ActivityIndicator color={tokens.btnPrimaryText} />
-            : <Text style={{ fontSize: 15, fontWeight: '600', color: tokens.btnPrimaryText }}>Sign in</Text>
-          }
+        <Pressable onPress={handleLogin} disabled={loading} style={{ marginBottom: 20 }}>
+          {({ pressed }) => (
+            <View
+              style={{
+                backgroundColor: tokens.btnPrimaryBg,
+                borderRadius: 10,
+                height: 44,
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: pressed || loading ? 0.8 : 1,
+              }}
+            >
+              {loading
+                ? <ActivityIndicator color={tokens.btnPrimaryText} />
+                : <Text style={{ fontSize: 15, fontWeight: '600', color: tokens.btnPrimaryText }}>Sign in</Text>
+              }
+            </View>
+          )}
         </Pressable>
 
         {/* Register link */}

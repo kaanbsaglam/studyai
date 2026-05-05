@@ -3,17 +3,10 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import type { Theme } from '../../types';
-
-const THEMES: { value: Theme; label: string }[] = [
-  { value: 'light', label: '☀️ Light' },
-  { value: 'dark',  label: '🌙 Dark' },
-  { value: 'earth', label: '🌿 Earth' },
-];
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
-  const { tokens, theme, setTheme } = useTheme();
+  const { tokens } = useTheme();
   const insets = useSafeAreaInsets();
 
   return (
@@ -55,33 +48,6 @@ export default function ProfileScreen() {
             {user?.tier} plan
           </Text>
         </View>
-      </View>
-
-      {/* Theme picker */}
-      <Text style={{ fontSize: 13, fontWeight: '600', color: tokens.textSecondary, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-        Theme
-      </Text>
-      <View style={{ flexDirection: 'row', gap: 10, marginBottom: 32 }}>
-        {THEMES.map((t) => (
-          <Pressable
-            key={t.value}
-            onPress={() => setTheme(t.value)}
-            style={({ pressed }) => ({
-              flex: 1,
-              backgroundColor: theme === t.value ? tokens.accentSoft : tokens.cardBg,
-              borderColor: theme === t.value ? tokens.accent : tokens.cardBorder,
-              borderWidth: 1,
-              borderRadius: 10,
-              paddingVertical: 10,
-              alignItems: 'center',
-              opacity: pressed ? 0.8 : 1,
-            })}
-          >
-            <Text style={{ fontSize: 13, fontWeight: '600', color: theme === t.value ? tokens.accent : tokens.textSecondary }}>
-              {t.label}
-            </Text>
-          </Pressable>
-        ))}
       </View>
 
       {/* Sign out */}
